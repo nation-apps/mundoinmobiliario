@@ -1,0 +1,163 @@
+@import "tailwindcss";
+
+/* ============================================================
+   MUNDO MOTOS — panel de administración del bot
+   Paleta sobria y clara: niebla azulada, tinta marino, verde petróleo.
+   Display: Fraunces · Sans: Inter
+   (Los nombres de las variables son los mismos del panel de B&B para poder reutilizar sus componentes.)
+   ============================================================ */
+
+:root {
+  --bg: #f3f6f8;          /* niebla */
+  --bg-soft: #e8eef2;     /* niebla sombreada */
+  --ink: #12202b;         /* marino, casi negro */
+  --ink-soft: #3b4b57;
+  --muted: #6b7c88;
+  --line: #d3dce2;
+  --accent: #0f766e;      /* verde petróleo */
+  --accent-deep: #0b5a54;
+  --gold: #b08d57;
+  --white: #fbfcfd;
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-script: var(--font-display);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-gold: var(--gold);
+  --color-porcelain: var(--white);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+  --font-script: var(--font-script);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--white);
+}
+
+/* ---------- Tipografía ---------- */
+
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.015em;
+}
+
+.t-script {
+  font-family: var(--font-script);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.t-brace {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.t-brace::before { content: "{ "; }
+.t-brace::after { content: " }"; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Las cifras del panel son datos: van en la sans con figuras tabulares. */
+.figure {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ---------- Piezas del panel ---------- */
+
+.admin-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.admin-input {
+  width: 100%;
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--ink);
+  transition: border-color 0.2s ease;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: var(--ink);
+}
+
+.admin-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 9px 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.admin-btn:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+.admin-btn:disabled { opacity: 0.45; pointer-events: none; }
+
+.admin-btn.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.admin-btn.ghost:hover { background: var(--ink); color: var(--bg); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

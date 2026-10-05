@@ -6,6 +6,7 @@ Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aur
 ## 1. Hecho (código)
 
 - Bot copiado del de B&B y limpiado: sin cursos, citas, tienda, evento ni pagos por Yape. Compila y pasa 208 pruebas.
+- Panel de administración en `admin/` (Next.js 16, copiado del de B&B y adaptado): chats, canales y multimedia. Compila.
 - Prompt de inmobiliaria (`bot/src/agent/systemPrompt.ts`): califica al cliente, no inventa propiedades, precios ni trámites,
   no da asesoría legal ni promete rendimientos, y deriva al asesor con un resumen.
 - Herramientas nuevas: `guardar_perfil_busqueda` (operación, tipo de inmueble, zona, presupuesto, recámaras, plazo, forma
@@ -56,23 +57,26 @@ pasar a un asesor (hoy: quiere ver una propiedad, quiere vender o rentar la suya
 
 ## 5. Orden de montaje
 
-1. **Repositorio:** crear `mundo-motos` en GitHub y subir esta carpeta (ya tiene su primer commit local).
-2. **Supabase:** proyecto nuevo (región cercana a México, p. ej. East US) → aplicar `supabase/migrations/0001_nucleo.sql`.
-   Crear el primer usuario del equipo (Authentication → Users) y su fila en `staff` con rol `admin`.
-3. **Railway:** proyecto nuevo desde el repo, **Root Directory `/bot`**, generar dominio, cargar las variables de
-   `bot/.env.example` (los secretos desde el portapapeles, nunca en el chat).
-4. **Meta:** en la app «Mundo Motos», caso de uso de WhatsApp → número de prueba → webhook
-   `https://<dominio de Railway>/webhook` con el `WHATSAPP_VERIFY_TOKEN`, campo `messages` → verificar tu celular como
+1. **Repositorio:** `https://github.com/nation-apps/mundoinmobiliario` (bot + panel + migración en un solo repo).
+2. **Supabase:** proyecto nuevo (región cercana a México, p. ej. East US) → SQL Editor → pegar y ejecutar
+   `supabase/migrations/0001_nucleo.sql`. Luego Authentication → Users → *Add user* (correo y contraseña del primer asesor) y, en el
+   SQL Editor, dar de alta su fila de equipo:
+   `insert into public.staff (user_id, nombre, email, rol) select id, 'Nombre', email, 'admin' from auth.users where email = 'correo@dominio.com';`
+3. **Railway, servicio «bot»:** New Project → Deploy from GitHub → este repo, **Root Directory `/bot`**, generar dominio, cargar las
+   variables de `bot/.env.example` (secretos desde el portapapeles, nunca en el chat). En `ADMIN_ORIGINS` pon el dominio del panel.
+4. **Railway, servicio «admin»:** en el mismo proyecto → New Service → mismo repo, **Root Directory `/admin`**, generar dominio y
+   cargar las 4 variables de `admin/.env.example` (`BOT_API_URL` = dominio del bot). Entra a `https://<admin>/admin` con el usuario del paso 2.
+5. **Meta:** en la app «Mundo Motos», caso de uso de WhatsApp → número de prueba → webhook
+   `https://<dominio del bot>/webhook` con el `WHATSAPP_VERIFY_TOKEN`, campo `messages` → verificar tu celular como
    destinatario. Para un token que no venza: usuario del sistema con la app y la cuenta de WhatsApp asignadas (runbook §3.2).
-5. **Prueba de punta a punta:** `curl <dominio>/health` → `{"status":"ok"}`; escribir al número de prueba desde tu celular;
-   revisar la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta Anulado silencie al bot.
-6. **Messenger e Instagram** (opcional, después): runbook §5 a §7. Para responder a público general, Meta exige revisión de la app.
+6. **Prueba de punta a punta:** `curl <dominio del bot>/health` → `{"status":"ok"}`; escribir al número de prueba desde tu celular;
+   ver la conversación en el panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta
+   Anulado silencie al bot.
+7. **Messenger e Instagram** (opcional, después): runbook §5 a §7. Para responder a público general, Meta exige revisión de la app.
 
 ## 6. Decisiones pendientes
 
-- **Panel de chats.** La bandeja de B&B vive dentro del sitio Next.js de B&B. Para Mundo Motos hay que elegir: un panel
-  propio y pequeño (solo chats, fichas y etiquetas) o integrarlo en el sitio web del negocio si ya tienen uno. Sin panel el bot
-  funciona, pero el equipo solo vería las conversaciones en la base de datos.
+- **Panel de chats:** hecho (`admin/`). Falta si quieren también agenda de visitas, panel de métricas o gestión de usuarios del equipo desde el panel.
 - **Seguimientos automáticos.** Los de B&B eran del evento Star Beauty y no se copiaron. Para una inmobiliaria conviene
   diseñarlos con calma (cuándo, a quién, con qué plantilla aprobada por Meta).
 - **Catálogo de propiedades.** Hoy el bot no conoce propiedades concretas; las deriva a un asesor. Si quieren que cite
