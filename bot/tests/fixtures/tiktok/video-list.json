@@ -1,0 +1,12 @@
+{
+  "code": 0,
+  "message": "OK",
+  "request_id": "2026092600000002",
+  "data": {
+    "videos": [
+      { "item_id": "7203946942097902849", "create_time": 1790300000, "caption": "Comenta SUNAT y te mando la guía", "share_url": "https://www.tiktok.com/@azestudiocontableperu/video/7203946942097902849" }
+    ],
+    "cursor": 1790300000000,
+    "has_more": false
+  }
+}

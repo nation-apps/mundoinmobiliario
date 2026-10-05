@@ -1,0 +1,7 @@
+{
+  "client_key": "TT_APP_ID_TEST",
+  "event": "comment.update",
+  "create_time": 1790400000,
+  "user_openid": "-000AZopenid_test",
+  "content": "{\"comment_id\":7247303576418566913,\"video_id\":7203946942097902849,\"comment_type\":\"comment\",\"comment_action\":\"insert\",\"unique_identifier\":\"+ABcUsuarioTest\",\"timestamp\":1790399990123,\"text\":\"SUNAT\"}"
+}

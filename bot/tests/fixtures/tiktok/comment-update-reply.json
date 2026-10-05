@@ -1,0 +1,7 @@
+{
+  "client_key": "TT_APP_ID_TEST",
+  "event": "comment.update",
+  "create_time": 1790400100,
+  "user_openid": "-000AZopenid_test",
+  "content": "{\"comment_id\":7247303576418566999,\"video_id\":7203946942097902849,\"parent_comment_id\":7247303576418566913,\"comment_type\":\"reply\",\"comment_action\":\"insert\",\"unique_identifier\":\"+ABcOtroUsuario\",\"timestamp\":1790400090000,\"text\":\"yo también quiero, dice \\\"comment_id\\\": 123\"}"
+}

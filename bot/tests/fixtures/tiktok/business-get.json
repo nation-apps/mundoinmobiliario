@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "message": "OK",
+  "request_id": "2026092600000004",
+  "data": {
+    "username": "azestudiocontableperu",
+    "display_name": "AZ Estudio Contable",
+    "followers_count": 1520,
+    "metrics": [
+      { "date": "2026-09-23", "video_views": 3400, "unique_video_views": 2100, "profile_views": 85, "likes": 120, "comments": 34, "shares": 9, "followers_count": 1500, "daily_new_followers": 12, "daily_lost_followers": 2, "engaged_audience": 150 },
+      { "date": "2026-09-24", "video_views": 2900, "unique_video_views": 1800, "profile_views": 70, "likes": 95, "comments": 20, "shares": 5, "followers_count": 1510, "daily_new_followers": 11, "daily_lost_followers": 1, "engaged_audience": 120 }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "client_key": "TT_APP_ID_TEST",
+  "event": "im_receive_msg",
+  "create_time": 1790400400,
+  "user_openid": "-000AZopenid_test",
+  "content": "{\"from\":\"juan_emprende\",\"to\":\"azestudiocontableperu\",\"unique_identifier\":\"+ABcUsuarioTest\",\"conversation_id\":\"conv_tt_1\",\"message_id\":\"msg_tt_1\",\"timestamp\":1790400390000,\"type\":\"text\",\"text\":{\"body\":\"SUNAT\"}}"
+}

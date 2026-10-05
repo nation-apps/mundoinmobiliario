@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "message": "OK",
+  "request_id": "2026092600000005",
+  "data": {
+    "access_token": "act.nuevo_access_token_test",
+    "token_type": "Bearer",
+    "scope": "user.info.basic,user.info.username,user.info.stats,user.insights,video.list,comment.list,comment.list.manage",
+    "expires_in": 86400,
+    "refresh_token": "rft.refresh_token_test",
+    "refresh_token_expires_in": 31536000,
+    "open_id": "-000AZopenid_test"
+  }
+}

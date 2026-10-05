@@ -1,0 +1,42 @@
+{
+  "code": 0,
+  "message": "OK",
+  "request_id": "2026092600000001",
+  "data": {
+    "comments": [
+      {
+        "comment_id": "7247303576418566913",
+        "video_id": "7203946942097902849",
+        "unique_identifier": "+ABcUsuarioTest",
+        "user_id": "deprecated",
+        "create_time": "1790399990",
+        "text": "SUNAT",
+        "likes": 0,
+        "replies": 1,
+        "owner": false,
+        "liked": false,
+        "pinned": false,
+        "status": "PUBLIC",
+        "username": "juan_emprende",
+        "display_name": "Juan Emprende",
+        "profile_image": "https://p16.tiktokcdn.com/temporal.jpeg",
+        "reply_list": [
+          {
+            "comment_id": "7247303576418567001",
+            "video_id": "7203946942097902849",
+            "unique_identifier": "+AZcuentaPropia",
+            "create_time": "1790400050",
+            "text": "¡Hola! Tu guía está en azestudiocontable.com",
+            "owner": true,
+            "status": "PUBLIC",
+            "username": "azestudiocontableperu",
+            "display_name": "AZ Estudio Contable",
+            "parent_comment_id": "7247303576418566913"
+          }
+        ]
+      }
+    ],
+    "cursor": 1,
+    "has_more": false
+  }
+}
