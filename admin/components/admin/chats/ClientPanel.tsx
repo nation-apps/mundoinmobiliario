@@ -34,7 +34,7 @@ import {
   type EtiquetaColor,
   type EventoConversacion,
   type Interes,
-  type PerfilBusqueda,
+  type PerfilInversionista,
   type MotivoCierre,
   type StaffMiembro,
 } from "@/lib/admin/chats-tipos";
@@ -102,19 +102,17 @@ function fusionarFormulario(previo: Formulario | null, datos: DatosEditables): F
   return { actual, guardado: datos };
 }
 
-/** Campos del perfil de búsqueda, en el orden en que le sirven al asesor. */
-const CAMPOS_PERFIL: [keyof PerfilBusqueda, string][] = [
-  ["operacion", "Operación"],
-  ["tipo_inmueble", "Tipo de inmueble"],
-  ["zona", "Zona"],
-  ["presupuesto", "Presupuesto"],
-  ["recamaras", "Recámaras"],
+/** Campos del perfil de inversionista, en el orden en que le sirven al asesor. */
+const CAMPOS_PERFIL: [keyof PerfilInversionista, string][] = [
+  ["experiencia", "Experiencia"],
+  ["objetivo", "Objetivo"],
+  ["capital", "Capital"],
   ["plazo", "Para cuándo"],
-  ["forma_de_pago", "Forma de pago"],
+  ["ubicacion", "País / ciudad"],
   ["notas", "Notas del bot"],
 ];
 
-function perfilParaMostrar(perfil: PerfilBusqueda | null | undefined): [string, string][] {
+function perfilParaMostrar(perfil: PerfilInversionista | null | undefined): [string, string][] {
   if (!perfil) return [];
   return CAMPOS_PERFIL.flatMap(([campo, etiqueta]) => {
     const valor = perfil[campo];
@@ -180,7 +178,7 @@ function textoEvento(evento: EventoConversacion, staff: StaffMiembro[]): string 
       return `Envió ${que}${nombre ? ` · ${nombre}` : ""}${d.media_path ? "" : " (no se pudo descargar)"}`;
     }
     case "visita":
-      return "Se agendó una visita";
+      return "Se agendó una llamada";
     default:
       return String(evento.tipo);
   }

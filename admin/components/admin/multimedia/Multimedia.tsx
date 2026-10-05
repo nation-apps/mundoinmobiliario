@@ -7,7 +7,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 
 /**
  * Biblioteca de archivos que el bot puede mandar por WhatsApp (la imagen del
- * folleto, fotos de una propiedad, un video…). Cada archivo lleva una NOTA: «cuándo debe
+ * temario, video del seminario…). Cada archivo lleva una NOTA: «cuándo debe
  * enviarla el bot». El bot lee esa nota en cada conversación, así que un
  * cambio aquí vale al instante, sin republicar nada.
  *
@@ -40,12 +40,12 @@ const LIMITES: { mime: string; tipo: ItemMultimedia["tipo"]; maxMB: number; ext:
   { mime: "application/pdf", tipo: "document", maxMB: 16, ext: "pdf" },
 ];
 
-const EJEMPLO_FOLLETO = {
-  nombre: "Folleto de propiedades",
+const EJEMPLO_TEMARIO = {
+  nombre: "Temario del programa",
   nota:
-    "Cuando el cliente pide ver opciones o el catálogo, mándalo y pregúntale qué zona y presupuesto tiene en mente. " +
-    "No prometas disponibilidad ni precios que no estén en el folleto.",
-  caption: "Propiedades disponibles · Mundo Motos",
+    "Cuando el cliente pide más información de un programa, mándalo y pregúntale qué quiere lograr. " +
+    "No prometas resultados ni precios que no estén en el documento.",
+  caption: "Temario · Mundo Inmobiliario",
 };
 
 export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]; urlBase: string }) {
@@ -58,10 +58,10 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
   const [activo, setActivo] = useState(true);
   const [subiendo, setSubiendo] = useState(false);
 
-  function usarEjemploFolleto() {
-    setNombre(EJEMPLO_FOLLETO.nombre);
-    setNota(EJEMPLO_FOLLETO.nota);
-    setCaption(EJEMPLO_FOLLETO.caption);
+  function usarEjemploTemario() {
+    setNombre(EJEMPLO_TEMARIO.nombre);
+    setNota(EJEMPLO_TEMARIO.nota);
+    setCaption(EJEMPLO_TEMARIO.caption);
   }
 
   async function guardar(e: React.FormEvent) {
@@ -121,12 +121,12 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
               Agregar un archivo
             </h2>
             <p className="mt-1 text-sm text-muted">
-              El bot lo manda por WhatsApp cuando la nota de abajo dice que toca. Sirve para un folleto, fotos de una propiedad, un video o un PDF.
+              El bot lo manda por WhatsApp cuando la nota de abajo dice que toca. Sirve para un temario, un video del seminario o un PDF.
             </p>
           </div>
 
-          <button type="button" onClick={usarEjemploFolleto} className="admin-btn ghost self-start">
-            Usar el ejemplo del folleto
+          <button type="button" onClick={usarEjemploTemario} className="admin-btn ghost self-start">
+            Usar el ejemplo del temario
           </button>
 
           <label className="flex flex-col gap-1.5">
@@ -142,7 +142,7 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
 
           <label className="flex flex-col gap-1.5">
             <span className="admin-label">Nombre</span>
-            <input value={nombre} onChange={(ev) => setNombre(ev.target.value)} maxLength={80} placeholder="Folleto de propiedades" className="admin-input" />
+            <input value={nombre} onChange={(ev) => setNombre(ev.target.value)} maxLength={80} placeholder="Temario del programa" className="admin-input" />
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -152,7 +152,7 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
               onChange={(ev) => setNota(ev.target.value)}
               rows={5}
               maxLength={600}
-              placeholder="Cuando el cliente pida ver opciones, mándalo y pregúntale zona y presupuesto…"
+              placeholder="Cuando el cliente pida más información del programa, mándalo y pregúntale qué quiere lograr…"
               className="admin-input"
             />
           </label>
@@ -179,7 +179,7 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
         </h2>
         {items.length === 0 ? (
           <p className="admin-card px-6 py-12 text-center text-sm text-muted">
-            Todavía no hay nada. Empieza con tu folleto de propiedades: toca «Usar el ejemplo del folleto», sube el archivo y guarda.
+            Todavía no hay nada. Empieza con el temario de tus programas: toca «Usar el ejemplo del temario», sube el archivo y guarda.
           </p>
         ) : (
           <ul className="flex flex-col gap-4">

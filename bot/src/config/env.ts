@@ -64,7 +64,7 @@ const envSchema = z.object({
   REENVIOS_ACTIVOS: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
 
   // Orígenes del panel admin autorizados a llamar a /admin/* (separados por
-  // coma). El panel de Mundo Motos llama al bot desde el servidor, pero se deja la
+  // coma). El panel de Mundo Inmobiliario llama al bot desde el servidor, pero se deja la
   // lista blanca por si se abre desde el navegador.
   ADMIN_ORIGINS: z.string().default(""),
   WEB_ORIGINS: z.string().default(""),

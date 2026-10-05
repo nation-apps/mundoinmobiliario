@@ -15,10 +15,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Panel | Mundo Motos",
-    template: "%s | Mundo Motos",
+    default: "Panel | Mundo Inmobiliario",
+    template: "%s | Mundo Inmobiliario",
   },
-  description: "Panel de administración del bot de WhatsApp, Messenger e Instagram de Mundo Motos.",
+  description: "Panel de administración del bot de WhatsApp, Messenger e Instagram de Mundo Inmobiliario.",
   robots: { index: false, follow: false },
 };
 

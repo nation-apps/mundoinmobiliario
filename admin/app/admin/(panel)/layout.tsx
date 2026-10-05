@@ -5,7 +5,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 import { AvisosProvider } from "@/components/admin/chats/Avisos";
 
 export const metadata = {
-  title: "Panel Mundo Motos",
+  title: "Panel Mundo Inmobiliario",
   robots: { index: false, follow: false },
 };
 

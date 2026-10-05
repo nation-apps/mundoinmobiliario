@@ -24,9 +24,9 @@ type CambioCanal = Partial<
   Pick<CanalConfig, "activo" | "ia_activa" | "ia_comentarios_activa" | "texto_respuesta_privada">
 >;
 
-/** Para qué sirve cada canal en Mundo Motos: lo primero que lee quien entra aquí. */
+/** Para qué sirve cada canal en Mundo Inmobiliario: lo primero que lee quien entra aquí. */
 const PARA_QUE: Record<CanalConfigurable, string> = {
-  whatsapp: "Canal principal: consultas de compradores, inquilinos y propietarios.",
+  whatsapp: "Canal principal: consultas sobre el seminario y los programas.",
   messenger: "Mensajes y comentarios de la página de Facebook.",
   instagram: "Mensajes directos y comentarios de la cuenta de Instagram del negocio.",
   tiktok: "Todavía no conectado: los comentarios se atienden desde la app de TikTok.",

@@ -1,5 +1,5 @@
 {
-  "name": "mundo-motos-bot",
+  "name": "mundo-inmobiliario-bot",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -31,5 +31,5 @@
     "typescript-eslint": "^8.47.0",
     "vitest": "^3.2.4"
   },
-  "description": "Bot omnicanal (WhatsApp, Messenger, Instagram) de Mundo Motos: inmobiliaria"
+  "description": "Bot omnicanal (WhatsApp, Messenger, Instagram) de Mundo Inmobiliario: inmobiliaria"
 }

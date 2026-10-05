@@ -1,4 +1,4 @@
--- Mundo Motos — núcleo del bot de WhatsApp / Messenger / Instagram y la bandeja de chats
+-- Mundo Inmobiliario — núcleo del bot de WhatsApp / Messenger / Instagram y la bandeja de chats
 --
 -- Esquema mínimo, sacado del bot de B&B Escuela (migraciones 0001 a 0010) sin lo que no aplica a una inmobiliaria:
 -- sin cursos, citas del sitio, tienda, ventas ni entradas de evento. El bot (carpeta `bot/`, corre en Railway con la
@@ -77,7 +77,7 @@ create table if not exists public.clientes (
   nombre text,
   email text,
   notas text,
-  perfil jsonb not null default '{}'::jsonb,  -- operación, tipo_inmueble, zona, presupuesto, recamaras, plazo, forma_de_pago, notas
+  perfil jsonb not null default '{}'::jsonb,  -- experiencia, objetivo, capital, plazo, ubicacion, notas
   canal_origen text not null default 'whatsapp',
   tipo text not null default 'prospecto',
   interes text,
@@ -85,10 +85,10 @@ create table if not exists public.clientes (
   updated_at timestamptz not null default now(),
   constraint clientes_canal_origen_check check (canal_origen in ('whatsapp', 'messenger', 'instagram', 'tiktok', 'web', 'manual')),
   constraint clientes_tipo_check check (tipo in ('prospecto', 'cliente', 'ex_cliente')),
-  constraint clientes_interes_check check (interes is null or interes in ('comprar', 'rentar', 'vender', 'invertir', 'otro'))
+  constraint clientes_interes_check check (interes is null or interes in ('seminario', 'programa_avanzado', 'mentoria', 'master', 'libro', 'otro'))
 );
 comment on column public.clientes.canal_origen is 'Por dónde llegó la primera vez; no cambia aunque después escriba por otro canal.';
-comment on column public.clientes.interes is 'Qué busca: comprar, rentar, vender su propiedad, invertir u otro.';
+comment on column public.clientes.interes is 'Qué le interesa: seminario, programa avanzado, mentoría, máster, libro u otro.';
 comment on column public.clientes.perfil is 'Lo que cuenta de lo que busca, ordenado para el asesor (lo escribe guardar_perfil_busqueda).';
 create index if not exists clientes_created_idx on public.clientes (created_at desc);
 
@@ -184,7 +184,7 @@ create table if not exists public.conversaciones (
   constraint conversaciones_estado_check check (estado in ('activa', 'escalada', 'cerrada')),
   constraint conversaciones_canal_check check (canal in ('whatsapp', 'messenger', 'instagram', 'tiktok', 'web')),
   constraint conversaciones_origen_check check (origen in ('dm', 'comentario', 'formulario')),
-  -- 'agendado' = visita agendada
+  -- 'agendado' = llamada o sesión agendada
   constraint conversaciones_etapa_check check (etapa in ('nuevo', 'en_atencion', 'calificado', 'agendado', 'propuesta', 'cerrado')),
   constraint conversaciones_motivo_cierre_check
     check (motivo_cierre is null or motivo_cierre in ('ganado', 'perdido', 'spam', 'sin_respuesta', 'otro'))
@@ -267,7 +267,7 @@ on public.cliente_etiquetas for all to authenticated using (public.puede_atender
 
 -- «Anulado»: contactos que no son el público del negocio. El bot no les contesta ni les escribe; no la renombres.
 insert into public.etiquetas (nombre, color) values
-  ('Anulado', 'rose'), ('Comprador', 'sky'), ('Inquilino', 'violet'), ('Propietario', 'amber'), ('Inversionista', 'emerald')
+  ('Anulado', 'rose'), ('Seminario', 'sky'), ('Programa Avanzado', 'violet'), ('Mentoría', 'amber'), ('Máster', 'emerald')
 on conflict (nombre) do nothing;
 
 -- ============ Respuestas rápidas ============
@@ -295,8 +295,8 @@ create policy "Equipo gestiona respuestas_rapidas"
 on public.respuestas_rapidas for all to authenticated using (public.puede_atender()) with check (public.puede_atender());
 
 insert into public.respuestas_rapidas (atajo, titulo, contenido, sort_order) values
-  ('hola', 'Saludo', 'Hola {{nombre}}, te escribimos de Mundo Motos. ¿En qué te podemos ayudar?', 1),
-  ('visita', 'Agendar una visita', 'Con gusto. ¿Qué día y en qué horario te queda mejor para ver la propiedad?', 2),
+  ('hola', 'Saludo', 'Hola {{nombre}}, te escribimos de Mundo Inmobiliario. ¿En qué te podemos ayudar?', 1),
+  ('seminario', 'Invitar al seminario', 'Con gusto. Aquí puedes registrarte al seminario gratuito: https://eventos.mundoinmobiliario.tv/gratis/seminario', 2),
   ('datos', 'Pedir datos', '¿Me compartes tu nombre completo y, si quieres, tu correo para que el asesor te mande la información?', 3)
 on conflict (atajo) do nothing;
 
@@ -320,7 +320,7 @@ drop policy if exists "Equipo ve eventos" on public.eventos_conversacion;
 create policy "Equipo ve eventos"
 on public.eventos_conversacion for select to authenticated using (public.puede_atender());
 
--- ============ Biblioteca multimedia (folletos, fotos, videos que el bot puede mandar) ============
+-- ============ Biblioteca multimedia (temarios, PDFs, videos que el bot puede mandar) ============
 
 create table if not exists public.plantillas_media (
   id uuid primary key default gen_random_uuid(),

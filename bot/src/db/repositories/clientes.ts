@@ -7,22 +7,20 @@ export type CanalOrigen = "whatsapp" | "messenger" | "instagram" | "tiktok" | "w
 export type CanalLead = "messenger" | "instagram" | "tiktok";
 
 /** 'prospecto' hasta que compra; lo pasa a 'cliente' el trigger de cierre ganado, o el staff a mano. */
-/** Lo que el cliente va contando de lo que busca; todo opcional, se completa conforme avanza el chat. */
-export type PerfilBusqueda = {
-  operacion?: "comprar" | "rentar" | "vender" | "invertir" | undefined;
-  tipo_inmueble?: string | undefined;
-  zona?: string | undefined;
-  presupuesto?: string | undefined;
-  recamaras?: string | undefined;
+/** Lo que el cliente va contando de su situación como inversionista; todo opcional, se completa conforme avanza el chat. */
+export type PerfilInversionista = {
+  experiencia?: string | undefined;
+  objetivo?: string | undefined;
+  capital?: string | undefined;
   plazo?: string | undefined;
-  forma_de_pago?: string | undefined;
+  ubicacion?: string | undefined;
   notas?: string | undefined;
 };
 
 export type TipoCliente = "prospecto" | "cliente" | "ex_cliente";
 
 /** Mismo check que `clientes.interes` (0001_nucleo.sql). */
-export const INTERESES = ["comprar", "rentar", "vender", "invertir", "otro"] as const;
+export const INTERESES = ["seminario", "programa_avanzado", "mentoria", "master", "libro", "otro"] as const;
 export type Interes = (typeof INTERESES)[number];
 
 /**
@@ -37,7 +35,7 @@ export type Cliente = {
   email: string | null;
   notas: string | null;
   /** Lo que busca, ordenado (operación, tipo, zona, presupuesto…). Lo escribe guardar_perfil_busqueda. */
-  perfil: PerfilBusqueda;
+  perfil: PerfilInversionista;
   canal_origen: CanalOrigen;
   tipo: TipoCliente;
   interes: Interes | null;
@@ -178,11 +176,11 @@ export async function getClienteById(id: string): Promise<Cliente | null> {
  * Mezcla lo nuevo con el perfil que ya había (lo ya guardado no se pierde si el modelo manda solo un campo).
  * Un campo vacío no borra nada.
  */
-export async function guardarPerfilCliente(clienteId: string, nuevo: PerfilBusqueda): Promise<PerfilBusqueda> {
+export async function guardarPerfilCliente(clienteId: string, nuevo: PerfilInversionista): Promise<PerfilInversionista> {
   const { data, error: leerError } = await supabase.from("clientes").select("perfil").eq("id", clienteId).single();
   if (leerError) throw leerError;
-  const actual = ((data as { perfil: PerfilBusqueda | null } | null)?.perfil ?? {}) as PerfilBusqueda;
-  const limpio = Object.fromEntries(Object.entries(nuevo).filter(([, v]) => typeof v === "string" && v.trim() !== "")) as PerfilBusqueda;
+  const actual = ((data as { perfil: PerfilInversionista | null } | null)?.perfil ?? {}) as PerfilInversionista;
+  const limpio = Object.fromEntries(Object.entries(nuevo).filter(([, v]) => typeof v === "string" && v.trim() !== "")) as PerfilInversionista;
   const perfil = { ...actual, ...limpio };
   const { error } = await supabase.from("clientes").update({ perfil }).eq("id", clienteId);
   if (error) throw error;

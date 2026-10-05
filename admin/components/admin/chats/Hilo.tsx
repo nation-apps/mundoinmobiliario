@@ -524,7 +524,7 @@ export default function Hilo({
   const respuestasDelCanal = respuestasRapidas.filter((r) => r.activa && (!r.canal || r.canal === conversacion.canal));
   const enlaceWaMe = conversacion.cliente_telefono
     ? `https://wa.me/${conversacion.cliente_telefono.replace(/\D/g, "")}?text=${encodeURIComponent(
-        "Hola, te escribimos de Mundo Motos por el mensaje que nos dejaste.",
+        "Hola, te escribimos de Mundo Inmobiliario por el mensaje que nos dejaste.",
       )}`
     : null;
 

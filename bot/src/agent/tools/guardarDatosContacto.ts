@@ -36,7 +36,7 @@ export const guardarDatosContactoTool: AgentTool<z.infer<typeof inputSchema>> = 
   name: "guardar_datos_contacto",
   description:
     "Guarda los datos que el cliente da voluntariamente: su número de WhatsApp, nombre, correo y qué le interesa " +
-    "(interes: comprar, rentar, vender, invertir u otro). Llámala apenas los dé, sin esperar a escalar. El teléfono " +
+    "(interes: seminario, programa_avanzado, mentoria, master, libro u otro). Llámala apenas los dé, sin esperar a escalar. El teléfono " +
     "debe ser el número de WhatsApp de la persona (10 dígitos en México, con o sin el 52 delante); nunca inventes uno. " +
     "Si devuelve 'telefono_no_verificable', no la reintentes con ese número: sigue la instrucción que trae. " +
     "Nunca pidas ni guardes contraseñas ni datos de tarjetas.",
@@ -48,7 +48,7 @@ export const guardarDatosContactoTool: AgentTool<z.infer<typeof inputSchema>> = 
       telefono: { type: "string", description: "Número de WhatsApp del cliente (México, 10 dígitos)" },
       nombre: { type: "string" },
       email: { type: "string" },
-      interes: { type: "string", enum: [...INTERESES], description: "Qué busca el cliente" },
+      interes: { type: "string", enum: [...INTERESES], description: "Qué le interesa al cliente" },
     },
   },
   handler: async (input, ctx) => {

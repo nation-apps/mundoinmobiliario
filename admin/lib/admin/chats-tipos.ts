@@ -63,7 +63,7 @@ export type ConversacionResumen = {
   cliente_tipo: "prospecto" | "cliente" | "ex_cliente";
   cliente_interes: string | null;
   /** Lo que busca, ordenado (lo llena el bot con guardar_perfil_busqueda). */
-  cliente_perfil: PerfilBusqueda | null;
+  cliente_perfil: PerfilInversionista | null;
   cliente_canal_origen: string;
   identidad_nombre: string | null;
   identidad_username: string | null;
@@ -305,15 +305,13 @@ export const INTERES_LABEL: Record<Interes, string> = {
   otro: "Otro",
 };
 
-/** Lo que el cliente va contando de lo que busca (clientes.perfil). Todo opcional. */
-export type PerfilBusqueda = {
-  operacion?: "comprar" | "rentar" | "vender" | "invertir";
-  tipo_inmueble?: string;
-  zona?: string;
-  presupuesto?: string;
-  recamaras?: string;
+/** Lo que el cliente cuenta de su situación como inversionista (clientes.perfil). Todo opcional. */
+export type PerfilInversionista = {
+  experiencia?: string;
+  objetivo?: string;
+  capital?: string;
   plazo?: string;
-  forma_de_pago?: string;
+  ubicacion?: string;
   notas?: string;
 };
 
@@ -362,7 +360,7 @@ export type ClienteFicha = {
   nombre: string | null;
   email: string | null;
   notas: string | null;
-  perfil: PerfilBusqueda;
+  perfil: PerfilInversionista;
   canal_origen: string;
   tipo: ClienteTipo;
   interes: Interes | null;

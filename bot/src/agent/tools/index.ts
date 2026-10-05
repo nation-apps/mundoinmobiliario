@@ -3,14 +3,14 @@ import type { AgentContext, AgentTool } from "./types.js";
 import { escalarAHumanoTool } from "./escalarAHumano.js";
 import { enviarMultimediaTool } from "./enviarMultimedia.js";
 import { guardarDatosContactoTool } from "./guardarDatosContacto.js";
-import { guardarPerfilBusquedaTool } from "./guardarPerfilBusqueda.js";
+import { guardarPerfilInversionistaTool } from "./guardarPerfilInversionista.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ALL_TOOLS: AgentTool<any>[] = [
   escalarAHumanoTool,
   enviarMultimediaTool,
   guardarDatosContactoTool,
-  guardarPerfilBusquedaTool,
+  guardarPerfilInversionistaTool,
 ];
 
 export type ModoAgente = "responder" | "sugerir";

@@ -1,4 +1,4 @@
-# Guía de arranque: Mundo Motos (inmobiliaria)
+# Guía de arranque: Mundo Inmobiliario (app de Meta «Mundo Motos»)
 
 *Estado al 5 de octubre de 2026.* Esta guía dice qué está hecho, qué falta y quién lo hace. El orden de montaje en Meta,
 Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aura); aquí solo lo adaptado a este negocio.
@@ -7,10 +7,12 @@ Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aur
 
 - Bot copiado del de B&B y limpiado: sin cursos, citas, tienda, evento ni pagos por Yape. Compila y pasa 208 pruebas.
 - Panel de administración en `admin/` (Next.js 16, copiado del de B&B y adaptado): chats, canales y multimedia. Compila.
-- Prompt de inmobiliaria (`bot/src/agent/systemPrompt.ts`): califica al cliente, no inventa propiedades, precios ni trámites,
-  no da asesoría legal ni promete rendimientos, y deriva al asesor con un resumen.
-- Herramientas nuevas: `guardar_perfil_busqueda` (operación, tipo de inmueble, zona, presupuesto, recámaras, plazo, forma
-  de pago). Se guarda en `clientes.perfil` para que el asesor lo vea sin releer el chat.
+- **El negocio es educación e inversión inmobiliaria** (Luis Ramírez), no venta de propiedades. Datos tomados de
+  https://eventos.mundoinmobiliario.tv/ el 5-oct-2026: seminario gratuito en Zoom y tres programas (Programa Avanzado, Mentoría, Máster).
+- Prompt (`bot/src/agent/systemPrompt.ts`): lleva al seminario, orienta qué programa encaja, califica, y pasa a un asesor a quien
+  quiere inscribirse o pregunta precios. No inventa precios ni fechas, no promete resultados, no cita testimonios como garantía.
+- Herramienta `guardar_perfil_inversionista` (experiencia, objetivo, capital, plazo, ubicación) → `clientes.perfil`; el asesor lo
+  ve en la ficha sin releer el chat. Etiquetas: Seminario, Programa Avanzado, Mentoría, Máster (+ Anulado).
 - México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Mexico_City`, plantillas `es_MX`.
 - Esquema de base de datos mínimo en `supabase/migrations/0001_nucleo.sql`. Se validó ejecutándolo completo en un esquema
   temporal con rollback; falta aplicarlo en el proyecto de Supabase del negocio.
@@ -36,7 +38,7 @@ Si más adelante quieren un número mexicano propio, lo más simple es una líne
 
 | # | Qué | Para qué |
 |---|---|---|
-| 1 | **Cuentas del negocio** (yo no puedo crearlas): GitHub (repo privado `mundo-motos`), Railway (proyecto nuevo) y Supabase (proyecto nuevo). Dame acceso o ejecuta tú los comandos que te pase. | Subir el código, desplegar el bot y aplicar la migración. |
+| 1 | **Cuentas del negocio** (yo no puedo crearlas): GitHub (repo `nation-apps/mundoinmobiliario`), Railway (proyecto nuevo) y Supabase (proyecto nuevo). Dame acceso o ejecuta tú los comandos que te pase. | Subir el código, desplegar el bot y aplicar la migración. |
 | 2 | **Llave de Anthropic sin vencimiento** (la guardas en el portapapeles; no la pegues en el chat). | Que el bot responda. |
 | 3 | **App «Mundo Motos» en Meta**: su App ID y a qué portafolio comercial pertenece. | Webhook, casos de uso y permisos (runbook §2). |
 | 4 | **Datos del negocio** (sección 4). | Llenar `bot/src/config/business.ts`. |
@@ -45,15 +47,15 @@ Si más adelante quieren un número mexicano propio, lo más simple es una líne
 
 ## 4. Datos del negocio por llenar (`bot/src/config/business.ts`)
 
-Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo confirma un asesor». Mientras estén vacíos el
-bot atiende bien pero no da detalles.
+Ya cargado desde el sitio: qué enseñan, fundador, descripción del seminario y su enlace de registro, descripción de los tres
+programas, Instagram/Facebook `@luisinverpresario`. Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo
+confirma un asesor». **Falta que lo confirme el negocio:**
 
-nombre comercial real · ciudad · operaciones que atienden (venta, renta, preventa) · tipos de inmueble · zonas · rango
-de precios · financiamiento (crédito bancario, Infonavit, contado) · cómo se agenda una visita · comisiones (o «derivar») ·
-oficina y horario · correo, web e Instagram · WhatsApp o teléfono de los asesores.
-
-Además: folletos, fotos o videos para la biblioteca multimedia (el bot los manda con `enviar_multimedia`), y el criterio para
-pasar a un asesor (hoy: quiere ver una propiedad, quiere vender o rentar la suya, o pregunta por una propiedad concreta).
+- **Fecha y hora del próximo seminario** (el sitio mostraba «miércoles 19 de agosto, 8 pm CDMX», que ya pasó).
+- **Precios, formas de pago, fechas de inicio y garantía** del Programa Avanzado, la Mentoría y el Máster (el sitio no los publica).
+- Qué incluye y cuesta la **entrada VIP** del seminario.
+- Ciudad, correo, horario de atención y WhatsApp de los asesores.
+- Temarios, PDFs o videos para la biblioteca multimedia (el bot los manda con `enviar_multimedia`).
 
 ## 5. Orden de montaje
 
@@ -77,9 +79,9 @@ pasar a un asesor (hoy: quiere ver una propiedad, quiere vender o rentar la suya
 ## 6. Decisiones pendientes
 
 - **Panel de chats:** hecho (`admin/`). Falta si quieren también agenda de visitas, panel de métricas o gestión de usuarios del equipo desde el panel.
-- **Seguimientos automáticos.** Los de B&B eran del evento Star Beauty y no se copiaron. Para una inmobiliaria conviene
+- **Seguimientos automáticos.** Los de B&B eran del evento Star Beauty y no se copiaron. Para el seminario y los programas conviene
   diseñarlos con calma (cuándo, a quién, con qué plantilla aprobada por Meta).
-- **Catálogo de propiedades.** Hoy el bot no conoce propiedades concretas; las deriva a un asesor. Si quieren que cite
-  propiedades, hace falta una tabla de inventario (y quién la mantiene).
-- **Nombre y marca.** «Mundo Motos» suena a motocicletas. Confirmar que ese es el nombre con el que se presenta la inmobiliaria
-  ante los clientes, porque aparecerá en el perfil de WhatsApp y en el prompt.
+- **Seminario con registro.** El registro ocurre en el sitio (nombre, correo, WhatsApp). Si quieren que el bot escriba a los
+  registrados (recordatorio, enlace de Zoom), hay que conectar ese formulario al bot y usar plantillas aprobadas por Meta.
+- **Nombre y marca.** El bot se presenta como «Mundo Inmobiliario» (el nombre del sitio). La app de Meta se llama «Mundo Motos»:
+  conviene renombrarla, porque el nombre de la app puede verse al conectar la cuenta de WhatsApp.
