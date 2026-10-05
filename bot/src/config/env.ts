@@ -41,7 +41,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-  /** URL pública del bot (Railway), p. ej. https://mundo-motos-bot.up.railway.app. */
+  /** URL pública del bot (Railway), p. ej. https://mundo-inmobiliario-bot.up.railway.app. */
   PUBLIC_BASE_URL: z.string().url(),
 
   BUSINESS_TIMEZONE: z.string().default("America/Mexico_City"),

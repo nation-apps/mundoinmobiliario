@@ -39,7 +39,7 @@ export default async function LoginPage({
       <div className="relative w-full max-w-sm">
         <div className="mb-9 text-center">
           <span className="t-display block text-4xl">
-            Mundo <span className="t-script text-accent">Motos</span>
+            Mundo <span className="t-script text-accent">Inmobiliario</span>
           </span>
           <span className="mt-3 block text-[10px] font-semibold uppercase tracking-[0.28em] text-muted">
             Panel interno
