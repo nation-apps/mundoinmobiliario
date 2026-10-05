@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { AppError } from "../lib/errors.js";
+import { telefonoParaEnvio } from "../lib/telefono.js";
 
 // v21.0 estaba fijo acá y esa versión caduca el 21-ene-2027 — ahora comparte
 // la misma variable que Messenger/Instagram (META_GRAPH_VERSION).
@@ -11,6 +12,20 @@ export const ESPERAS_REINTENTO_MS = [600, 2_000] as const;
 /** 429 = demasiadas peticiones y 503 = servicio no disponible: Meta no recibió el mensaje, se puede reintentar sin duplicar. */
 const ESTADOS_REINTENTABLES = new Set([429, 503]);
 
+/** Meta: «el número destino no está en la lista permitida». En México suele ser solo el formato (52 vs 521). */
+const ERROR_DESTINO_NO_PERMITIDO = 131030;
+
+/** Móviles mexicanos a los que Meta solo acepta escribirles con el "1" (521 + 10 dígitos). Se aprende en el primer rechazo. */
+const destinosConUno = new Set<string>();
+
+function codigoDeError(errorBody: string): number | undefined {
+  try {
+    return (JSON.parse(errorBody) as { error?: { code?: number } }).error?.code;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Devuelve el wa_message_id que Meta asigna al aceptar el envío. Ese
  * "aceptado" NO es "entregado": para media por link, Meta puede responder
@@ -20,13 +35,19 @@ const ESTADOS_REINTENTABLES = new Set([429, 503]);
  */
 async function callGraphApi(body: Record<string, unknown>): Promise<string> {
   const url = `${GRAPH_BASE_URL}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const destino = typeof body.to === "string" ? body.to : undefined;
+  const aprendido = destino !== undefined && destinosConUno.has(destino);
   const init = {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ messaging_product: "whatsapp", ...body }),
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      ...body,
+      ...(destino !== undefined ? { to: telefonoParaEnvio(destino, aprendido) } : {}),
+    }),
   };
 
   for (let intento = 0; ; intento++) {
@@ -50,6 +71,22 @@ async function callGraphApi(body: Record<string, unknown>): Promise<string> {
         continue;
       }
       const errorBody = await res.text();
+      // Móvil mexicano rechazado con el formato 52 + 10: se prueba una vez con 521 + 10 y, si Meta lo acepta, se recuerda.
+      if (
+        destino !== undefined &&
+        !aprendido &&
+        codigoDeError(errorBody) === ERROR_DESTINO_NO_PERMITIDO &&
+        telefonoParaEnvio(destino, true) !== destino
+      ) {
+        logger.warn({ destino }, "Meta rechazó el formato 52+10: se reintenta con el formato 521+10");
+        destinosConUno.add(destino);
+        try {
+          return await callGraphApi(body);
+        } catch (err) {
+          destinosConUno.delete(destino);
+          throw err;
+        }
+      }
       logger.error({ status: res.status, errorBody }, "Falló el envío a WhatsApp Graph API");
       throw new AppError("No se pudo enviar el mensaje de WhatsApp", "whatsapp_send_failed", 502);
     }
