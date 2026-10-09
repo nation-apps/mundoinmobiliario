@@ -126,6 +126,21 @@ export async function getOrCreateConversacionAbierta(params: {
 }
 
 /**
+ * Una persona del equipo respondió a mano (desde el panel o desde Meta Business Suite): el chat pasa a «Yo»
+ * (`escalada`) para que el bot no le hable encima. Solo si lo tenía el bot; una cerrada no se reabre.
+ */
+export async function pasarAPersona(conversacionId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .update({ estado: "escalada" })
+    .eq("id", conversacionId)
+    .eq("estado", "activa")
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
+/**
  * Cambia el «origen» de una conversación ya abierta: alguien que escribía directo y ahora llega por un anuncio de
  * WhatsApp pasa a contar para esa campaña. El primer contacto del cliente (`clientes.fuente`) no cambia.
  */

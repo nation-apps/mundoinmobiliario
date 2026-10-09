@@ -286,6 +286,24 @@ export default function Hilo({
   const esComentario = conversacion?.origen === "comentario";
   const modoHumano = conversacion?.estado === "escalada";
   const humanAgentAprobado = estadoCanales?.metaHumanAgentAprobado ?? false;
+  // La IA también se apaga por canal (Canales): con ella apagada el bot no responde aunque el chat diga «Bot».
+  const [iaDelCanal, setIaDelCanal] = useState<{ canal: string; encendida: boolean } | null>(null);
+  useEffect(() => {
+    if (!canal || canal === "web") return;
+    let vigente = true;
+    supabase
+      .from("canales")
+      .select("activo, ia_activa")
+      .eq("canal", canal)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (vigente && data) setIaDelCanal({ canal, encendida: Boolean(data.activo && data.ia_activa) });
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [canal, supabase]);
+  const iaApagada = iaDelCanal?.canal === canal && iaDelCanal.encendida === false;
   const staffPorId = useMemo(() => new Map(staff.map((s) => [s.user_id, s])), [staff]);
   const chatWhatsappId = esWeb && clienteId !== null && chatWhatsapp?.clienteId === clienteId ? chatWhatsapp.id : null;
 
@@ -633,6 +651,14 @@ export default function Hilo({
               <span className={modoHumano ? "text-ink" : "text-muted"}>Yo</span>
             </label>
           )}
+          {iaApagada && !esComentario && !esWeb && (
+            <span
+              title="La IA de este canal está apagada en Canales: el bot no responde en ningún chat de este canal."
+              className="shrink-0 border border-line px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted"
+            >
+              IA del canal apagada
+            </span>
+          )}
         </div>
       </div>
 
@@ -698,7 +724,16 @@ export default function Hilo({
 
         {modoCompositor === "responder" && !modoHumano && !esComentario && !esWeb && conversacion.estado !== "cerrada" && (
           <p className="mb-2 text-xs text-muted">
-            El bot está atendiendo este chat. Puedes escribir igual, pero activa <strong>Yo</strong> para que deje de responder por su cuenta.
+            {iaApagada ? (
+              <>
+                La IA de {CANAL_LABEL[conversacion.canal]} está apagada (en Canales): el bot no responde en este chat. Responde tú.
+              </>
+            ) : (
+              <>
+                El bot está atendiendo este chat. Si respondes tú, el chat pasa a <strong>Yo</strong> y el bot deja de responder;
+                para devolvérselo, cambia a <strong>Bot</strong>.
+              </>
+            )}
           </p>
         )}
         {modoCompositor === "responder" && esComentario && (

@@ -14,6 +14,7 @@ import { normalizarTelefono } from "../lib/telefono.js";
 import {
   getConversacionConDestino,
   getOrCreateConversacionAbierta,
+  pasarAPersona,
 } from "../db/repositories/conversaciones.js";
 import { guardarMensaje, getMensajeById, actualizarMetadataPorExternalId } from "../db/repositories/mensajes.js";
 import { getClienteById, getClienteByTelefono, guardarTelefonoCliente, fusionarClientes } from "../db/repositories/clientes.js";
@@ -141,7 +142,12 @@ export async function adminRoutes(app: FastifyInstance) {
       });
     }
 
-    logger.info({ conversacionId, canal: found.conversacion.canal }, "Mensaje humano enviado desde el panel");
+    // Respondió una persona: el bot deja de contestar en este chat hasta que lo devuelvan a «Bot».
+    const pasoAPersona = await pasarAPersona(conversacionId).catch((err: unknown) => {
+      logger.warn({ err, conversacionId }, "No se pudo pasar la conversación a «Yo»");
+      return false;
+    });
+    logger.info({ conversacionId, canal: found.conversacion.canal, pasoAPersona }, "Mensaje humano enviado desde el panel");
     return reply.status(201).send({ mensaje });
   });
 

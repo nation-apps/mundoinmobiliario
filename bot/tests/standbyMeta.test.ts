@@ -15,7 +15,11 @@ vi.mock("../src/lib/rateLimit.js", () => ({ isRateLimited: () => false }));
 vi.mock("../src/meta/identidades.js", () => ({
   resolverIdentidad: vi.fn(async () => ({ cliente: { id: "c1", telefono: null }, identidad: { id: "i1", nombre_perfil: null } })),
 }));
-vi.mock("../src/db/repositories/conversaciones.js", () => ({ getOrCreateConversacionAbierta: vi.fn(async () => ({ id: "conv-1" })) }));
+const conversaciones = {
+  getOrCreateConversacionAbierta: vi.fn(async () => ({ id: "conv-1" })),
+  pasarAPersona: vi.fn(async () => true),
+};
+vi.mock("../src/db/repositories/conversaciones.js", () => conversaciones);
 vi.mock("../src/meta/client.js", () => ({ descargarAdjunto: vi.fn() }));
 vi.mock("../src/lib/adjuntos.js", () => ({ subirAdjunto: vi.fn(), mediaTypeDeAttachment: vi.fn() }));
 
@@ -57,3 +61,43 @@ describe("mensajes en standby (el hilo lo atiende otra app)", () => {
     expect(documento.procesarDocumentoEntrante).not.toHaveBeenCalled();
   });
 });
+
+/** El asesor de TVS respondía desde Business Suite y el chat seguía en «Bot»: ahora pasa a «Yo» solo. */
+describe("respuesta de un asesor desde Meta Business Suite", () => {
+  const eco = {
+    object: "page",
+    entry: [
+      {
+        id: "PAGINA",
+        messaging: [
+          {
+            sender: { id: "PAGINA" },
+            recipient: { id: "PSID_ORESTES" },
+            timestamp: 1760000000000,
+            message: { mid: "m.eco.1", text: "Hola, Orestes!!", is_echo: true },
+          },
+        ],
+      },
+    ],
+  };
+
+  it("se guarda como del equipo y el chat pasa a «Yo»", async () => {
+    mensajes.existeExternalId.mockResolvedValue(false);
+    const [evento] = parseEventosMeta(eco);
+    await handleInboundMeta(evento!);
+    expect(mensajes.guardarMensaje).toHaveBeenCalledWith(
+      expect.objectContaining({ rol: "humano", contenido: "Hola, Orestes!!", metadata: { via: "business_suite" } }),
+    );
+    expect(conversaciones.pasarAPersona).toHaveBeenCalledWith("conv-1");
+    expect(inbound.handleInbound).not.toHaveBeenCalled();
+  });
+
+  it("un eco de un mensaje que mandó el propio bot no cambia nada", async () => {
+    mensajes.existeExternalId.mockResolvedValue(true);
+    const [evento] = parseEventosMeta(eco);
+    await handleInboundMeta(evento!);
+    expect(mensajes.guardarMensaje).not.toHaveBeenCalled();
+    expect(conversaciones.pasarAPersona).not.toHaveBeenCalled();
+  });
+});
+

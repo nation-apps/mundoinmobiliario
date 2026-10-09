@@ -2,7 +2,7 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { isRateLimited } from "../lib/rateLimit.js";
 import { resolverIdentidad } from "../meta/identidades.js";
-import { getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
+import { getOrCreateConversacionAbierta, pasarAPersona } from "../db/repositories/conversaciones.js";
 import { guardarMensaje, existeExternalId } from "../db/repositories/mensajes.js";
 import { descargarAdjunto } from "../meta/client.js";
 import { subirAdjunto, mediaTypeDeAttachment } from "../lib/adjuntos.js";
@@ -80,6 +80,10 @@ export async function handleInboundMeta(evento: EventoMeta): Promise<void> {
         metadata: { via: "business_suite" },
       });
     }
+    // Un asesor está respondiendo desde Business Suite: el chat pasa a «Yo» para que el bot no le hable encima.
+    await pasarAPersona(conversacion.id).catch((err: unknown) =>
+      logger.warn({ err, conversacionId: conversacion.id }, "No se pudo pasar la conversación a «Yo»"),
+    );
     return;
   }
 
