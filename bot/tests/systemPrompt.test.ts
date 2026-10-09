@@ -20,8 +20,8 @@ describe("prompt de Mundo Motos", () => {
 
   it("todo dato pendiente se convierte en «no lo sabes, lo confirma un asesor» y no se inventa", async () => {
     const p = await buildSystemPrompt("whatsapp");
-    expect(p).toMatch(/Precios: NO lo sabes todavía\. No lo inventes: di que un asesor te lo confirma/);
-    expect(p).toMatch(/Financiamiento o crédito: NO lo sabes todavía/);
+    expect(p).toMatch(/Precios de motos, refacciones y accesorios: NO lo sabes todavía\. No lo inventes: di que un asesor te lo confirma/);
+    expect(p).toMatch(/Requisitos, enganche mínimo, plazos y financieras: NO lo sabes todavía/);
     expect(p).not.toMatch(/POR_DEFINIR/);
     // Lo mismo en el texto de cada canal (TikTok mencionaba el número del bot).
     for (const canal of ["messenger", "instagram", "tiktok", "web"] as const) {
@@ -32,8 +32,22 @@ describe("prompt de Mundo Motos", () => {
   it("no inventa modelos, precios ni crédito, y no promete aprobaciones", async () => {
     const p = await buildSystemPrompt("whatsapp");
     expect(p).toMatch(/No inventes modelos, precios, existencias/);
-    expect(p).toMatch(/No prometas que un crédito se aprueba/);
+    expect(p).toMatch(/no prometas aprobación, crédito sin revisión de Buró, cero enganche/);
     expect(p).not.toMatch(/seminario|inmobiliari|inversionista/i);
+  });
+
+  it("aplica las reglas del documento del negocio", async () => {
+    const p = await buildSystemPrompt("whatsapp");
+    // Datos de la sucursal.
+    expect(p).toMatch(/Avenida Yaxchilán 573, Cancún/);
+    expect(p).toMatch(/lunes a viernes de 9 am a 6 pm y sábado de 9 am a 2 pm/);
+    // Sin seminuevas, sin pruebas de manejo prometidas, sin lo que no hay en inventario.
+    expect(p).toMatch(/No compramos, vendemos ni tomamos a cuenta motos usadas o seminuevas/);
+    expect(p).toMatch(/Ofrece una visita para conocer la moto, no una prueba/);
+    expect(p).toMatch(/No manejamos rines, llantas, cubre cárter ni cubrepuños/);
+    // Filtro de ciudad sin descartar, y el taller no diagnostica por chat.
+    expect(p).toMatch(/¿Vives en Cancún o podrías visitarnos en nuestra\s+sucursal\?/);
+    expect(p).toMatch(/Nunca des un diagnóstico como definitivo por chat/);
   });
 
   it("califica al cliente y deriva al asesor con un resumen", async () => {

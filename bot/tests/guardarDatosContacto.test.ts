@@ -10,7 +10,7 @@ const clientes = {
   guardarEmailCliente: vi.fn(),
   guardarInteresCliente: vi.fn(),
   fusionarClientes: vi.fn(),
-  INTERESES: ["moto_nueva", "seminueva", "financiamiento", "taller", "refacciones", "otro"] as const,
+  INTERESES: ["moto_nueva", "refacciones", "accesorios", "taller", "otro"] as const,
 };
 vi.mock("../src/db/repositories/clientes.js", () => clientes);
 

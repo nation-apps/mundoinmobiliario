@@ -7,7 +7,7 @@ export default function Privacidad() {
   return (
     <PaginaLegal titulo="Política de privacidad">
       <p>
-        {NEGOCIO_LEGAL} es una agencia de motocicletas. Esta política explica qué datos recibimos cuando nos escribes por
+        {NEGOCIO_LEGAL} vende motos TVS (TVS Motor Cancún), refacciones y accesorios, y tiene taller en Cancún. Esta política explica qué datos recibimos cuando nos escribes por
         WhatsApp, Messenger o Instagram, o llenas un formulario de uno de nuestros anuncios, para qué los usamos y cómo
         puedes pedir que los eliminemos.
       </p>

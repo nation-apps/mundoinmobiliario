@@ -44,24 +44,31 @@ rompe los webhooks de WhatsApp y Meta ya registrados. Si se cambia, hay que volv
 Hoy el bot usa el **número de prueba de Meta**: hasta 5 destinatarios verificados y 250 mensajes cada 24 h. Sirve para probar
 todo; para atender clientes hace falta un número real que pueda recibir el código por SMS o llamada.
 
-## 3. Datos del negocio por llenar (`bot/src/config/business.ts`)
+## 3. Datos del negocio (`bot/src/config/business.ts`)
 
-Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo confirma un asesor». **Falta que lo confirme el
-negocio:**
+Cargados del documento del cliente «Implementación CRM - Mundo de Motos» (Google Docs, 9-oct-2026): tres líneas (motos
+TVS nuevas como TVS Motor Cancún, refacciones y accesorios multimarca, taller), sucursal en Av. Yaxchilán 573, Cancún,
+horario L–V 9–18 y sábado 9–14, contado y financiamiento sujeto a Buró, redes y reglas (sin seminuevas, sin pruebas de
+manejo prometidas, sin rines, llantas, cubre cárter ni cubrepuños, el taller no diagnostica por chat, preguntar si vive
+en Cancún sin descartar). El cliente conoce el negocio como **Mundo de Motos**: así se presenta el bot.
 
-- Qué vende y qué servicios da (motos nuevas, seminuevas, refacciones, accesorios, taller).
-- Marcas y modelos; si el bot puede dar precios o rangos.
-- Crédito o financiamiento: con quién, requisitos y enganche; formas de pago; garantía.
-- Ciudad, sucursales con dirección, horario, correo, sitio web, Instagram, Facebook y WhatsApp de los asesores.
-- Catálogos, fichas técnicas o videos para la biblioteca multimedia (el bot los manda con `enviar_multimedia`).
-- Confirmar los intereses (`moto_nueva`, `seminueva`, `financiamiento`, `taller`, `refacciones`, `otro`) y las etiquetas
-  (Moto nueva, Seminueva, Crédito, Taller) que deja la migración `0003_mundo_motos.sql`.
+Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo confirma un asesor». **Falta que lo entregue
+el negocio:**
+
+- Catálogo autorizado con precios y existencias (motos, refacciones y accesorios), y tarifas de servicios de taller.
+- Condiciones de financiamiento: requisitos, enganche mínimo, plazos y qué financieras siguen habilitadas (en el proyecto
+  se registraron Galgo y Atrato; validar antes de nombrarlas).
+- Garantía, enlace de Google Maps, sitio web propio (si existe) y el número de WhatsApp definitivo del bot.
+- Directorio de asesores autorizado (Giovanny Oney +52 998 476 9700 aparece publicado; Alonso y demás, pendientes) y
+  quién atiende el +52 998 758 4160.
+- Disponibilidad real de citas: hoy el bot solo registra el horario pedido y el equipo lo confirma.
+- Catálogos o fichas técnicas para la biblioteca multimedia (el bot los manda con `enviar_multimedia`).
 
 ## 4. Base de datos
 
 Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`,
-`0004_reparto_leads.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot de Mundo Motos antes de correr
-0003**: los intereses nuevos chocarían con el check anterior de `clientes.interes`.
+`0004_reparto_leads.sql`, `0005_datos_negocio.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
+migración**: los intereses del código tienen que existir en el check de `clientes.interes`.
 
 Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:
 `insert into public.staff (user_id, nombre, email, rol) select id, 'Nombre', email, 'admin' from auth.users where email = 'correo@dominio.com';`

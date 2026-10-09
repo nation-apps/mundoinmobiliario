@@ -103,14 +103,19 @@ function fusionarFormulario(previo: Formulario | null, datos: DatosEditables): F
   return { actual, guardado: datos };
 }
 
-/** Campos del perfil de compra, en el orden en que le sirven al asesor. */
+/** Campos del perfil (compra, refacciones o taller), en el orden en que le sirven al asesor. */
 const CAMPOS_PERFIL: [keyof PerfilCompra, string][] = [
-  ["moto", "Moto que busca"],
-  ["uso", "Uso"],
+  ["moto", "Moto que quiere"],
+  ["pago", "Contado o crédito"],
+  ["enganche", "Enganche"],
   ["presupuesto", "Presupuesto"],
-  ["pago", "Forma de pago"],
   ["plazo", "Para cuándo"],
+  ["uso", "Uso"],
+  ["vehiculo", "Su moto"],
+  ["solicitud", "Pieza / servicio"],
+  ["kilometraje", "Kilometraje"],
   ["ubicacion", "Ciudad"],
+  ["horario_visita", "Horario que pidió"],
   ["notas", "Notas del bot"],
 ];
 

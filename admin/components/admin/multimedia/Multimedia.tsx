@@ -45,7 +45,7 @@ const EJEMPLO_TEMARIO = {
   nota:
     "Cuando el cliente pide ver los modelos, mándalo y pregúntale para qué usaría la moto. " +
     "No des precios ni existencias que no estén en el documento.",
-  caption: "Catálogo · Mundo Motos",
+  caption: "Catálogo TVS · Mundo de Motos",
 };
 
 export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]; urlBase: string }) {

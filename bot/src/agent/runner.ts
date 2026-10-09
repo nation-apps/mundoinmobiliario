@@ -23,10 +23,10 @@ const MAX_TOKENS = 1024;
 const BUDGET_NOTICE_THROTTLE_MS = 60 * 60_000;
 
 export const FALLBACK_MESSAGE =
-  "Disculpa, tuve un problema para procesar tu mensaje. Ya avisé al equipo de Mundo Motos para que te escriba.";
+  "Disculpa, tuve un problema para procesar tu mensaje. Ya avisé al equipo de Mundo de Motos para que te escriba.";
 
 const BUDGET_EXCEEDED_MESSAGE =
-  "Estamos con alta demanda en este momento. Alguien del equipo de Mundo Motos te va a escribir en breve.";
+  "Estamos con alta demanda en este momento. Alguien del equipo de Mundo de Motos te va a escribir en breve.";
 
 /** Lo que devuelve runAgent en modo "sugerir" cuando no pudo generar un borrador — nunca escala, nunca manda nada. */
 export const SUGERENCIA_NO_DISPONIBLE =

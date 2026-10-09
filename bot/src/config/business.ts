@@ -4,39 +4,53 @@ import { env } from "./env.js";
 export const POR_DEFINIR = "POR_DEFINIR";
 
 /**
- * Datos de Mundo Motos. Lo que diga POR_DEFINIR hay que llenarlo con el dueño antes de abrir el bot al público: el bot
- * no inventa nada (modelos, precios, existencias, financiamiento, horarios) y para cada dato pendiente dice que un
- * asesor lo confirma.
+ * Datos de Mundo de Motos, tomados del documento «Implementación CRM - Mundo de Motos» (Google Docs, 9-oct-2026). Lo
+ * que diga POR_DEFINIR el bot no lo inventa (precios, existencias, condiciones de crédito) y dice que un asesor lo
+ * confirma. Cuando el negocio entregue catálogo con precios, condiciones de financiamiento o el enlace de Google Maps,
+ * se llenan aquí.
  */
 export const NEGOCIO = {
-  nombre: "Mundo Motos",
-  rubro: "agencia de motocicletas",
+  nombre: "Mundo de Motos",
+  /** La venta de motos nuevas se presenta como TVS Motor Cancún, en alianza con Mundo de Motos. */
+  rubro: "agencia TVS y refaccionaria y taller multimarca",
   pais: "México",
-  ciudad: POR_DEFINIR,
-  /** Qué vende y qué servicios da (motos nuevas, seminuevas, refacciones, taller…), tal cual lo diga el negocio. */
-  propuesta: POR_DEFINIR,
-  /** Marcas y modelos que maneja. */
-  marcas: POR_DEFINIR,
-  /** Precios o rangos que el bot puede dar. Si el negocio prefiere que solo los dé un asesor, se deja en POR_DEFINIR. */
+  ciudad: "Cancún, Quintana Roo",
+  motos:
+    "motos nuevas de la marca TVS (la venta de unidades se presenta como TVS Motor Cancún, en alianza con Mundo de " +
+    "Motos). Modelos con los que se ha trabajado: HLX 150, Apache RTR 160, RTR 200, RTR 310 y RR 310. La " +
+    "disponibilidad de cada modelo, versión y color siempre se consulta con un asesor",
+  refacciones:
+    "refacciones para modelos seleccionados de distintas marcas, principalmente Italika, Bajaj, Vento, Hero, Suzuki y " +
+    "Honda: balatas o pastillas de freno, carburadores, CDI, filtros de aire y de aceite. Multimarca no quiere decir " +
+    "que haya todas las piezas para todas las motos",
+  /** Lo que se confirmó que NO hay (conversaciones del 6 y 7 de octubre). Actualizar cuando cambie el inventario. */
+  noManejamos: "rines, llantas, cubre cárter ni cubrepuños",
+  accesorios: "accesorios para motociclistas, incluidos cascos (solo los que estén en el catálogo vigente)",
+  taller:
+    "taller multimarca para mantenimiento, servicio preventivo, cambio de piezas y limpieza de componentes, con " +
+    "atención especializada en TVS. No se ofrece diagnóstico especializado para motos de otras marcas",
+  /** No hay catálogo autorizado con precios todavía: los da un asesor. */
   precios: POR_DEFINIR,
-  /** Crédito o financiamiento: con quién, requisitos, enganche. */
-  financiamiento: POR_DEFINIR,
-  formasDePago: POR_DEFINIR,
-  /** Garantía de las motos y del servicio. */
+  financiamiento:
+    "hay venta de contado y financiada. El financiamiento está sujeto a documentación, revisión de Buró de Crédito, " +
+    "aprobación y disponibilidad",
+  /** Requisitos, enganche mínimo, plazos y financieras habilitadas: no hay una tabla autorizada todavía. */
+  requisitosCredito: POR_DEFINIR,
+  /** Tarifas de servicios de taller definidos. */
+  tarifasTaller: POR_DEFINIR,
   garantia: POR_DEFINIR,
-  /** Servicio de taller, refacciones y accesorios. */
-  servicio: POR_DEFINIR,
   /** Número del bot (el que escribe). Por ahora, el número de prueba de Meta. */
   whatsappBot: POR_DEFINIR,
-  /** WhatsApp o teléfono de los asesores, por si el bot deriva. */
-  whatsappAsesores: POR_DEFINIR,
-  email: POR_DEFINIR,
+  sucursal: "Mundo de Motos – TVS Motor Cancún, Avenida Yaxchilán 573, Cancún, Quintana Roo",
+  /** Enlace oficial de Google Maps: falta que el negocio lo comparta. */
+  mapa: POR_DEFINIR,
+  horarioTexto: "lunes a viernes de 9 am a 6 pm y sábado de 9 am a 2 pm",
+  email: "mundodemotossureste@gmail.com",
+  /** No hay un sitio propio confirmado (el de TVS México es de la marca, no de la sucursal). */
   web: POR_DEFINIR,
-  instagram: POR_DEFINIR,
-  facebook: POR_DEFINIR,
-  /** Sucursal o sucursales, con dirección. */
-  sucursales: POR_DEFINIR,
-  horarioTexto: POR_DEFINIR,
+  redes:
+    "Mundo de Motos: Facebook, Instagram y YouTube @mundodemotosmx. TVS Motor Cancún: Facebook @tvsmotorcancun e " +
+    "Instagram @tvsmotor.cancun",
 } as const;
 
 export const BUSINESS_TIMEZONE = env.BUSINESS_TIMEZONE;

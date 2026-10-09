@@ -36,7 +36,7 @@ export const guardarDatosContactoTool: AgentTool<z.infer<typeof inputSchema>> = 
   name: "guardar_datos_contacto",
   description:
     "Guarda los datos que el cliente da voluntariamente: su número de WhatsApp, nombre, correo y qué le interesa " +
-    "(interes: moto_nueva, seminueva, financiamiento, taller, refacciones u otro). Llámala apenas los dé, sin esperar a escalar. El teléfono " +
+    "(interes: moto_nueva, refacciones, accesorios, taller u otro). Llámala apenas los dé, sin esperar a escalar. El teléfono " +
     "debe ser el número de WhatsApp de la persona (10 dígitos en México, con o sin el 52 delante); nunca inventes uno. " +
     "Si devuelve 'telefono_no_verificable', no la reintentes con ese número: sigue la instrucción que trae. " +
     "Nunca pidas ni guardes contraseñas ni datos de tarjetas.",

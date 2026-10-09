@@ -6,22 +6,27 @@ export type CanalOrigen = "whatsapp" | "messenger" | "instagram" | "tiktok" | "w
 /** Canales por los que puede aparecer alguien SIN teléfono (se le conoce solo por su identidad en ese canal). */
 export type CanalLead = "messenger" | "instagram" | "tiktok";
 
-/** Lo que el cliente va contando de la moto que busca; todo opcional, se completa conforme avanza el chat. */
+/** Lo que el cliente va contando (compra, refacciones o taller); todo opcional, se completa conforme avanza el chat. */
 export type PerfilCompra = {
   moto?: string | undefined;
   uso?: string | undefined;
   presupuesto?: string | undefined;
+  enganche?: string | undefined;
   pago?: string | undefined;
   plazo?: string | undefined;
   ubicacion?: string | undefined;
+  vehiculo?: string | undefined;
+  solicitud?: string | undefined;
+  kilometraje?: string | undefined;
+  horario_visita?: string | undefined;
   notas?: string | undefined;
 };
 
 /** 'prospecto' hasta que compra; lo pasa a 'cliente' el trigger de cierre ganado, o el staff a mano. */
 export type TipoCliente = "prospecto" | "cliente" | "ex_cliente";
 
-/** Mismo check que `clientes.interes` (0003_mundo_motos.sql). */
-export const INTERESES = ["moto_nueva", "seminueva", "financiamiento", "taller", "refacciones", "otro"] as const;
+/** Mismo check que `clientes.interes` (0005_datos_negocio.sql). */
+export const INTERESES = ["moto_nueva", "refacciones", "accesorios", "taller", "otro"] as const;
 export type Interes = (typeof INTERESES)[number];
 
 /**

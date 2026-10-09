@@ -304,26 +304,30 @@ export const TIPO_CLIENTE_LABEL: Record<ClienteTipo, string> = {
 };
 
 /** clientes.interes (check de 0001_nucleo.sql). */
-/** Mismo check que `clientes.interes` (supabase/migrations/0003_mundo_motos.sql) y que INTERESES del bot. */
-export type Interes = "moto_nueva" | "seminueva" | "financiamiento" | "taller" | "refacciones" | "otro";
-export const INTERESES: Interes[] = ["moto_nueva", "seminueva", "financiamiento", "taller", "refacciones", "otro"];
+/** Mismo check que `clientes.interes` (supabase/migrations/0005_datos_negocio.sql) y que INTERESES del bot. */
+export type Interes = "moto_nueva" | "refacciones" | "accesorios" | "taller" | "otro";
+export const INTERESES: Interes[] = ["moto_nueva", "refacciones", "accesorios", "taller", "otro"];
 export const INTERES_LABEL: Record<Interes, string> = {
-  moto_nueva: "Moto nueva",
-  seminueva: "Moto seminueva",
-  financiamiento: "Crédito / financiamiento",
+  moto_nueva: "Comprar moto TVS",
+  refacciones: "Refacciones",
+  accesorios: "Accesorios",
   taller: "Taller / servicio",
-  refacciones: "Refacciones y accesorios",
   otro: "Otro",
 };
 
-/** La moto que busca el cliente (clientes.perfil, lo escribe guardar_perfil_compra). Todo opcional. */
+/** Lo que cuenta el cliente: compra, refacciones o taller (clientes.perfil, lo escribe guardar_perfil_compra). Todo opcional. */
 export type PerfilCompra = {
   moto?: string;
   uso?: string;
   presupuesto?: string;
+  enganche?: string;
   pago?: string;
   plazo?: string;
   ubicacion?: string;
+  vehiculo?: string;
+  solicitud?: string;
+  kilometraje?: string;
+  horario_visita?: string;
   notas?: string;
 };
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export const NEGOCIO_LEGAL = "Mundo Motos";
+export const NEGOCIO_LEGAL = "Mundo de Motos";
 export const CORREO_PRIVACIDAD = "amplificape@gmail.com";
 export const ACTUALIZADO = "9 de octubre de 2026";
 
