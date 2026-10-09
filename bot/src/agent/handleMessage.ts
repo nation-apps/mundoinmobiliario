@@ -2,7 +2,10 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { isRateLimited } from "../lib/rateLimit.js";
 import { findOrCreateByPhone } from "../db/repositories/clientes.js";
-import { getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
+import { actualizarFuenteConversacion, getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
+import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
+import { paginaDeAnuncio } from "../meta/client.js";
+import { marcaDePagina } from "../meta/paginas.js";
 import { guardarMensaje, marcarExternalId } from "../db/repositories/mensajes.js";
 import { sendTextIfWindowOpen } from "../whatsapp/window.js";
 import { descargarMedia } from "../whatsapp/client.js";
@@ -41,6 +44,16 @@ export function metadataAnuncio(referral: AdReferral | undefined): Record<string
   return Object.keys(anuncio).length ? { anuncio } : undefined;
 }
 
+/**
+ * El «origen» de quien llega por un anuncio de clic a WhatsApp: «Campaña WhatsApp Meta <marca>», con la marca de la
+ * página que publicó el anuncio. Sin anuncio no hay campaña (la conversación queda «WhatsApp directo»).
+ */
+export async function fuenteDeAnuncio(referral: AdReferral | undefined): Promise<string | null> {
+  if (!referral) return null;
+  const paginaId = referral.sourceId ? await paginaDeAnuncio(referral.sourceId) : null;
+  return fuenteCampana("WhatsApp", marcaDePagina(paginaId));
+}
+
 function extractText(message: InboundMessage): string | null {
   switch (message.kind) {
     case "text":
@@ -63,7 +76,18 @@ export async function handleInboundMessage(message: InboundMessage): Promise<voi
   }
 
   const cliente = await findOrCreateByPhone(message.from, message.contactName);
-  const conversacion = await getOrCreateConversacionAbierta({ clienteId: cliente.id, canal: "whatsapp" });
+  const fuenteAnuncio = message.kind === "text" ? await fuenteDeAnuncio(message.referral) : null;
+  const conversacion = await getOrCreateConversacionAbierta({
+    clienteId: cliente.id,
+    canal: "whatsapp",
+    ...(fuenteAnuncio ? { fuente: fuenteAnuncio } : {}),
+  });
+  // Ya tenía la conversación abierta (escribía directo) y ahora llega por un anuncio: cuenta para esa campaña.
+  if (fuenteAnuncio && !esFuenteDeCampana(conversacion.fuente)) {
+    await actualizarFuenteConversacion(conversacion.id, fuenteAnuncio).catch((err: unknown) =>
+      logger.warn({ err, conversacionId: conversacion.id }, "No se pudo anotar la campaña de la conversación"),
+    );
+  }
 
   if (message.kind === "audio") {
     if (conversacion.estado === "escalada") {

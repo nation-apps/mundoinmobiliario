@@ -1,10 +1,11 @@
-import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { fuenteCampana } from "../lib/fuente.js";
 import { registrarLeadWeb } from "../db/repositories/clientes.js";
 import { getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
 import { guardarMensaje } from "../db/repositories/mensajes.js";
 import { obtenerLead } from "../meta/client.js";
 import { contenidoDelLead, datosDelLead, HILO_LEAD_ADS } from "../meta/leadAds.js";
+import { marcaDePagina, tokenDePagina } from "../meta/paginas.js";
 import type { EventoMeta } from "../meta/parser.js";
 
 type EventoLead = Extract<EventoMeta, { kind: "lead_formulario" }>;
@@ -18,14 +19,16 @@ type EventoLead = Extract<EventoMeta, { kind: "lead_formulario" }>;
  * por WhatsApp a quien no ha escrito exige una plantilla aprobada.
  */
 export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
-  if (env.META_PAGE_ID && evento.cuentaId !== env.META_PAGE_ID) {
-    // El token es de una sola página: el de otra probablemente no se pueda leer, pero se intenta igual.
-    logger.warn({ paginaId: evento.cuentaId }, "Lead de una página distinta a META_PAGE_ID");
+  if (!tokenDePagina(evento.cuentaId)) {
+    // Una página que no se conectó con scripts/conectar-pagina-meta.py: se intenta con el token principal.
+    logger.warn({ paginaId: evento.cuentaId }, "Lead de una página sin token propio (no está en META_PAGINAS)");
   }
+  // De qué página vino: es lo que distingue «Campaña Formulario Meta TVS» de «… Mundo de Motos».
+  const marca = marcaDePagina(evento.cuentaId);
 
   let lead;
   try {
-    lead = await obtenerLead(evento.leadgenId, evento.formId);
+    lead = await obtenerLead(evento.leadgenId, evento.formId, evento.cuentaId);
   } catch (err) {
     // Sin las respuestas no hay a quién registrar. Meta guarda el lead 90 días: se puede bajar desde el Centro de clientes potenciales.
     logger.error(
@@ -45,6 +48,7 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
     origen: "formulario",
     hiloExterno: HILO_LEAD_ADS,
     cuentaId: evento.cuentaId,
+    fuente: fuenteCampana("Formulario", marca),
   });
 
   try {
@@ -57,6 +61,8 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
       metadata: {
         origen: HILO_LEAD_ADS,
         leadgen_id: lead.id,
+        pagina_id: evento.cuentaId,
+        ...(marca ? { marca } : {}),
         ...(lead.formId ? { form_id: lead.formId } : {}),
         ...(lead.adId ? { ad_id: lead.adId } : {}),
         ...(lead.formulario ? { formulario: lead.formulario } : {}),

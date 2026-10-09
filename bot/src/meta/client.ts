@@ -4,6 +4,7 @@ import { AppError } from "../lib/errors.js";
 import type { CanalMeta, AttachmentType } from "./parser.js";
 import type { ModoEnvioMeta } from "./window.js";
 import type { CampoLead } from "./leadAds.js";
+import { tokenDePagina, tokensParaAnuncios } from "./paginas.js";
 
 export const GRAPH_BASE_URL = `https://graph.facebook.com/${env.META_GRAPH_VERSION}`;
 
@@ -153,8 +154,8 @@ export async function obtenerPerfil(params: { canal: CanalMeta; id: string }): P
   }
 }
 
-async function leerGraphApi(path: string, campos: string): Promise<Record<string, unknown>> {
-  const url = `${GRAPH_BASE_URL}${path}?fields=${campos}&access_token=${encodeURIComponent(tokenRequerido())}`;
+async function leerGraphApi(path: string, campos: string, token = tokenRequerido()): Promise<Record<string, unknown>> {
+  const url = `${GRAPH_BASE_URL}${path}?fields=${campos}&access_token=${encodeURIComponent(token)}`;
   const res = await fetch(url);
   if (!res.ok) {
     const errorBody = await res.text();
@@ -185,11 +186,15 @@ export type LeadMeta = {
  * Las respuestas de un formulario instantáneo (Lead Ads). Necesita
  * `leads_retrieval` en el token de la página y que la app tenga acceso a los
  * clientes potenciales de la página (Business Settings → Integraciones →
- * Acceso a clientes potenciales). Lanza si no se pueden leer las respuestas;
- * el nombre del formulario y del anuncio se piden aparte y nunca hacen fallar.
+ * Acceso a clientes potenciales). Se lee con el token de la página que
+ * publicó el formulario (meta/paginas.ts). Lanza si no se pueden leer las
+ * respuestas; el nombre del formulario y del anuncio se piden aparte y nunca
+ * hacen fallar.
  */
-export async function obtenerLead(leadgenId: string, formIdAviso: string | null): Promise<LeadMeta> {
-  const data = await leerGraphApi(`/${leadgenId}`, "id,form_id,ad_id,field_data");
+export async function obtenerLead(leadgenId: string, formIdAviso: string | null, paginaId: string | null): Promise<LeadMeta> {
+  const token = tokenDePagina(paginaId) ?? tokenRequerido();
+  const leer = (path: string, campos: string) => leerGraphApi(path, campos, token);
+  const data = await leer(`/${leadgenId}`, "id,form_id,ad_id,field_data");
   const campos = (Array.isArray(data.field_data) ? data.field_data : []).flatMap((c: unknown) => {
     const campo = c as { name?: unknown; values?: unknown };
     if (typeof campo.name !== "string") return [];
@@ -200,14 +205,14 @@ export async function obtenerLead(leadgenId: string, formIdAviso: string | null)
 
   const [formulario, extra] = await Promise.all([
     formId
-      ? leerGraphApi(`/${formId}`, "name")
+      ? leer(`/${formId}`, "name")
           .then((d) => textoOpcional(d.name))
           .catch((err: unknown) => {
             logger.warn({ err, formId }, "No se pudo leer el nombre del formulario de Meta (no crítico)");
             return null;
           })
       : Promise.resolve(null),
-    leerGraphApi(`/${leadgenId}`, "ad_name,campaign_name,platform,is_organic").catch((err: unknown) => {
+    leer(`/${leadgenId}`, "ad_name,campaign_name,platform,is_organic").catch((err: unknown) => {
       logger.warn({ err, leadgenId }, "No se pudo leer el anuncio del lead de Meta (no crítico)");
       return {} as Record<string, unknown>;
     }),
@@ -224,6 +229,38 @@ export async function obtenerLead(leadgenId: string, formIdAviso: string | null)
     plataforma: textoOpcional(extra.platform),
     esOrganico: extra.is_organic === true,
   };
+}
+
+const paginaPorAnuncio = new Map<string, { paginaId: string | null; hasta: number }>();
+const REINTENTO_ANUNCIO_MS = 30 * 60 * 1000;
+
+/**
+ * De qué página es un anuncio (para el «origen» de quien llega por un anuncio de WhatsApp): la página que lo publica
+ * es el `actor_id` de su creatividad. Necesita un token con acceso a la cuenta publicitaria (META_ADS_TOKEN o, si
+ * alcanza, el de una página). Nunca lanza: si no se puede saber devuelve null. Guarda el resultado; un fallo se
+ * reintenta a la media hora.
+ */
+export async function paginaDeAnuncio(anuncioId: string): Promise<string | null> {
+  const previo = paginaPorAnuncio.get(anuncioId);
+  if (previo && (previo.paginaId || previo.hasta > Date.now())) return previo.paginaId;
+
+  for (const token of tokensParaAnuncios()) {
+    try {
+      const data = await leerGraphApi(`/${anuncioId}`, "creative{actor_id,effective_object_story_id}", token);
+      const creativo = (data.creative ?? {}) as { actor_id?: unknown; effective_object_story_id?: unknown };
+      const paginaId =
+        textoOpcional(creativo.actor_id) ?? textoOpcional(creativo.effective_object_story_id)?.split("_")[0] ?? null;
+      if (paginaId) {
+        paginaPorAnuncio.set(anuncioId, { paginaId, hasta: Infinity });
+        return paginaId;
+      }
+    } catch {
+      // Este token no ve la cuenta publicitaria: se prueba con el siguiente.
+    }
+  }
+  logger.warn({ anuncioId }, "No se pudo saber de qué página es el anuncio (falta un token con acceso a la cuenta publicitaria)");
+  paginaPorAnuncio.set(anuncioId, { paginaId: null, hasta: Date.now() + REINTENTO_ANUNCIO_MS });
+  return null;
 }
 
 /** Las URLs de adjuntos entrantes de Meta caducan: hay que descargar al momento de recibirlas. */

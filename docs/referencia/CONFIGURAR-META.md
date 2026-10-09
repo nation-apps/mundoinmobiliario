@@ -212,8 +212,10 @@ Para que lleguen:
    app y en el token de la Página (§3). Quien genera el token debe poder **anunciar** en la Página (tarea
    ADVERTISE). Si el token ya existía, vuelve a autorizar la app con los permisos nuevos y comprueba con
    `debug_token` que `scopes` incluya `leads_retrieval`. Atajo: genera el token de usuario en el Explorador de la
-   Graph API, cópialo y corre `python3 scripts/conectar-pagina-meta.py`. El script saca el token de la página (no
-   vence), lo guarda en Railway, suscribe la página a `leadgen` y lista los formularios, sin mostrar ningún token.
+   Graph API, cópialo y corre `python3 scripts/conectar-pagina-meta.py <ID> --marca <marca>` una vez por página
+   (Mundo de Motos: TVS Motor Cancún con `--marca TVS` y Mundo de Motos MX con `--marca "Mundo de Motos"`; la que
+   atiende los DMs, con `--mensajes`). El script saca el token de la página (no vence), lo guarda en `META_PAGINAS`,
+   suscribe la página y lista los formularios, sin mostrar ningún token.
 2. **Webhook**: objeto Page, campo `leadgen` (§5), y la Página suscrita con `leadgen` en `subscribed_fields`.
 3. **Acceso a clientes potenciales**: Business Settings → Integraciones → **Acceso a clientes potenciales**
    (Leads Access). Si el negocio personalizó el acceso, la app (o el usuario del sistema) debe estar en la lista
@@ -227,3 +229,18 @@ web y bot») se ve si el aviso `leadgen` está suscrito y si el token trae el pe
 del bot dice «No se pudo leer el lead de Meta» con la respuesta de Meta (casi siempre falta `leads_retrieval` o el
 acceso a clientes potenciales). Meta guarda los leads 90 días: lo que no entró se puede bajar en CSV desde el
 Centro de clientes potenciales de Meta Business Suite.
+
+## 10. Origen de cada lead (campo «origen»)
+
+Cada conversación y cada cliente guardan de dónde vinieron (`conversaciones.fuente` / `clientes.fuente`, migración
+0006; el cliente se queda con su primer contacto). Etiquetas (`bot/src/lib/fuente.ts`):
+
+- **Campaña Formulario Meta <marca>**: formulario instantáneo; la marca es la de la página que publicó el formulario
+  (`META_PAGINAS`).
+- **Campaña WhatsApp Meta <marca>**: llegó por un anuncio de clic a WhatsApp; la página sale del anuncio
+  (`GET /{ad_id}?fields=creative{actor_id}`), lo que necesita un token con acceso a la cuenta publicitaria
+  (`--anuncios` en el script, o un token de página si alcanza). Si no se puede saber, queda «Campaña WhatsApp Meta».
+- **WhatsApp directo**, **Instagram**, **Messenger**, **Formulario web**, **Comentario Facebook/Instagram**.
+
+Los anuncios de WhatsApp solo llegan al panel si apuntan al número de WhatsApp conectado al bot.
+

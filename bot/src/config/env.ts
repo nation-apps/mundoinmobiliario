@@ -29,6 +29,13 @@ const envSchema = z.object({
   META_PAGE_ID: z.string().min(1).optional(),
   META_PAGE_ACCESS_TOKEN: z.string().min(1).optional(),
   META_IG_ACCOUNT_ID: z.string().min(1).optional(),
+  // Páginas cuyos formularios de anuncios llegan a la bandeja, cada una con su marca (la del campo «origen») y su
+  // token: JSON [{"id":"…","marca":"TVS","token":"…"}]. Lo escribe scripts/conectar-pagina-meta.py. La de
+  // META_PAGE_ID (mensajes directos) puede estar también aquí para tener su marca.
+  META_PAGINAS: z.string().min(1).optional(),
+  // Opcional: token con ads_read sobre la cuenta publicitaria, para saber de qué página es un anuncio de WhatsApp
+  // (si falta se prueba con los tokens de página).
+  META_ADS_TOKEN: z.string().min(1).optional(),
   // Entre 24h y 7 días de la última respuesta, solo un humano puede escribir
   // con el tag HUMAN_AGENT — y solo si Meta aprobó esa función en App Review.
   // Se compara el string tal cual contra "true" (Boolean("false") es true).

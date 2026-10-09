@@ -67,7 +67,7 @@ el negocio:**
 ## 4. Base de datos
 
 Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`,
-`0004_reparto_leads.sql`, `0005_datos_negocio.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
+`0004_reparto_leads.sql`, `0005_datos_negocio.sql`, `0006_fuente_lead.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
 migración**: los intereses del código tienen que existir en el check de `clientes.interes`.
 
 Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:

@@ -84,7 +84,16 @@ export type ConversacionResumen = {
   primera_respuesta_at: string | null;
   primera_respuesta_humana_at: string | null;
   actividad_at: string;
+  /** De dónde vino esta conversación («Campaña Formulario Meta TVS», «WhatsApp directo»…). Opcional: antes de 0006 no existe. */
+  fuente?: string | null;
+  /** Origen del primer contacto del cliente. */
+  cliente_fuente?: string | null;
 };
+
+/** «Campaña WhatsApp Meta TVS» → «WhatsApp Meta TVS» (la etiqueta corta de la lista). Null si no es de campaña. */
+export function campanaCorta(fuente: string | null | undefined): string | null {
+  return fuente?.startsWith("Campaña ") ? fuente.slice("Campaña ".length) : null;
+}
 
 export type Mensaje = {
   id: string;

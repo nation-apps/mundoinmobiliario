@@ -1,4 +1,5 @@
 import { supabase } from "../client.js";
+import { fuentePorCanal } from "../../lib/fuente.js";
 
 /**
  * `web` es el formulario de contacto del sitio (POST /public/leads): llega a la
@@ -34,6 +35,8 @@ export type Conversacion = {
   /** Solo con etapa 'cerrado'. Cerrar como 'ganado' pasa al contacto a `clientes.tipo = 'cliente'` (trigger). */
   motivo_cierre: MotivoCierre | null;
   asignada_a: string | null;
+  /** De dónde vino («Campaña Formulario Meta TVS», «WhatsApp directo»…): lib/fuente.ts. */
+  fuente: string | null;
   created_at: string;
 };
 
@@ -68,6 +71,8 @@ export async function getOrCreateConversacionAbierta(params: {
    * ventana de 24h está abierta y el siguiente texto libre rebotaría en Meta.
    */
   ultimoMensajeAt?: string;
+  /** Solo al CREAR: el «origen» del lead. Sin él se deduce del canal (lib/fuente.ts → fuentePorCanal). */
+  fuente?: string | null;
 }): Promise<Conversacion> {
   const canal = params.canal ?? "whatsapp";
   const origen = params.origen ?? "dm";
@@ -99,6 +104,7 @@ export async function getOrCreateConversacionAbierta(params: {
       identidad_id: params.identidadId ?? null,
       hilo_externo: hiloExterno,
       cuenta_id: params.cuentaId ?? null,
+      fuente: params.fuente ?? fuentePorCanal(canal, origen, hiloExterno),
       ...(params.ultimoMensajeAt ? { ultimo_mensaje_at: params.ultimoMensajeAt } : {}),
     })
     .select("*")
@@ -117,6 +123,15 @@ export async function getOrCreateConversacionAbierta(params: {
     throw insertError;
   }
   return creada as Conversacion;
+}
+
+/**
+ * Cambia el «origen» de una conversación ya abierta: alguien que escribía directo y ahora llega por un anuncio de
+ * WhatsApp pasa a contar para esa campaña. El primer contacto del cliente (`clientes.fuente`) no cambia.
+ */
+export async function actualizarFuenteConversacion(conversacionId: string, fuente: string): Promise<void> {
+  const { error } = await supabase.from("conversaciones").update({ fuente }).eq("id", conversacionId);
+  if (error) throw error;
 }
 
 /**

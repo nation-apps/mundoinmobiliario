@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import {
   ETAPA_LABEL,
   HILO_LEAD_ADS,
+  campanaCorta,
   describirIdentidad,
   esperaRespuesta,
   iniciales,
@@ -113,6 +114,7 @@ export default function ListaConversaciones({
         const pendiente = esperaRespuesta(c);
         const etiquetas = etiquetasPorCliente.get(c.cliente_id) ?? [];
         const tono = ETAPA_TONO[c.etapa] ?? ETAPA_TONO.nuevo;
+        const campana = campanaCorta(c.fuente);
         return (
           <li key={c.id}>
             <button
@@ -141,6 +143,11 @@ export default function ListaConversaciones({
                   >
                     {ETAPA_LABEL[c.etapa]}
                   </span>
+                  {campana && (
+                    <span title={c.fuente ?? undefined} className="border border-accent/40 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                      {campana}
+                    </span>
+                  )}
                   {c.asignada_nombre && (
                     <span
                       title={`Asignada a ${c.asignada_nombre}`}

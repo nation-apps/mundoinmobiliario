@@ -718,6 +718,15 @@ function Ficha({
                 : "Llegó por el formulario de la web."}
           </p>
         )}
+        {conversacion.fuente && (
+          <div className="mt-3 text-xs text-ink-soft">
+            <span className="admin-label">Origen</span>
+            <span className="text-ink">{conversacion.fuente}</span>
+            {conversacion.cliente_fuente && conversacion.cliente_fuente !== conversacion.fuente && (
+              <span className="mt-0.5 block text-muted">Primer contacto: {conversacion.cliente_fuente}</span>
+            )}
+          </div>
+        )}
 
         <div className="mt-3">
           {telefono ? (

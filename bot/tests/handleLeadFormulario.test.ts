@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/lib/logger.js", () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
-vi.mock("../src/config/env.js", () => ({ env: { META_PAGE_ID: "PAGE_ID_TEST" } }));
+vi.mock("../src/meta/paginas.js", () => ({
+  marcaDePagina: (id: string) => (id === "PAGE_ID_TEST" ? "TVS" : null),
+  tokenDePagina: (id: string) => (id === "PAGE_ID_TEST" ? "token-de-prueba" : null),
+}));
 
 const clientes = { registrarLeadWeb: vi.fn() };
 const conversaciones = { getOrCreateConversacionAbierta: vi.fn() };
@@ -53,7 +56,8 @@ describe("handleLeadFormulario", () => {
   it("registra al lead y lo deja en su propio hilo de formulario de anuncio", async () => {
     await handleLeadFormulario(evento);
 
-    expect(metaClient.obtenerLead).toHaveBeenCalledWith("444", "555");
+    // Se lee con el token de la página que publicó el formulario.
+    expect(metaClient.obtenerLead).toHaveBeenCalledWith("444", "555", "PAGE_ID_TEST");
     expect(clientes.registrarLeadWeb).toHaveBeenCalledWith({ telefono: "525512345678", nombre: "Ana López", email: undefined });
     expect(conversaciones.getOrCreateConversacionAbierta).toHaveBeenCalledWith({
       clienteId: "cliente-1",
@@ -61,6 +65,8 @@ describe("handleLeadFormulario", () => {
       origen: "formulario",
       hiloExterno: "facebook_lead_ads",
       cuentaId: "PAGE_ID_TEST",
+      // El «origen» que pidió el cliente, con la marca de la página.
+      fuente: "Campaña Formulario Meta TVS",
     });
     expect(mensajes.guardarMensaje).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,6 +76,7 @@ describe("handleLeadFormulario", () => {
         contenido: "Nombre: Ana López\nTeléfono: +525512345678",
         metadata: expect.objectContaining({
           origen: "facebook_lead_ads",
+          marca: "TVS",
           formulario: "Cotiza tu moto",
           anuncio: "Video moto nueva",
           plataforma: "ig",
