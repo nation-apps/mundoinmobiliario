@@ -21,6 +21,12 @@ describe("datosDelLead", () => {
     expect(datos.nombre).toBe("Ana López");
   });
 
+  it("acepta el campo de teléfono llamado `phone` (formularios de Mundo de Motos MX)", () => {
+    const campos = [{ name: "phone", values: ["+5219981234567"] }];
+    expect(datosDelLead(campos).telefono).toBe("529981234567");
+    expect(contenidoDelLead(campos)).toBe("Teléfono: +5219981234567");
+  });
+
   it("si el formulario pide el WhatsApp con una pregunta propia, lo usa como teléfono", () => {
     const datos = datosDelLead([{ name: "¿cuál_es_tu_whatsapp?", values: ["55 1234 5678"] }]);
     expect(datos.telefono).toBe("525512345678");

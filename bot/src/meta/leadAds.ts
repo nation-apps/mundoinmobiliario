@@ -25,6 +25,8 @@ const ETIQUETAS: Record<string, string> = {
   email: "Correo",
   work_email: "Correo de trabajo",
   phone_number: "Teléfono",
+  // Algunos formularios (p. ej. los de Mundo de Motos MX) llaman así al campo estándar de teléfono.
+  phone: "Teléfono",
   work_phone_number: "Teléfono de trabajo",
   city: "Ciudad",
   state: "Estado",
@@ -63,6 +65,7 @@ export function datosDelLead(campos: CampoLead[]): DatosLead {
 
   const crudoTelefono =
     primerValor(campos, "phone_number") ??
+    primerValor(campos, "phone") ??
     primerValor(campos, "work_phone_number") ??
     campos
       .filter((c) => !(c.name in ETIQUETAS) && PREGUNTA_DE_TELEFONO.test(c.name))
