@@ -72,7 +72,7 @@ app.setErrorHandler((err, request, reply) => {
 
 try {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
-  logger.info({ port: env.PORT }, "byb-escuela-bot escuchando");
+  logger.info({ port: env.PORT }, "mundo-motos-bot escuchando");
 } catch (err) {
   logger.error({ err }, "No se pudo iniciar el servidor");
   process.exit(1);

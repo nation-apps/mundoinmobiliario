@@ -8,3 +8,6 @@ dist/
 .next/
 *.tsbuildinfo
 next-env.d.ts
+
+# Archivos locales con contraseñas de prueba (bot/scripts/crear-cuentas-equipo.mjs)
+*.local.txt
