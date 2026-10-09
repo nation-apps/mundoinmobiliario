@@ -1,90 +1,78 @@
-# Guía de arranque: Mundo Inmobiliario (app de Meta «Mundo Motos»)
+# Guía de arranque: Mundo Motos
 
-*Estado al 5 de octubre de 2026.* Esta guía dice qué está hecho, qué falta y quién lo hace. El orden de montaje en Meta,
+*Estado al 9 de octubre de 2026.* Esta guía dice qué está hecho, qué falta y quién lo hace. El orden de montaje en Meta,
 Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aura); aquí solo lo adaptado a este negocio.
 
-## 1. Hecho (código)
+## 1. Hecho
 
-- Bot copiado del de B&B y limpiado: sin cursos, citas, tienda, evento ni pagos por Yape. Compila y pasa 208 pruebas.
-- Panel de administración en `admin/` (Next.js 16, copiado del de B&B y adaptado): chats, canales y multimedia. Compila.
-- **El negocio es educación e inversión inmobiliaria** (Luis Ramírez), no venta de propiedades. Datos tomados de
-  https://eventos.mundoinmobiliario.tv/ el 5-oct-2026: seminario gratuito en Zoom y tres programas (Programa Avanzado, Mentoría, Máster).
-- Prompt (`bot/src/agent/systemPrompt.ts`): lleva al seminario, orienta qué programa encaja, califica, y pasa a un asesor a quien
-  quiere inscribirse o pregunta precios. No inventa precios ni fechas, no promete resultados, no cita testimonios como garantía.
-- Herramienta `guardar_perfil_inversionista` (experiencia, objetivo, capital, plazo, ubicación) → `clientes.perfil`; el asesor lo
-  ve en la ficha sin releer el chat. Etiquetas: Seminario, Programa Avanzado, Mentoría, Máster (+ Anulado).
+- **El negocio es Mundo Motos, una agencia de motocicletas.** El bot estuvo orientado a Mundo Inmobiliario (seminario,
+  programas, perfil de inversionista); todo eso se quitó el 9 de octubre de 2026.
+- Prompt (`bot/src/agent/systemPrompt.ts`): entiende qué moto busca la persona y cómo piensa pagarla, guarda su perfil de
+  compra y pasa a un asesor a quien quiere cotizar, apartar, tramitar un crédito o agendar una visita o prueba de manejo.
+  No inventa modelos, precios, existencias ni condiciones de crédito, y no promete aprobaciones.
+- Herramienta `guardar_perfil_compra` (moto, uso, presupuesto, pago, plazo, ciudad) → `clientes.perfil`; el asesor lo ve en
+  la ficha sin releer el chat.
+- **Leads de formularios de anuncios** de Facebook e Instagram → Chats, como «Formulario de anuncio»
+  (`docs/referencia/CONFIGURAR-META.md` §9).
+- Panel de administración en `admin/` (Next.js 16): chats, canales y multimedia. Páginas públicas para Meta: `/privacidad`,
+  `/terminos`, `/eliminar-datos`.
 - México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Mexico_City`, plantillas `es_MX`.
-- Esquema de base de datos mínimo en `supabase/migrations/0001_nucleo.sql`. Se validó ejecutándolo completo en un esquema
-  temporal con rollback; falta aplicarlo en el proyecto de Supabase del negocio.
-- Heredado de B&B: ritmo humano, juntar mensajes seguidos, reintento y reenvío de envíos fallidos, etiqueta **Anulado**,
-  botones de WhatsApp, tope diario de gasto, alerta de saldo de Anthropic.
 
-## 2. Número de WhatsApp «gratis por mientras»
+### Dónde vive cada cosa
 
-**Usa el número de prueba de Meta**, no Twilio:
+| Pieza | Dónde |
+|---|---|
+| Código | GitHub `nation-apps/mundoinmobiliario` (se sube con la cuenta `nation-apps`) |
+| Bot | Railway, proyecto `beautiful-acceptance`, servicio `mundoinmobiliario`, `https://mundoinmobiliario-production.up.railway.app` |
+| Panel | Mismo proyecto, servicio `joyful-peace`, `https://joyful-peace-production-2649.up.railway.app/admin` |
+| Base de datos | Supabase (la URL está en las variables del bot en Railway) |
+| App de Meta | «Mundo Motos», ID `2544073699424560`, portafolio «Mundo Motos» |
 
-- Se crea solo al agregar el caso de uso de WhatsApp a la app «Mundo Motos» (Meta Developers → la app → WhatsApp →
-  Configuración de la API). No necesita línea, trámite ni pago.
-- Límites: hasta **5 destinatarios verificados** (se agregan y se confirman con un código) y **250 mensajes cada 24 h**.
-- Sirve para probar todo el bot: webhook, respuestas, botones, escalada, panel.
-- Para producción hace falta un número real que pueda recibir el código por SMS o llamada (de cualquier país).
+**Desplegar:** el push a `main` no despliega solo. Desde la raíz del repo (con el proyecto enlazado):
+`railway up -s mundoinmobiliario --detach` (bot) y `railway up -s joyful-peace --detach` (panel). Subir siempre el repo
+completo: los servicios usan Root Directory `/bot` y `/admin`.
 
-**Twilio:** un número mexicano no es inmediato ni gratis. Twilio pide un paquete regulatorio para México (identidad y
-dirección en México; los negocios, la Constancia de Situación Fiscal) y tarda varios días hábiles. La cuenta de prueba tiene
-la selección de números limitada. No verifiqué si Meta acepta registrar un número de Twilio como número de WhatsApp.
-Si más adelante quieren un número mexicano propio, lo más simple es una línea física o eSIM de un operador mexicano.
+Los nombres `mundoinmobiliario` del repo, del servicio y del dominio del bot se dejaron así a propósito: cambiar el dominio
+rompe los webhooks de WhatsApp y Meta ya registrados. Si se cambia, hay que volver a registrar las dos URLs de webhook.
 
-## 3. Lo que necesito de ti
+## 2. Número de WhatsApp
 
-| # | Qué | Para qué |
-|---|---|---|
-| 1 | **Cuentas del negocio** (yo no puedo crearlas): GitHub (repo `nation-apps/mundoinmobiliario`), Railway (proyecto nuevo) y Supabase (proyecto nuevo). Dame acceso o ejecuta tú los comandos que te pase. | Subir el código, desplegar el bot y aplicar la migración. |
-| 2 | **Llave de Anthropic sin vencimiento** (la guardas en el portapapeles; no la pegues en el chat). | Que el bot responda. |
-| 3 | **App «Mundo Motos» en Meta**: su App ID y a qué portafolio comercial pertenece. | Webhook, casos de uso y permisos (runbook §2). |
-| 4 | **Datos del negocio** (sección 4). | Llenar `bot/src/config/business.ts`. |
-| 5 | **Celular de prueba** para verificarlo como destinatario del número de prueba de Meta. | Probar el bot. |
-| 6 | **País y ciudad confirmados** (asumí México por el número). | Idioma, zona horaria y moneda. |
+Hoy el bot usa el **número de prueba de Meta**: hasta 5 destinatarios verificados y 250 mensajes cada 24 h. Sirve para probar
+todo; para atender clientes hace falta un número real que pueda recibir el código por SMS o llamada.
 
-## 4. Datos del negocio por llenar (`bot/src/config/business.ts`)
+## 3. Datos del negocio por llenar (`bot/src/config/business.ts`)
 
-Ya cargado desde el sitio: qué enseñan, fundador, descripción del seminario y su enlace de registro, descripción de los tres
-programas, Instagram/Facebook `@luisinverpresario`. Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo
-confirma un asesor». **Falta que lo confirme el negocio:**
+Cada campo en `POR_DEFINIR` se convierte, en el prompt, en «no lo sabes: lo confirma un asesor». **Falta que lo confirme el
+negocio:**
 
-- **Fecha y hora del próximo seminario** (el sitio mostraba «miércoles 19 de agosto, 8 pm CDMX», que ya pasó).
-- **Precios, formas de pago, fechas de inicio y garantía** del Programa Avanzado, la Mentoría y el Máster (el sitio no los publica).
-- Qué incluye y cuesta la **entrada VIP** del seminario.
-- Ciudad, correo, horario de atención y WhatsApp de los asesores.
-- Temarios, PDFs o videos para la biblioteca multimedia (el bot los manda con `enviar_multimedia`).
+- Qué vende y qué servicios da (motos nuevas, seminuevas, refacciones, accesorios, taller).
+- Marcas y modelos; si el bot puede dar precios o rangos.
+- Crédito o financiamiento: con quién, requisitos y enganche; formas de pago; garantía.
+- Ciudad, sucursales con dirección, horario, correo, sitio web, Instagram, Facebook y WhatsApp de los asesores.
+- Catálogos, fichas técnicas o videos para la biblioteca multimedia (el bot los manda con `enviar_multimedia`).
+- Confirmar los intereses (`moto_nueva`, `seminueva`, `financiamiento`, `taller`, `refacciones`, `otro`) y las etiquetas
+  (Moto nueva, Seminueva, Crédito, Taller) que deja la migración `0003_mundo_motos.sql`.
 
-## 5. Orden de montaje
+## 4. Base de datos
 
-1. **Repositorio:** `https://github.com/nation-apps/mundoinmobiliario` (bot + panel + migración en un solo repo).
-2. **Supabase:** proyecto nuevo (región cercana a México, p. ej. East US) → SQL Editor → pegar y ejecutar
-   `supabase/migrations/0001_nucleo.sql`. Luego Authentication → Users → *Add user* (correo y contraseña del primer asesor) y, en el
-   SQL Editor, dar de alta su fila de equipo:
-   `insert into public.staff (user_id, nombre, email, rol) select id, 'Nombre', email, 'admin' from auth.users where email = 'correo@dominio.com';`
-3. **Railway, servicio «bot»:** New Project → Deploy from GitHub → este repo, **Root Directory `/bot`**, generar dominio, cargar las
-   variables de `bot/.env.example` (secretos desde el portapapeles, nunca en el chat). En `ADMIN_ORIGINS` pon el dominio del panel.
-4. **Railway, servicio «admin»:** en el mismo proyecto → New Service → mismo repo, **Root Directory `/admin`**, generar dominio y
-   cargar las 4 variables de `admin/.env.example` (`BOT_API_URL` = dominio del bot). Entra a `https://<admin>/admin` con el usuario del paso 2.
-5. **Meta:** en la app «Mundo Motos», caso de uso de WhatsApp → número de prueba → webhook
-   `https://<dominio del bot>/webhook` con el `WHATSAPP_VERIFY_TOKEN`, campo `messages` → verificar tu celular como
-   destinatario. Para un token que no venza: usuario del sistema con la app y la cuenta de WhatsApp asignadas (runbook §3.2).
-6. **Prueba de punta a punta:** `curl <dominio del bot>/health` → `{"status":"ok"}`; escribir al número de prueba desde tu celular;
-   ver la conversación en el panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta
-   Anulado silencie al bot.
-7. **Messenger e Instagram** (opcional, después): runbook §5 a §7. Para responder a público general, Meta exige revisión de la app.
-8. **Formularios de anuncios (Lead Ads):** los leads de un formulario instantáneo de Facebook/Instagram entran a Chats como
-   «Formulario de anuncio». Pasos en `docs/referencia/CONFIGURAR-META.md` §9 (permiso `leads_retrieval`, campo `leadgen`,
-   acceso a clientes potenciales y App Review).
+Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`. Se
+corren a mano en el SQL Editor de Supabase; las tres son idempotentes. **No desplegar el bot de Mundo Motos antes de correr
+0003**: los intereses nuevos chocarían con el check anterior de `clientes.interes`.
 
-## 6. Decisiones pendientes
+Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:
+`insert into public.staff (user_id, nombre, email, rol) select id, 'Nombre', email, 'admin' from auth.users where email = 'correo@dominio.com';`
 
-- **Panel de chats:** hecho (`admin/`). Falta si quieren también agenda de visitas, panel de métricas o gestión de usuarios del equipo desde el panel.
-- **Seguimientos automáticos.** Los de B&B eran del evento Star Beauty y no se copiaron. Para el seminario y los programas conviene
-  diseñarlos con calma (cuándo, a quién, con qué plantilla aprobada por Meta).
-- **Seminario con registro.** El registro ocurre en el sitio (nombre, correo, WhatsApp). Si quieren que el bot escriba a los
-  registrados (recordatorio, enlace de Zoom), hay que conectar ese formulario al bot y usar plantillas aprobadas por Meta.
-- **Nombre y marca.** El bot se presenta como «Mundo Inmobiliario» (el nombre del sitio). La app de Meta se llama «Mundo Motos»:
-  conviene renombrarla, porque el nombre de la app puede verse al conectar la cuenta de WhatsApp.
+## 5. Meta
+
+1. **WhatsApp:** caso de uso de WhatsApp → webhook `https://<bot>/webhook` con `WHATSAPP_VERIFY_TOKEN`, campo `messages`.
+2. **Formularios de anuncios:** caso de uso «Captar y administrar clientes potenciales de anuncios» (agregado el
+   9-oct-2026, permisos listos para la prueba) → webhook de Page `https://<bot>/webhook/meta`, campo `leadgen`; token de la
+   página con `leads_retrieval` en `META_PAGE_ID` / `META_PAGE_ACCESS_TOKEN`. Pasos en `CONFIGURAR-META.md` §9.
+3. **Messenger e Instagram** (opcional, después): runbook §5 a §7.
+4. Para leads reales y para responder a público general, Meta exige revisión de la app (acceso avanzado).
+
+## 6. Prueba de punta a punta
+
+`curl <bot>/health` → `{"status":"ok"}`; escribir al número de prueba desde un celular verificado; ver la conversación en el
+panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta Anulado silencie al bot.
+Para los leads: Lead Ads Testing Tool → el lead aparece en Chats y en **Canales** se ve «aviso suscrito» y «permiso» en Sí.

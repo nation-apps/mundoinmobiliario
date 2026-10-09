@@ -8,7 +8,7 @@ export default function EliminarDatos() {
   return (
     <PaginaLegal titulo="Eliminación de tus datos">
       <p>
-        Si hablaste con {NEGOCIO_LEGAL} por WhatsApp, Messenger o Instagram y quieres que borremos tu información, puedes
+        Si hablaste con {NEGOCIO_LEGAL} por WhatsApp, Messenger o Instagram, o llenaste un formulario de un anuncio nuestro, y quieres que borremos tu información, puedes
         pedirlo de cualquiera de estas dos formas:
       </p>
 
@@ -24,7 +24,7 @@ export default function EliminarDatos() {
 
       <h2>Qué eliminamos</h2>
       <ul>
-        <li>Tu ficha de contacto (nombre, teléfono o identificador, correo y perfil de inversionista).</li>
+        <li>Tu ficha de contacto (nombre, teléfono o identificador, correo y la moto que buscabas).</li>
         <li>El historial de mensajes y los archivos que enviaste.</li>
       </ul>
       <p>

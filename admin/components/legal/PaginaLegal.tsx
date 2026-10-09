@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-export const NEGOCIO_LEGAL = "Mundo Inmobiliario";
+export const NEGOCIO_LEGAL = "Mundo Motos";
 export const CORREO_PRIVACIDAD = "amplificape@gmail.com";
-export const ACTUALIZADO = "5 de octubre de 2026";
+export const ACTUALIZADO = "9 de octubre de 2026";
 
 /** Contenedor común de las páginas públicas que Meta pide para publicar la app. */
 export function PaginaLegal({ titulo, children }: { titulo: string; children: ReactNode }) {

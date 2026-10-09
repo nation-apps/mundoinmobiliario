@@ -6,21 +6,22 @@ export type CanalOrigen = "whatsapp" | "messenger" | "instagram" | "tiktok" | "w
 /** Canales por los que puede aparecer alguien SIN teléfono (se le conoce solo por su identidad en ese canal). */
 export type CanalLead = "messenger" | "instagram" | "tiktok";
 
-/** 'prospecto' hasta que compra; lo pasa a 'cliente' el trigger de cierre ganado, o el staff a mano. */
-/** Lo que el cliente va contando de su situación como inversionista; todo opcional, se completa conforme avanza el chat. */
-export type PerfilInversionista = {
-  experiencia?: string | undefined;
-  objetivo?: string | undefined;
-  capital?: string | undefined;
+/** Lo que el cliente va contando de la moto que busca; todo opcional, se completa conforme avanza el chat. */
+export type PerfilCompra = {
+  moto?: string | undefined;
+  uso?: string | undefined;
+  presupuesto?: string | undefined;
+  pago?: string | undefined;
   plazo?: string | undefined;
   ubicacion?: string | undefined;
   notas?: string | undefined;
 };
 
+/** 'prospecto' hasta que compra; lo pasa a 'cliente' el trigger de cierre ganado, o el staff a mano. */
 export type TipoCliente = "prospecto" | "cliente" | "ex_cliente";
 
-/** Mismo check que `clientes.interes` (0001_nucleo.sql). */
-export const INTERESES = ["seminario", "programa_avanzado", "mentoria", "master", "libro", "otro"] as const;
+/** Mismo check que `clientes.interes` (0003_mundo_motos.sql). */
+export const INTERESES = ["moto_nueva", "seminueva", "financiamiento", "taller", "refacciones", "otro"] as const;
 export type Interes = (typeof INTERESES)[number];
 
 /**
@@ -34,8 +35,8 @@ export type Cliente = {
   nombre: string | null;
   email: string | null;
   notas: string | null;
-  /** Lo que busca, ordenado (operación, tipo, zona, presupuesto…). Lo escribe guardar_perfil_busqueda. */
-  perfil: PerfilInversionista;
+  /** La moto que busca, ordenado (moto, uso, presupuesto, pago…). Lo escribe guardar_perfil_compra. */
+  perfil: PerfilCompra;
   canal_origen: CanalOrigen;
   tipo: TipoCliente;
   interes: Interes | null;
@@ -178,11 +179,11 @@ export async function getClienteById(id: string): Promise<Cliente | null> {
  * Mezcla lo nuevo con el perfil que ya había (lo ya guardado no se pierde si el modelo manda solo un campo).
  * Un campo vacío no borra nada.
  */
-export async function guardarPerfilCliente(clienteId: string, nuevo: PerfilInversionista): Promise<PerfilInversionista> {
+export async function guardarPerfilCliente(clienteId: string, nuevo: PerfilCompra): Promise<PerfilCompra> {
   const { data, error: leerError } = await supabase.from("clientes").select("perfil").eq("id", clienteId).single();
   if (leerError) throw leerError;
-  const actual = ((data as { perfil: PerfilInversionista | null } | null)?.perfil ?? {}) as PerfilInversionista;
-  const limpio = Object.fromEntries(Object.entries(nuevo).filter(([, v]) => typeof v === "string" && v.trim() !== "")) as PerfilInversionista;
+  const actual = ((data as { perfil: PerfilCompra | null } | null)?.perfil ?? {}) as PerfilCompra;
+  const limpio = Object.fromEntries(Object.entries(nuevo).filter(([, v]) => typeof v === "string" && v.trim() !== "")) as PerfilCompra;
   const perfil = { ...actual, ...limpio };
   const { error } = await supabase.from("clientes").update({ perfil }).eq("id", clienteId);
   if (error) throw error;

@@ -35,7 +35,7 @@ import {
   type EtiquetaColor,
   type EventoConversacion,
   type Interes,
-  type PerfilInversionista,
+  type PerfilCompra,
   type MotivoCierre,
   type StaffMiembro,
 } from "@/lib/admin/chats-tipos";
@@ -103,17 +103,18 @@ function fusionarFormulario(previo: Formulario | null, datos: DatosEditables): F
   return { actual, guardado: datos };
 }
 
-/** Campos del perfil de inversionista, en el orden en que le sirven al asesor. */
-const CAMPOS_PERFIL: [keyof PerfilInversionista, string][] = [
-  ["experiencia", "Experiencia"],
-  ["objetivo", "Objetivo"],
-  ["capital", "Capital"],
+/** Campos del perfil de compra, en el orden en que le sirven al asesor. */
+const CAMPOS_PERFIL: [keyof PerfilCompra, string][] = [
+  ["moto", "Moto que busca"],
+  ["uso", "Uso"],
+  ["presupuesto", "Presupuesto"],
+  ["pago", "Forma de pago"],
   ["plazo", "Para cuándo"],
-  ["ubicacion", "País / ciudad"],
+  ["ubicacion", "Ciudad"],
   ["notas", "Notas del bot"],
 ];
 
-function perfilParaMostrar(perfil: PerfilInversionista | null | undefined): [string, string][] {
+function perfilParaMostrar(perfil: PerfilCompra | null | undefined): [string, string][] {
   if (!perfil) return [];
   return CAMPOS_PERFIL.flatMap(([campo, etiqueta]) => {
     const valor = perfil[campo];

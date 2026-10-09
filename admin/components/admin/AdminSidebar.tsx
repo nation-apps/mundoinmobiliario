@@ -48,7 +48,7 @@ export default function AdminSidebar({
       <div className="px-6 pb-7 pt-7">
         <Link href="/admin/chats" className="flex flex-col leading-none">
           <span className="t-display text-2xl text-porcelain">
-            Mundo <span className="t-script text-accent">Inmobiliario</span>
+            Mundo <span className="t-script text-accent">Motos</span>
           </span>
           <span className="mt-2 text-[9px] font-semibold uppercase tracking-[0.28em] text-white/40">
             Panel interno
@@ -126,7 +126,7 @@ export default function AdminSidebar({
       {/* barra superior móvil */}
       <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-bg px-5 lg:hidden">
         <span className="t-display text-lg">
-          Mundo <span className="t-script text-accent">Inmobiliario</span>
+          Mundo <span className="t-script text-accent">Motos</span>
         </span>
         <button
           onClick={() => setAbierto((v) => !v)}

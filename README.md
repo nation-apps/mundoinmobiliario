@@ -1,12 +1,11 @@
-# Mundo Inmobiliario — bot omnicanal de atención
+# Mundo Motos — bot omnicanal de atención
 
-Bot de **WhatsApp, Messenger e Instagram** con IA (Claude) para Mundo Inmobiliario (Luis Ramírez), una empresa de educación e
-inversión inmobiliaria: invita al **seminario gratuito**, explica el Programa Avanzado, la Mentoría y el Máster, guarda el perfil
-de inversionista de cada persona y, cuando quiere inscribirse o pregunta por precios, la pasa a un asesor. Los datos salen de
-https://eventos.mundoinmobiliario.tv/ (la app de Meta se llama «Mundo Motos»).
+Bot de **WhatsApp, Messenger e Instagram** con IA (Claude) para **Mundo Motos**, una agencia de motocicletas: resuelve
+dudas, entiende qué moto busca cada persona y cómo piensa pagarla, guarda su perfil de compra y la pasa a un asesor para
+cotizar, apartar, tramitar un crédito o agendar una visita. También recibe los leads de los formularios de anuncios de
+Facebook e Instagram.
 
-Salió del bot de B&B Escuela (el más completo hasta ahora) sin lo propio de ese negocio: cursos, citas, tienda, el evento
-Star Beauty y los pagos por Yape.
+Salió del bot de B&B Escuela. Antes estuvo orientado a Mundo Inmobiliario; todo eso se quitó el 9 de octubre de 2026.
 
 ```
 bot/        Servicio Node 22 + Fastify (se despliega en Railway, Root Directory /bot)
@@ -18,10 +17,12 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 
 ## Qué trae
 
-- **Conversación:** prompt con los datos del negocio en `bot/src/config/business.ts` (lo que diga `POR_DEFINIR`, como precios y
-  fecha del seminario, el bot no lo inventa: dice que un asesor lo confirma). No promete resultados ni da asesoría personalizada.
-- **Herramientas del agente:** `guardar_datos_contacto`, `guardar_perfil_inversionista` (experiencia, objetivo, capital, plazo,
-  ubicación), `enviar_multimedia` (temarios y videos de la biblioteca) y `escalar_a_humano`.
+- **Conversación:** prompt con los datos del negocio en `bot/src/config/business.ts`. Lo que diga `POR_DEFINIR` (modelos,
+  precios, crédito, sucursales, horario) el bot no lo inventa: dice que un asesor lo confirma.
+- **Herramientas del agente:** `guardar_datos_contacto`, `guardar_perfil_compra` (moto, uso, presupuesto, pago, plazo,
+  ciudad), `enviar_multimedia` (catálogos, fichas y videos de la biblioteca) y `escalar_a_humano`.
+- **Leads de anuncios:** los formularios instantáneos de Facebook e Instagram entran a Chats como «Formulario de anuncio»
+  (`docs/referencia/CONFIGURAR-META.md` §9).
 - **Voz humana y fiabilidad** (heredadas de B&B): lee y muestra «escribiendo…», pausa según el largo de la respuesta, junta
   mensajes seguidos en una sola respuesta, reintenta los envíos que fallan, no repite preguntas, no contesta a bots ajenos,
   y la etiqueta **Anulado** hace que el bot ignore a un contacto.
@@ -30,9 +31,9 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 ## Panel de administración (`admin/`)
 
 - **Chats:** bandeja en tiempo real, hilo, respuesta manual del asesor, sugerencia de la IA, ficha del cliente con su perfil de
-  inversionista, etiquetas y notas.
+  compra, etiquetas y notas.
 - **Canales:** encender/apagar WhatsApp, Messenger e Instagram y la IA por canal; estado del webhook y del token.
-- **Multimedia del bot:** temarios, PDFs y videos que el bot puede enviar, cada uno con su nota de «cuándo mandarlo».
+- **Multimedia del bot:** catálogos, fichas técnicas, PDFs y videos que el bot puede enviar, cada uno con su nota de «cuándo mandarlo».
 - Entra con un usuario de Supabase Auth que tenga fila en la tabla `staff`. El navegador nunca habla directo con el bot: el
   servidor del panel (`/api/admin/bot/*`) reenvía la acción con la sesión del staff y el bot la vuelve a validar.
 

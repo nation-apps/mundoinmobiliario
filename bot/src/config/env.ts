@@ -41,7 +41,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-  /** URL pública del bot (Railway), p. ej. https://mundo-inmobiliario-bot.up.railway.app. */
+  /** URL pública del bot (Railway), p. ej. https://mundoinmobiliario-production.up.railway.app. */
   PUBLIC_BASE_URL: z.string().url(),
 
   BUSINESS_TIMEZONE: z.string().default("America/Mexico_City"),
@@ -64,7 +64,7 @@ const envSchema = z.object({
   REENVIOS_ACTIVOS: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
 
   // Orígenes del panel admin autorizados a llamar a /admin/* (separados por
-  // coma). El panel de Mundo Inmobiliario llama al bot desde el servidor, pero se deja la
+  // coma). El panel de Mundo Motos llama al bot desde el servidor, pero se deja la
   // lista blanca por si se abre desde el navegador.
   ADMIN_ORIGINS: z.string().default(""),
   WEB_ORIGINS: z.string().default(""),

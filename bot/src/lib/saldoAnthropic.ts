@@ -27,7 +27,7 @@ export async function avisarSinSaldo(): Promise<void> {
   ultimoAvisoAt = Date.now();
   await sendTextIfWindowOpen(
     env.ESCALATION_PHONE,
-    "⚠️ El bot de Mundo Inmobiliario NO puede responder: se agotó el saldo de la cuenta de Anthropic. Recárgalo en console.anthropic.com > Plans & Billing y vuelve a funcionar al instante.",
+    "⚠️ El bot de Mundo Motos NO puede responder: se agotó el saldo de la cuenta de Anthropic. Recárgalo en console.anthropic.com > Plans & Billing y vuelve a funcionar al instante.",
   ).catch((err: unknown) => logger.error({ err }, "No se pudo avisar de la falta de saldo"));
 }
 

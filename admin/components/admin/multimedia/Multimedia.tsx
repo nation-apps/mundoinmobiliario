@@ -7,7 +7,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 
 /**
  * Biblioteca de archivos que el bot puede mandar por WhatsApp (la imagen del
- * temario, video del seminario…). Cada archivo lleva una NOTA: «cuándo debe
+ * catálogo, ficha técnica de un modelo, video…). Cada archivo lleva una NOTA: «cuándo debe
  * enviarla el bot». El bot lee esa nota en cada conversación, así que un
  * cambio aquí vale al instante, sin republicar nada.
  *
@@ -41,11 +41,11 @@ const LIMITES: { mime: string; tipo: ItemMultimedia["tipo"]; maxMB: number; ext:
 ];
 
 const EJEMPLO_TEMARIO = {
-  nombre: "Temario del programa",
+  nombre: "Catálogo de motos",
   nota:
-    "Cuando el cliente pide más información de un programa, mándalo y pregúntale qué quiere lograr. " +
-    "No prometas resultados ni precios que no estén en el documento.",
-  caption: "Temario · Mundo Inmobiliario",
+    "Cuando el cliente pide ver los modelos, mándalo y pregúntale para qué usaría la moto. " +
+    "No des precios ni existencias que no estén en el documento.",
+  caption: "Catálogo · Mundo Motos",
 };
 
 export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]; urlBase: string }) {
@@ -121,7 +121,7 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
               Agregar un archivo
             </h2>
             <p className="mt-1 text-sm text-muted">
-              El bot lo manda por WhatsApp cuando la nota de abajo dice que toca. Sirve para un temario, un video del seminario o un PDF.
+              El bot lo manda por WhatsApp cuando la nota de abajo dice que toca. Sirve para un catálogo, la ficha técnica de un modelo, un video o un PDF.
             </p>
           </div>
 

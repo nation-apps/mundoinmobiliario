@@ -14,11 +14,11 @@ export const escalarAHumanoTool: AgentTool<z.infer<typeof inputSchema>> = {
   name: "escalar_a_humano",
   description:
     "Marca la conversación para que la atienda un asesor del equipo y le avisa. Úsalo siempre que: el cliente pida " +
-    "hablar con una persona o con un asesor; quiera inscribirse al Programa Avanzado, la Mentoría o el Máster, o " +
-    "pregunte por sus precios, formas de pago o fechas de inicio; ya haya dejado claro qué necesita y quiera avanzar; " +
-    "pregunte por la entrada VIP del seminario; tenga un reclamo o un problema con un pago o con su acceso; o cuando " +
-    "una tool falle y no puedas resolver la solicitud. Pasa en el motivo un resumen claro de la persona (qué programa le " +
-    "interesa, experiencia, objetivo, capital, plazo). Después de llamar esta tool, dile al cliente que un asesor le va a " +
+    "hablar con una persona o con un asesor; quiera cotizar, apartar o comprar una moto, tramitar un crédito, o agendar " +
+    "una visita o una prueba de manejo; pregunte por precios, existencias, promociones o requisitos que no conoces; ya " +
+    "haya dejado claro qué necesita y quiera avanzar; tenga un reclamo o un problema con un pago, con su moto o con el " +
+    "taller; o cuando una tool falle y no puedas resolver la solicitud. Pasa en el motivo un resumen claro de la persona " +
+    "(qué moto busca, uso, presupuesto, cómo piensa pagar, para cuándo). Después de llamar esta tool, dile al cliente que un asesor le va a " +
     "escribir por este mismo chat; no sigas intentando resolverlo tú.",
   inputSchema,
   mutates: true,

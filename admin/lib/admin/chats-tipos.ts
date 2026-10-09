@@ -70,7 +70,7 @@ export type ConversacionResumen = {
   cliente_tipo: "prospecto" | "cliente" | "ex_cliente";
   cliente_interes: string | null;
   /** Lo que busca, ordenado (lo llena el bot con guardar_perfil_busqueda). */
-  cliente_perfil: PerfilInversionista | null;
+  cliente_perfil: PerfilCompra | null;
   cliente_canal_origen: string;
   identidad_nombre: string | null;
   identidad_username: string | null;
@@ -304,21 +304,24 @@ export const TIPO_CLIENTE_LABEL: Record<ClienteTipo, string> = {
 };
 
 /** clientes.interes (check de 0001_nucleo.sql). */
-export type Interes = "comprar" | "rentar" | "vender" | "invertir" | "otro";
-export const INTERESES: Interes[] = ["comprar", "rentar", "vender", "invertir", "otro"];
+/** Mismo check que `clientes.interes` (supabase/migrations/0003_mundo_motos.sql) y que INTERESES del bot. */
+export type Interes = "moto_nueva" | "seminueva" | "financiamiento" | "taller" | "refacciones" | "otro";
+export const INTERESES: Interes[] = ["moto_nueva", "seminueva", "financiamiento", "taller", "refacciones", "otro"];
 export const INTERES_LABEL: Record<Interes, string> = {
-  comprar: "Quiere comprar",
-  rentar: "Quiere rentar",
-  vender: "Quiere vender su propiedad",
-  invertir: "Quiere invertir",
+  moto_nueva: "Moto nueva",
+  seminueva: "Moto seminueva",
+  financiamiento: "Crédito / financiamiento",
+  taller: "Taller / servicio",
+  refacciones: "Refacciones y accesorios",
   otro: "Otro",
 };
 
-/** Lo que el cliente cuenta de su situación como inversionista (clientes.perfil). Todo opcional. */
-export type PerfilInversionista = {
-  experiencia?: string;
-  objetivo?: string;
-  capital?: string;
+/** La moto que busca el cliente (clientes.perfil, lo escribe guardar_perfil_compra). Todo opcional. */
+export type PerfilCompra = {
+  moto?: string;
+  uso?: string;
+  presupuesto?: string;
+  pago?: string;
   plazo?: string;
   ubicacion?: string;
   notas?: string;
@@ -369,7 +372,7 @@ export type ClienteFicha = {
   nombre: string | null;
   email: string | null;
   notas: string | null;
-  perfil: PerfilInversionista;
+  perfil: PerfilCompra;
   canal_origen: string;
   tipo: ClienteTipo;
   interes: Interes | null;

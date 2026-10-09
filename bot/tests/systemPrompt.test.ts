@@ -3,14 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("../src/config/env.js", () => ({ env: { BUSINESS_TIMEZONE: "America/Mexico_City", LOG_LEVEL: "silent" } }));
 vi.mock("../src/db/repositories/plantillasMedia.js", () => ({
   listActivePlantillas: vi.fn(async () => [
-    { id: "p1", nombre: "Temario del programa", tipo: "document", descripcion_uso: "Cuando pida información del programa" },
+    { id: "p1", nombre: "Catálogo de motos", tipo: "document", descripcion_uso: "Cuando pida ver los modelos" },
   ]),
 }));
 
 const { buildSystemPrompt } = await import("../src/agent/systemPrompt.js");
 const { quitarVoseo } = await import("../src/lib/voseo.js");
 
-describe("prompt de Mundo Inmobiliario", () => {
+describe("prompt de Mundo Motos", () => {
   it("el propio prompt no usa voseo: el modelo imita lo que lee", async () => {
     // La regla que prohíbe el voseo cita las palabras prohibidas; se quita para no confundirla con voseo real.
     const p = (await buildSystemPrompt("whatsapp")).replace(/- NUNCA uses voseo[\s\S]*?"tú", "eres"\.\n/, "");
@@ -20,28 +20,31 @@ describe("prompt de Mundo Inmobiliario", () => {
 
   it("todo dato pendiente se convierte en «no lo sabes, lo confirma un asesor» y no se inventa", async () => {
     const p = await buildSystemPrompt("whatsapp");
-    expect(p).toMatch(/Precios de los programas: NO lo sabes todavía\. No lo inventes: di que un asesor te lo confirma/);
-    expect(p).toMatch(/Fecha y hora del próximo seminario: NO lo sabes todavía/);
+    expect(p).toMatch(/Precios: NO lo sabes todavía\. No lo inventes: di que un asesor te lo confirma/);
+    expect(p).toMatch(/Financiamiento o crédito: NO lo sabes todavía/);
     expect(p).not.toMatch(/POR_DEFINIR/);
+    // Lo mismo en el texto de cada canal (TikTok mencionaba el número del bot).
+    for (const canal of ["messenger", "instagram", "tiktok", "web"] as const) {
+      expect(await buildSystemPrompt(canal)).not.toMatch(/POR_DEFINIR/);
+    }
   });
 
-  it("no inventa precios ni fechas, no da asesoría personalizada y no promete resultados", async () => {
+  it("no inventa modelos, precios ni crédito, y no promete aprobaciones", async () => {
     const p = await buildSystemPrompt("whatsapp");
-    expect(p).toMatch(/No inventes precios, descuentos, fechas, promociones, duraciones/);
-    expect(p).toMatch(/No des asesoría legal, fiscal ni financiera personalizada/);
-    expect(p).toMatch(/No prometas resultados ni ganancias/);
-    expect(p).toMatch(/NO vendes ni muestras propiedades/);
+    expect(p).toMatch(/No inventes modelos, precios, existencias/);
+    expect(p).toMatch(/No prometas que un crédito se aprueba/);
+    expect(p).not.toMatch(/seminario|inmobiliari|inversionista/i);
   });
 
   it("califica al cliente y deriva al asesor con un resumen", async () => {
     const p = await buildSystemPrompt("whatsapp");
-    expect(p).toMatch(/guardar_perfil_inversionista/);
-    expect(p).toMatch(/escalar_a_humano con un resumen claro/);
+    expect(p).toMatch(/guardar_perfil_compra/);
+    expect(p).toMatch(/escalar_a_humano con un resumen\s+claro/);
   });
 
   it("incluye la multimedia disponible y las reglas de voz humana", async () => {
     const p = await buildSystemPrompt("whatsapp");
-    expect(p).toMatch(/id: p1 — "Temario del programa"/);
+    expect(p).toMatch(/id: p1 — "Catálogo de motos"/);
     expect(p).toMatch(/Voz humana/);
     expect(p).toMatch(/\[\[botones: Opción 1 \| Opción 2 \| Opción 3\]\]/);
   });

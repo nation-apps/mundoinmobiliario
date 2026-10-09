@@ -7,21 +7,22 @@ export default function Privacidad() {
   return (
     <PaginaLegal titulo="Política de privacidad">
       <p>
-        {NEGOCIO_LEGAL} ofrece formación y acompañamiento en inversión inmobiliaria. Esta política explica qué datos
-        recibimos cuando nos escribes por WhatsApp, Messenger o Instagram, para qué los usamos y cómo puedes pedir que los
-        eliminemos.
+        {NEGOCIO_LEGAL} es una agencia de motocicletas. Esta política explica qué datos recibimos cuando nos escribes por
+        WhatsApp, Messenger o Instagram, o llenas un formulario de uno de nuestros anuncios, para qué los usamos y cómo
+        puedes pedir que los eliminemos.
       </p>
 
       <h2>Qué datos recogemos</h2>
       <ul>
         <li>Tu número de WhatsApp o tu identificador en Messenger o Instagram, y el nombre de tu perfil.</li>
         <li>Los mensajes, imágenes y documentos que nos envías.</li>
-        <li>Lo que tú nos cuentas: tu nombre, correo, experiencia invirtiendo, objetivo, capital disponible, plazo y país o ciudad.</li>
+        <li>Lo que tú nos cuentas: tu nombre, correo, la moto que buscas, para qué la usarías, tu presupuesto, cómo piensas pagarla, para cuándo la quieres y tu ciudad.</li>
+        <li>Las respuestas que dejas en un formulario de un anuncio nuestro en Facebook o Instagram, que Meta nos entrega.</li>
       </ul>
 
       <h2>Para qué los usamos</h2>
       <ul>
-        <li>Responder tus preguntas sobre el seminario gratuito y los programas.</li>
+        <li>Responder tus preguntas sobre nuestras motos, el crédito y el taller, y prepararte una cotización.</li>
         <li>Que una persona de nuestro equipo continúe la conversación cuando lo pidas o cuando haga falta.</li>
         <li>Mantener un historial de la conversación para no repetirte preguntas.</li>
       </ul>
