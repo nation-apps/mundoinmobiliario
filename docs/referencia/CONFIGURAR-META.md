@@ -67,6 +67,9 @@ Genera un token **sin vencimiento** con estos permisos:
 | `business_management` | Dependencia de `pages_messaging`, `pages_show_list` e `instagram_manage_messages` |
 | `read_insights` | Métricas de la Página (pestaña Contenido del panel) |
 | `instagram_manage_insights` | Métricas de Instagram |
+| `leads_retrieval` | Leer las respuestas de los formularios de anuncios (§9) |
+| `pages_manage_ads` | Leer los formularios de la Página (lo pide Meta junto con `leads_retrieval`) |
+| `ads_management` | Nombre del anuncio y de la campaña de cada lead (opcional: sin él el lead llega igual) |
 
 Con ese token, pide el **Page Access Token** de la Página de AZ (ese, no el del usuario del sistema, va en
 `META_PAGE_ACCESS_TOKEN`):
@@ -102,14 +105,14 @@ App Dashboard → Webhooks (o la sección Configuration de cada caso de uso):
 
 - **Callback URL**: `https://bot.bybescuela.com/webhook/meta`
 - **Verify token**: `META_VERIFY_TOKEN` (o `WHATSAPP_VERIFY_TOKEN` si se dejó vacía)
-- **Objeto Page**: `messages`, `messaging_postbacks`, `message_echoes`, `feed`
+- **Objeto Page**: `messages`, `messaging_postbacks`, `message_echoes`, `feed`, `leadgen`
 - **Objeto Instagram**: `messages`, `comments`, `messaging_postbacks`
 
 Messenger e Instagram comparten ese endpoint. Después, **suscribe la Página a la app** (hace falta también para
 Instagram con Facebook Login):
 
 ```bash
-curl -s -X POST "https://graph.facebook.com/v26.0/$META_PAGE_ID/subscribed_apps?subscribed_fields=messages,messaging_postbacks,message_echoes,feed&access_token=$META_PAGE_ACCESS_TOKEN"
+curl -s -X POST "https://graph.facebook.com/v26.0/$META_PAGE_ID/subscribed_apps?subscribed_fields=messages,messaging_postbacks,message_echoes,feed,leadgen&access_token=$META_PAGE_ACCESS_TOKEN"
 curl -s "https://graph.facebook.com/v26.0/$META_PAGE_ID/subscribed_apps?access_token=$META_PAGE_ACCESS_TOKEN"
 ```
 
@@ -193,3 +196,32 @@ de Facebook rechazados por Meta" (o "de Instagram"), ajusta `METRICAS_FACEBOOK` 
 
 Errores comunes (`10/2018278`, `10/2534022`, `551`, `100/2534013`…) y diagnóstico general: tabla "Solución de
 problemas" de [`GUIA-INSTALACION.md`](../GUIA-INSTALACION.md).
+
+## 9. Formularios de anuncios (Lead Ads)
+
+Cuando alguien llena el formulario instantáneo de un anuncio de Facebook o Instagram, Meta avisa por el webhook de
+la Página (campo `leadgen`) con **solo el id del lead**. El bot pide las respuestas con
+`GET /{leadgen_id}?fields=field_data` (`bot/src/meta/client.ts → obtenerLead`) y las deja en **Chats** como una
+conversación «Web» rotulada *Formulario de anuncio* (`bot/src/agent/handleLeadFormulario.ts`). Si el teléfono ya
+existe, se suma a esa ficha. El bot no le escribe solo: el asesor lo contacta por WhatsApp desde la conversación
+(el primer mensaje a quien no ha escrito exige plantilla aprobada).
+
+Para que lleguen:
+
+1. **Permisos** `leads_retrieval` y `pages_manage_ads` (y `ads_management` para ver el nombre del anuncio) en la
+   app y en el token de la Página (§3). Quien genera el token debe poder **anunciar** en la Página (tarea
+   ADVERTISE). Si el token ya existía, vuelve a autorizar la app con los permisos nuevos y comprueba con
+   `debug_token` que `scopes` incluya `leads_retrieval`.
+2. **Webhook**: objeto Page, campo `leadgen` (§5), y la Página suscrita con `leadgen` en `subscribed_fields`.
+3. **Acceso a clientes potenciales**: Business Settings → Integraciones → **Acceso a clientes potenciales**
+   (Leads Access). Si el negocio personalizó el acceso, la app (o el usuario del sistema) debe estar en la lista
+   de la Página; si no lo personalizó, cualquier administrador de la Página tiene acceso.
+4. **App Review**: en modo desarrollo solo llegan leads de prueba. Para leads reales, `leads_retrieval` y
+   `pages_manage_ads` con **Advanced Access**, la app en **Live** y el negocio verificado (§7).
+
+Probar con la **Lead Ads Testing Tool** (https://developers.facebook.com/tools/lead-ads-testing): elegir la Página
+y el formulario → *Create lead* → el lead debe aparecer en Chats en segundos. En **Canales** (tarjeta «Formulario
+web y bot») se ve si el aviso `leadgen` está suscrito y si el token trae el permiso. Si el lead no aparece, el log
+del bot dice «No se pudo leer el lead de Meta» con la respuesta de Meta (casi siempre falta `leads_retrieval` o el
+acceso a clientes potenciales). Meta guarda los leads 90 días: lo que no entró se puede bajar en CSV desde el
+Centro de clientes potenciales de Meta Business Suite.

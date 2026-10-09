@@ -75,6 +75,9 @@ confirma un asesor». **Falta que lo confirme el negocio:**
    ver la conversación en el panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta
    Anulado silencie al bot.
 7. **Messenger e Instagram** (opcional, después): runbook §5 a §7. Para responder a público general, Meta exige revisión de la app.
+8. **Formularios de anuncios (Lead Ads):** los leads de un formulario instantáneo de Facebook/Instagram entran a Chats como
+   «Formulario de anuncio». Pasos en `docs/referencia/CONFIGURAR-META.md` §9 (permiso `leads_retrieval`, campo `leadgen`,
+   acceso a clientes potenciales y App Review).
 
 ## 6. Decisiones pendientes
 

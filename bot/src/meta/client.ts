@@ -3,6 +3,7 @@ import { logger } from "../lib/logger.js";
 import { AppError } from "../lib/errors.js";
 import type { CanalMeta, AttachmentType } from "./parser.js";
 import type { ModoEnvioMeta } from "./window.js";
+import type { CampoLead } from "./leadAds.js";
 
 export const GRAPH_BASE_URL = `https://graph.facebook.com/${env.META_GRAPH_VERSION}`;
 
@@ -152,6 +153,79 @@ export async function obtenerPerfil(params: { canal: CanalMeta; id: string }): P
   }
 }
 
+async function leerGraphApi(path: string, campos: string): Promise<Record<string, unknown>> {
+  const url = `${GRAPH_BASE_URL}${path}?fields=${campos}&access_token=${encodeURIComponent(tokenRequerido())}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new AppError(`Meta respondió ${res.status} al leer ${path}: ${errorBody}`, "meta_api_failed", 502);
+  }
+  return (await res.json()) as Record<string, unknown>;
+}
+
+function textoOpcional(valor: unknown): string | null {
+  return typeof valor === "string" && valor.trim() !== "" ? valor : null;
+}
+
+export type LeadMeta = {
+  id: string;
+  formId: string | null;
+  adId: string | null;
+  campos: CampoLead[];
+  /** Lo que sigue es contexto para el panel: si Meta no lo da (falta un permiso de anuncios), queda en null. */
+  formulario: string | null;
+  anuncio: string | null;
+  campana: string | null;
+  /** "fb" o "ig". */
+  plataforma: string | null;
+  esOrganico: boolean;
+};
+
+/**
+ * Las respuestas de un formulario instantáneo (Lead Ads). Necesita
+ * `leads_retrieval` en el token de la página y que la app tenga acceso a los
+ * clientes potenciales de la página (Business Settings → Integraciones →
+ * Acceso a clientes potenciales). Lanza si no se pueden leer las respuestas;
+ * el nombre del formulario y del anuncio se piden aparte y nunca hacen fallar.
+ */
+export async function obtenerLead(leadgenId: string, formIdAviso: string | null): Promise<LeadMeta> {
+  const data = await leerGraphApi(`/${leadgenId}`, "id,form_id,ad_id,field_data");
+  const campos = (Array.isArray(data.field_data) ? data.field_data : []).flatMap((c: unknown) => {
+    const campo = c as { name?: unknown; values?: unknown };
+    if (typeof campo.name !== "string") return [];
+    const values = Array.isArray(campo.values) ? campo.values.filter((v): v is string => typeof v === "string") : [];
+    return [{ name: campo.name, values }];
+  });
+  const formId = textoOpcional(data.form_id) ?? formIdAviso;
+
+  const [formulario, extra] = await Promise.all([
+    formId
+      ? leerGraphApi(`/${formId}`, "name")
+          .then((d) => textoOpcional(d.name))
+          .catch((err: unknown) => {
+            logger.warn({ err, formId }, "No se pudo leer el nombre del formulario de Meta (no crítico)");
+            return null;
+          })
+      : Promise.resolve(null),
+    leerGraphApi(`/${leadgenId}`, "ad_name,campaign_name,platform,is_organic").catch((err: unknown) => {
+      logger.warn({ err, leadgenId }, "No se pudo leer el anuncio del lead de Meta (no crítico)");
+      return {} as Record<string, unknown>;
+    }),
+  ]);
+
+  return {
+    id: textoOpcional(data.id) ?? leadgenId,
+    formId,
+    adId: textoOpcional(data.ad_id),
+    campos,
+    formulario,
+    anuncio: textoOpcional(extra.ad_name),
+    campana: textoOpcional(extra.campaign_name),
+    plataforma: textoOpcional(extra.platform),
+    esOrganico: extra.is_organic === true,
+  };
+}
+
 /** Las URLs de adjuntos entrantes de Meta caducan: hay que descargar al momento de recibirlas. */
 export async function descargarAdjunto(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
   const res = await fetch(url);
@@ -184,6 +258,9 @@ export type EstadoConexionMeta = {
   instagram: { id: string; username: string | null } | null;
   suscrita: boolean;
   tokenVenceEn: string | null;
+  /** Formularios de anuncios: la página le manda a esta app el campo `leadgen`, y el token trae `leads_retrieval`. */
+  leadgenSuscrito: boolean;
+  permisoLeads: boolean;
 };
 
 /**
@@ -205,8 +282,13 @@ export async function estadoConexion(): Promise<EstadoConexionMeta | null> {
     ]);
 
     const pagina = paginaRes.ok ? ((await paginaRes.json()) as Record<string, unknown>) : null;
-    const suscritos = suscritosRes.ok ? ((await suscritosRes.json()) as { data?: unknown[] }) : null;
-    const debug = debugRes.ok ? ((await debugRes.json()) as { data?: { expires_at?: number } }) : null;
+    const suscritos = suscritosRes.ok
+      ? ((await suscritosRes.json()) as { data?: { id?: string; subscribed_fields?: string[] }[] })
+      : null;
+    const debug = debugRes.ok
+      ? ((await debugRes.json()) as { data?: { expires_at?: number; app_id?: string; scopes?: string[] } })
+      : null;
+    const nuestraApp = suscritos?.data?.find((app) => app.id === debug?.data?.app_id);
 
     const ig = pagina?.instagram_business_account as { id?: string; username?: string } | undefined;
     const expiresAt = debug?.data?.expires_at;
@@ -217,6 +299,8 @@ export async function estadoConexion(): Promise<EstadoConexionMeta | null> {
       suscrita: Boolean(suscritos?.data && suscritos.data.length > 0),
       // 0 = sin vencimiento (token permanente); lo dejamos explícito como null.
       tokenVenceEn: expiresAt ? new Date(expiresAt * 1000).toISOString() : null,
+      leadgenSuscrito: nuestraApp?.subscribed_fields?.includes("leadgen") ?? false,
+      permisoLeads: debug?.data?.scopes?.includes("leads_retrieval") ?? false,
     };
   } catch (err) {
     logger.warn({ err }, "No se pudo consultar el estado de conexión de Meta");

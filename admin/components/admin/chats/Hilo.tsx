@@ -15,6 +15,7 @@ import {
   CANAL_LABEL,
   ETAPAS,
   ETAPA_LABEL,
+  HILO_LEAD_ADS,
   describirIdentidad,
   horaCorta,
   horasRestantesVentana,
@@ -35,7 +36,32 @@ import CanalIcono from "./CanalIcono";
 
 /* ---------- Burbujas ---------- */
 
+function textoMetadata(mensaje: Mensaje, clave: string): string | null {
+  const valor = mensaje.metadata[clave];
+  return typeof valor === "string" && valor.trim() !== "" ? valor : null;
+}
+
+/** Formulario instantáneo de un anuncio: de qué formulario, anuncio y campaña vino (lo que Meta haya dado). */
+function DatosAnuncio({ mensaje }: { mensaje: Mensaje }) {
+  const formulario = textoMetadata(mensaje, "formulario");
+  const anuncio = textoMetadata(mensaje, "anuncio");
+  const campana = textoMetadata(mensaje, "campana");
+  const red = textoMetadata(mensaje, "plataforma") === "ig" ? "Instagram" : "Facebook";
+  return (
+    <div className="mb-1.5 border-b border-ink/10 pb-1.5 text-[11px] text-muted">
+      <span className="font-semibold uppercase tracking-[0.12em]">
+        Formulario de anuncio · {red}
+        {mensaje.metadata.organico === true ? " (orgánico)" : ""}
+      </span>
+      {formulario && <span className="block">Formulario: {formulario}</span>}
+      {anuncio && <span className="block">Anuncio: {anuncio}</span>}
+      {campana && <span className="block">Campaña: {campana}</span>}
+    </div>
+  );
+}
+
 function DatosFormulario({ mensaje }: { mensaje: Mensaje }) {
+  if (mensaje.metadata.origen === HILO_LEAD_ADS) return <DatosAnuncio mensaje={mensaje} />;
   const asunto = typeof mensaje.metadata.asunto === "string" ? mensaje.metadata.asunto : null;
   const pagina = typeof mensaje.metadata.pagina === "string" ? mensaje.metadata.pagina : null;
   if (!asunto && !pagina) return null;
@@ -682,7 +708,8 @@ export default function Hilo({
         {modoCompositor === "responder" && esWeb && (
           <div className="border border-line bg-bg-soft px-3 py-3 text-xs">
             <p className="text-ink-soft">
-              Este mensaje llegó por el formulario del sitio: no se responde por aquí. Contáctalo por WhatsApp
+              Este mensaje llegó por {conversacion.hilo_externo === HILO_LEAD_ADS ? "el formulario de un anuncio" : "el formulario del sitio"}: no
+              se responde por aquí. Contáctalo por WhatsApp
               {conversacion.cliente_email ? " o por correo" : ""}.
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">

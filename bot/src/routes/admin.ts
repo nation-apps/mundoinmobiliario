@@ -337,6 +337,9 @@ export async function adminRoutes(app: FastifyInstance) {
       // El formulario del sitio. `protegido` = exige PUBLIC_LEADS_TOKEN (solo
       // el servidor del sitio puede crear leads).
       web: { protegido: Boolean(env.PUBLIC_LEADS_TOKEN) },
+      // Formularios instantáneos de anuncios (Lead Ads): entran por el webhook
+      // de la página. Hacen falta las dos cosas para que lleguen a Chats.
+      formulariosAnuncios: { suscrito: meta?.leadgenSuscrito ?? false, permiso: meta?.permisoLeads ?? false },
       ia: { configurada: anthropicConfigurado },
       // No vive en ninguna tabla — es una aprobación de Meta a nivel de app,
       // no un interruptor de negocio. El panel lo necesita para calcular el

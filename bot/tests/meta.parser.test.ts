@@ -109,6 +109,39 @@ describe("parseEventosMeta — Instagram", () => {
   });
 });
 
+describe("parseEventosMeta — formularios de anuncios (leadgen)", () => {
+  it("aviso de lead: solo identificadores, con external_id para deduplicar", () => {
+    const [evento] = parseEventosMeta(cargar("facebook-leadgen.json"));
+    expect(evento).toMatchObject({
+      kind: "lead_formulario",
+      canal: "messenger",
+      cuentaId: "PAGE_ID_TEST",
+      externalId: "leadgen:444444444444",
+      remitenteId: null,
+      leadgenId: "444444444444",
+      formId: "555555555555",
+      adId: "666666666666",
+    });
+    // created_time del leadgen viene en segundos.
+    expect(evento?.timestamp.toISOString()).toBe("2025-10-09T08:53:20.000Z");
+  });
+
+  it("acepta los IDs como números, como en el ejemplo de la documentación", () => {
+    const payload = {
+      object: "page",
+      entry: [{ id: "123", changes: [{ field: "leadgen", value: { leadgen_id: 444, page_id: 123, form_id: 555, created_time: 1760000000 } }] }],
+    };
+    const [evento] = parseEventosMeta(payload);
+    expect(evento).toMatchObject({ kind: "lead_formulario", leadgenId: "444", formId: "555", adId: null });
+  });
+
+  it("un aviso sin leadgen_id queda en el log como no_soportado", () => {
+    const payload = { object: "page", entry: [{ id: "123", changes: [{ field: "leadgen", value: { form_id: "555" } }] }] };
+    const [evento] = parseEventosMeta(payload);
+    expect(evento).toMatchObject({ kind: "no_soportado", motivo: "Aviso de leadgen sin leadgen_id reconocible" });
+  });
+});
+
 describe("parseEventosMeta — payload que no calza", () => {
   it("describeParsePayloadError explica el motivo en vez de fallar en silencio", () => {
     const error = describeParsePayloadError({ object: "algo_raro" });

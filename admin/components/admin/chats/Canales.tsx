@@ -317,13 +317,15 @@ function TarjetaWeb({
       </header>
 
       <p className="text-[13px] leading-relaxed text-ink-soft">
-        Cada envío del formulario de contacto del sitio entra a Chats como una conversación «Web». No se responde por
-        ahí: desde la conversación se le escribe por WhatsApp.
+        Cada envío del formulario de contacto del sitio, y de los formularios de anuncios de Facebook e Instagram, entra a
+        Chats como una conversación «Web». No se responde por ahí: desde la conversación se le escribe por WhatsApp.
       </p>
 
       <Datos
         filas={[
           ["Formulario protegido con token", siNo(estado?.web?.protegido)],
+          ["Formularios de anuncios: aviso de Meta suscrito", siNo(estado?.formulariosAnuncios?.suscrito)],
+          ["Formularios de anuncios: permiso para leer leads", siNo(estado?.formulariosAnuncios?.permiso)],
           ["IA configurada", siNo(estado?.ia?.configurada)],
           ["Human Agent aprobado por Meta", siNo(estado?.metaHumanAgentAprobado)],
         ]}

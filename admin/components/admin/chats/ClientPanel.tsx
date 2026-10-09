@@ -13,6 +13,7 @@ import {
   ESTADO_CONVERSACION_LABEL,
   ETAPAS,
   ETAPA_LABEL,
+  HILO_LEAD_ADS,
   INTERESES,
   INTERES_LABEL,
   MOTIVOS_CIERRE,
@@ -704,7 +705,11 @@ function Ficha({
         )}
         {!cargando && identidades.length === 0 && (
           <p className="mt-3 text-xs text-muted">
-            {conversacion.canal === "web" ? "Llegó por el formulario de la web." : `Contacto de ${CANAL_LABEL[conversacion.canal]}.`}
+            {conversacion.canal !== "web"
+              ? `Contacto de ${CANAL_LABEL[conversacion.canal]}.`
+              : conversacion.hilo_externo === HILO_LEAD_ADS
+                ? "Llegó por el formulario de un anuncio de Facebook o Instagram."
+                : "Llegó por el formulario de la web."}
           </p>
         )}
 

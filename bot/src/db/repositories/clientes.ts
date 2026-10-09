@@ -86,19 +86,21 @@ export async function crearClienteLead(params: { nombre: string | null; canalOri
 }
 
 /**
- * Lo que manda el formulario del sitio (POST /public/leads). Si el teléfono
- * ya existe, solo se completan los datos que faltaban.
+ * Lo que manda el formulario del sitio (POST /public/leads) o un formulario
+ * de anuncio de Meta. Si el teléfono ya existe, solo se completan los datos
+ * que faltaban. Sin teléfono (un formulario de anuncio que no lo pidió) no hay
+ * con qué reconocer a la persona: se crea una ficha nueva.
  */
 export async function registrarLeadWeb(params: {
-  telefono: string;
-  nombre: string;
+  telefono: string | null;
+  nombre: string | null;
   email?: string | undefined;
   interes?: Interes | undefined;
 }): Promise<Cliente> {
-  const existente = await getClienteByTelefono(params.telefono);
+  const existente = params.telefono ? await getClienteByTelefono(params.telefono) : null;
   if (existente) {
     const completar: Partial<Pick<Cliente, "nombre" | "email" | "interes">> = {};
-    if (!existente.nombre) completar.nombre = params.nombre;
+    if (!existente.nombre && params.nombre) completar.nombre = params.nombre;
     if (!existente.email && params.email) completar.email = params.email;
     if (!existente.interes && params.interes) completar.interes = params.interes;
     if (Object.keys(completar).length === 0) return existente;
@@ -121,7 +123,7 @@ export async function registrarLeadWeb(params: {
     .single();
 
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === "23505" && params.telefono) {
       const ganador = await getClienteByTelefono(params.telefono);
       if (ganador) return ganador;
     }

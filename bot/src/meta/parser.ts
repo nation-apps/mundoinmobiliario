@@ -71,6 +71,20 @@ const metaIgCommentValue = z.object({
   parent_id: z.string().optional(),
 });
 
+// object:"page", field:"leadgen" — alguien llenó un formulario instantáneo de
+// un anuncio (Lead Ads). El aviso trae solo identificadores: las respuestas se
+// piden aparte con el leadgen_id (meta/client.ts → obtenerLead). El ejemplo de
+// la documentación muestra los IDs como números y los envíos reales como
+// texto: se aceptan los dos y se guardan como texto.
+const idMeta = z.union([z.string().min(1), z.number()]).transform(String);
+const metaLeadgenValue = z.object({
+  leadgen_id: idMeta,
+  page_id: idMeta.optional(),
+  form_id: idMeta.optional(),
+  ad_id: idMeta.optional(),
+  created_time: z.number().optional(),
+});
+
 const metaChange = z.object({
   field: z.string(),
   // Se valida específicamente según `field` al procesar, no acá — "feed" y
@@ -148,6 +162,19 @@ export type EventoMeta =
       externalId: string;
       remitenteId: string | null;
       timestamp: Date;
+    }
+  | {
+      kind: "lead_formulario";
+      canal: CanalMeta;
+      /** La página dueña del formulario. */
+      cuentaId: string;
+      /** `leadgen:<leadgen_id>`: con esto se guarda el mensaje y se descartan los avisos repetidos. */
+      externalId: string;
+      remitenteId: null;
+      timestamp: Date;
+      leadgenId: string;
+      formId: string | null;
+      adId: string | null;
     }
   | {
       kind: "no_soportado";
@@ -290,6 +317,35 @@ function procesarFeedChange(canal: CanalMeta, cuentaId: string, valorCrudo: unkn
   };
 }
 
+function procesarLeadgenChange(canal: CanalMeta, cuentaId: string, valorCrudo: unknown): EventoMeta {
+  const parsed = metaLeadgenValue.safeParse(valorCrudo);
+  if (!parsed.success) {
+    // A diferencia de un comentario raro, esto es un lead que se perdería: que quede en el log.
+    return {
+      kind: "no_soportado",
+      canal,
+      cuentaId,
+      externalId: `leadgen:${cuentaId}:${Date.now()}`,
+      remitenteId: null,
+      timestamp: new Date(),
+      motivo: "Aviso de leadgen sin leadgen_id reconocible",
+    };
+  }
+  const v = parsed.data;
+  return {
+    kind: "lead_formulario",
+    canal,
+    cuentaId: v.page_id ?? cuentaId,
+    externalId: `leadgen:${v.leadgen_id}`,
+    remitenteId: null,
+    // created_time del leadgen viene en segundos Unix.
+    timestamp: v.created_time ? new Date(v.created_time * 1000) : new Date(),
+    leadgenId: v.leadgen_id,
+    formId: v.form_id ?? null,
+    adId: v.ad_id ?? null,
+  };
+}
+
 function procesarCommentsChange(canal: CanalMeta, cuentaId: string, valorCrudo: unknown): EventoMeta | null {
   const parsed = metaIgCommentValue.safeParse(valorCrudo);
   if (!parsed.success) return null;
@@ -339,6 +395,8 @@ export function parseEventosMeta(rawBody: unknown): EventoMeta[] {
         evento = procesarFeedChange(canal, entry.id, change.value);
       } else if (change.field === "comments") {
         evento = procesarCommentsChange(canal, entry.id, change.value);
+      } else if (change.field === "leadgen") {
+        evento = procesarLeadgenChange(canal, entry.id, change.value);
       } else {
         evento = {
           kind: "no_soportado",

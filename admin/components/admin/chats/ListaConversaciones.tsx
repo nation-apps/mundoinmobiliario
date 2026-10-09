@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import {
   ETAPA_LABEL,
+  HILO_LEAD_ADS,
   describirIdentidad,
   esperaRespuesta,
   iniciales,
@@ -71,7 +72,7 @@ function previewTexto(c: ConversacionResumen): string {
 
 function quienAtiende(c: ConversacionResumen): string {
   if (c.origen === "comentario") return "Comentario";
-  if (c.origen === "formulario") return "Formulario web";
+  if (c.origen === "formulario") return c.hilo_externo === HILO_LEAD_ADS ? "Formulario de anuncio" : "Formulario web";
   if (c.estado === "cerrada") return "Cerrada";
   return c.estado === "escalada" ? "Persona" : "Bot";
 }

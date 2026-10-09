@@ -35,6 +35,8 @@ la sube a su reserva/matrícula por la misma ruta que la web (queda "en revisió
   y los tokens de verificación, que el staff copia desde `/admin/canales` al registrar los webhooks en Meta.
   Es lo único "sensible" que sale por la API (solo sirve para el handshake de Meta) y nunca se loguea.
 - `POST /public/leads` — formulario del sitio (header `x-byb-leads-token`).
+- `POST /webhook/meta` también recibe los leads de formularios de anuncios (campo `leadgen` de la Página):
+  ver `docs/referencia/CONFIGURAR-META.md` §9.
 
 ## Variables
 

@@ -8,6 +8,7 @@ import { descargarAdjunto } from "../meta/client.js";
 import { subirAdjunto, mediaTypeDeAttachment } from "../lib/adjuntos.js";
 import { handleInbound } from "./handleInbound.js";
 import { handleComentario } from "./handleComentario.js";
+import { handleLeadFormulario } from "./handleLeadFormulario.js";
 import { procesarDocumentoEntrante } from "./documentoEntrante.js";
 import type { CanalMeta, EventoMeta } from "../meta/parser.js";
 
@@ -26,6 +27,11 @@ export async function handleInboundMeta(evento: EventoMeta): Promise<void> {
 
   if (evento.kind === "comentario_nuevo" || evento.kind === "comentario_eliminado") {
     await handleComentario(evento);
+    return;
+  }
+
+  if (evento.kind === "lead_formulario") {
+    await handleLeadFormulario(evento);
     return;
   }
 

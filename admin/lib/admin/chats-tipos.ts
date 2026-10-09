@@ -16,6 +16,13 @@ export type TipoMensaje = "mensaje" | "comentario" | "nota" | "sistema";
 
 export const CANALES: Canal[] = ["whatsapp", "messenger", "instagram", "tiktok", "web"];
 
+/**
+ * `hilo_externo` de los leads de formularios de anuncios de Meta (Lead Ads):
+ * entran como canal `web` / origen `formulario`, igual que el formulario del
+ * sitio, y esto los distingue. Mismo valor que HILO_LEAD_ADS en bot/src/meta/leadAds.ts.
+ */
+export const HILO_LEAD_ADS = "facebook_lead_ads";
+
 export const CANAL_LABEL: Record<Canal, string> = {
   whatsapp: "WhatsApp",
   messenger: "Messenger",
@@ -142,6 +149,8 @@ export type EstadoCanales = {
   instagram: { configurado: boolean; cuenta: string | null; username: string | null };
   tiktok: { configurado: boolean; mensajesDirectos: boolean };
   web: { protegido: boolean };
+  /** Opcional: un bot anterior a los formularios de anuncios no lo manda. */
+  formulariosAnuncios?: { suscrito: boolean; permiso: boolean };
   ia: { configurada: boolean };
   metaHumanAgentAprobado: boolean;
   /**
