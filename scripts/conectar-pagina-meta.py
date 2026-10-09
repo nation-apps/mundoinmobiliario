@@ -10,7 +10,7 @@ y, para los mensajes, instagram_basic, instagram_manage_messages y pages_messagi
 negocio y las páginas. Cópialo con el botón de copiar.
 
 Uso (desde la raíz del repo, con el proyecto de Railway enlazado):
-    python3 scripts/conectar-pagina-meta.py                        # lista las páginas que ve el token
+    python3 scripts/conectar-pagina-meta.py                        # solo lista las páginas que ve el token
     python3 scripts/conectar-pagina-meta.py <ID> --marca TVS        # solo leads de esa página
     python3 scripts/conectar-pagina-meta.py <ID> --marca TVS --mensajes
         # además, sus DMs de Messenger e Instagram (el bot atiende los mensajes de UNA sola página)
@@ -101,10 +101,9 @@ def main() -> None:
         anuncia = "puede anunciar" if "ADVERTISE" in p.get("tasks", []) else "SIN permiso para anunciar"
         print(f"  {p['id']}  {p['name']}  ({anuncia})")
 
+    # Sin ID solo se listan: conectar una página por descarte ya enganchó una de prueba que no tocaba.
     if not args.pagina:
-        if len(paginas) > 1:
-            sys.exit("\nCorre el script otra vez con el ID de la página y su marca, p. ej.: <ID> --marca TVS")
-        args.pagina = paginas[0]["id"]
+        sys.exit("\nNo se conectó nada. Corre el script otra vez con el ID de la página y su marca, p. ej.: <ID> --marca TVS")
     pagina = next((p for p in paginas if p["id"] == args.pagina), None)
     if not pagina:
         sys.exit(f"La página {args.pagina} no está en la lista.")
