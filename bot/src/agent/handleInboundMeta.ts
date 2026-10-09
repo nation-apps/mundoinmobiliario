@@ -58,6 +58,13 @@ export async function handleInboundMeta(evento: EventoMeta): Promise<void> {
     cuentaId: evento.cuentaId,
   });
 
+  // El hilo lo atiende otra app (p. ej. la bandeja de Meta Business Suite): solo se guarda lo que escribió el
+  // cliente para que el equipo lo vea en el panel. Nada de agente, acuses ni respuestas.
+  if (evento.kind !== "dm_eco" && evento.enEspera) {
+    await guardarEnEspera(evento, conversacion.id);
+    return;
+  }
+
   if (evento.kind === "dm_eco") {
     // Si ya existe, es nuestro propio envío (se guardó al mandarlo, con este
     // mismo external_id) — no hay nada que hacer. Si no existe, alguien
@@ -136,4 +143,30 @@ export async function handleInboundMeta(evento: EventoMeta): Promise<void> {
     texto: evento.texto,
     externalId: evento.externalId,
   });
+}
+
+type EventoEnEspera = Extract<EventoMeta, { kind: "dm_texto" | "dm_adjunto" | "dm_postback" }>;
+
+async function guardarEnEspera(evento: EventoEnEspera, conversacionId: string): Promise<void> {
+  const metadata = { en_espera: true };
+  if (evento.kind === "dm_adjunto") {
+    try {
+      const { buffer, mimeType } = await descargarAdjunto(evento.url);
+      const mediaPath = await subirAdjunto({ conversacionId, buffer, mimeType });
+      await guardarMensaje({
+        conversacionId,
+        rol: "user",
+        contenido: `[${evento.attachmentType}]`,
+        externalId: evento.externalId,
+        mediaPath,
+        mediaType: mediaTypeDeAttachment(evento.attachmentType),
+        metadata: { ...metadata, attachment_type: evento.attachmentType },
+      });
+    } catch (err) {
+      logger.error({ err, canal: evento.canal, externalId: evento.externalId }, "No se pudo guardar un adjunto en espera de Meta");
+    }
+    return;
+  }
+  const texto = evento.kind === "dm_texto" ? evento.texto : (evento.titulo ?? evento.payload);
+  await guardarMensaje({ conversacionId, rol: "user", contenido: texto, externalId: evento.externalId, metadata });
 }

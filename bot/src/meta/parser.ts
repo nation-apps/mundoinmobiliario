@@ -97,6 +97,9 @@ const metaEntry = z.object({
   id: z.string(),
   time: z.number().optional(),
   messaging: z.array(metaMessagingEvent).optional(),
+  // Con el enrutamiento de conversaciones, cuando el hilo lo atiende otra app (la bandeja de Meta Business Suite,
+  // ManyChat…) los mensajes del cliente llegan aquí y no en `messaging`. Misma forma.
+  standby: z.array(metaMessagingEvent).optional(),
   changes: z.array(metaChange).optional(),
 });
 
@@ -109,7 +112,17 @@ export type CanalMeta = "messenger" | "instagram";
 export type AttachmentType = "image" | "video" | "audio" | "file" | "share" | "story_mention" | "ig_reel" | "otro";
 
 export type EventoMeta =
-  | { kind: "dm_texto"; canal: CanalMeta; cuentaId: string; externalId: string; remitenteId: string; timestamp: Date; texto: string }
+  | {
+      kind: "dm_texto";
+      canal: CanalMeta;
+      cuentaId: string;
+      externalId: string;
+      remitenteId: string;
+      timestamp: Date;
+      texto: string;
+      /** Llegó por `standby`: el hilo lo atiende otra app; se guarda para verlo en el panel pero el bot no responde. */
+      enEspera?: boolean;
+    }
   | {
       kind: "dm_adjunto";
       canal: CanalMeta;
@@ -119,6 +132,7 @@ export type EventoMeta =
       timestamp: Date;
       attachmentType: AttachmentType;
       url: string;
+      enEspera?: boolean;
     }
   | {
       kind: "dm_eco";
@@ -129,6 +143,7 @@ export type EventoMeta =
       remitenteId: string;
       timestamp: Date;
       texto: string | null;
+      enEspera?: boolean;
     }
   | {
       kind: "dm_postback";
@@ -139,6 +154,7 @@ export type EventoMeta =
       timestamp: Date;
       payload: string;
       titulo: string | null;
+      enEspera?: boolean;
     }
   | {
       kind: "comentario_nuevo";
@@ -387,6 +403,16 @@ export function parseEventosMeta(rawBody: unknown): EventoMeta[] {
     for (const ev of entry.messaging ?? []) {
       const evento = procesarMessaging(canal, entry.id, ev);
       if (evento) eventos.push(evento);
+    }
+
+    for (const ev of entry.standby ?? []) {
+      const evento = procesarMessaging(canal, entry.id, ev);
+      if (
+        evento &&
+        (evento.kind === "dm_texto" || evento.kind === "dm_adjunto" || evento.kind === "dm_eco" || evento.kind === "dm_postback")
+      ) {
+        eventos.push({ ...evento, enEspera: true });
+      }
     }
 
     for (const change of entry.changes ?? []) {

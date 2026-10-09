@@ -588,7 +588,8 @@ export default function Hilo({
           </button>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {/* Sin shrink-0: con la ventana a medio ancho los controles se salían de la columna y tapaban la ficha. */}
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <select
             value={conversacion.etapa}
             onChange={(e) => cambiarEtapa(e.target.value as Etapa)}

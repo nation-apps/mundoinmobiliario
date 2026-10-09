@@ -39,7 +39,7 @@ PERMISOS_NECESARIOS = {"leads_retrieval", "pages_manage_ads", "pages_manage_meta
 # Sin estos llegan los leads pero no los mensajes directos: se avisa, no se detiene.
 PERMISOS_MENSAJES = {"instagram_basic", "instagram_manage_messages", "pages_messaging"}
 CAMPOS_SOLO_LEADS = "leadgen"
-CAMPOS_CON_MENSAJES = "leadgen,messages,messaging_postbacks,message_echoes"
+CAMPOS_CON_MENSAJES = "leadgen,messages,messaging_postbacks,message_echoes,standby"
 
 
 def graph(ruta: str, params: dict, metodo: str = "GET") -> dict:
