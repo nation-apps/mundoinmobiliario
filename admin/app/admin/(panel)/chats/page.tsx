@@ -23,7 +23,12 @@ export default async function ChatsPage() {
   // El estado de los canales lo pide la propia bandeja desde el navegador.
   return (
     <Suspense fallback={<CargandoChats />}>
-      <Bandeja usuarioId={staff.userId} modo="panel" inicial={inicial} />
+      <Bandeja
+        usuarioId={staff.userId}
+        modo="panel"
+        inicial={inicial}
+        estadoPorDefecto={staff.rol === "vendedor" ? "mias" : "todas"}
+      />
     </Suspense>
   );
 }

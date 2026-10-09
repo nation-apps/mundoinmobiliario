@@ -119,9 +119,23 @@ export async function getOrCreateConversacionAbierta(params: {
   return creada as Conversacion;
 }
 
-export async function escalarConversacion(conversacionId: string): Promise<void> {
-  const { error } = await supabase.from("conversaciones").update({ estado: "escalada" }).eq("id", conversacionId);
+/**
+ * Marca la conversación como escalada y devuelve el nombre de quien la tiene
+ * asignada (lo pone el reparto automático de 0004_reparto_leads.sql), para
+ * que el aviso al equipo diga a quién le toca.
+ */
+export async function escalarConversacion(conversacionId: string): Promise<{ asignadaNombre: string | null }> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .update({ estado: "escalada" })
+    .eq("id", conversacionId)
+    .select("asignada_a")
+    .maybeSingle();
   if (error) throw error;
+  const asignadaA = (data as { asignada_a: string | null } | null)?.asignada_a ?? null;
+  if (!asignadaA) return { asignadaNombre: null };
+  const { data: staff } = await supabase.from("staff").select("nombre").eq("user_id", asignadaA).maybeSingle();
+  return { asignadaNombre: (staff as { nombre: string } | null)?.nombre ?? null };
 }
 
 export type ConversacionConDestino = {

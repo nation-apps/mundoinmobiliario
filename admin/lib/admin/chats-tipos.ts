@@ -404,6 +404,8 @@ export type BandejaProps = {
   usuarioId: string;
   modo: ModoBandeja;
   inicial: DatosBandeja;
+  /** Filtro de estado la primera vez (sin filtros guardados): un vendedor entra viendo sus chats («Mías»). */
+  estadoPorDefecto?: FiltroEstadoBandeja;
 };
 
 export type FiltroCanalBandeja = "todas" | Canal | "comentarios";

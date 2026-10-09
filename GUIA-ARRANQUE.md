@@ -14,6 +14,10 @@ Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aur
   la ficha sin releer el chat.
 - **Leads de formularios de anuncios** de Facebook e Instagram → Chats, como «Formulario de anuncio»
   (`docs/referencia/CONFIGURAR-META.md` §9).
+- **Reparto automático de leads** entre vendedores (panel → «Reparto de leads», solo administración): aleatorio o por
+  porcentaje, solo formularios o todas las conversaciones nuevas, y el cliente que vuelve sigue con su vendedor. Lo hace un
+  trigger al crear la conversación (`0004_reparto_leads.sql`); el vendedor ve el aviso y su chat en el filtro «Mías», y el
+  aviso de escalamiento dice a quién está asignada. Arranca apagado.
 - Panel de administración en `admin/` (Next.js 16): chats, canales y multimedia. Páginas públicas para Meta: `/privacidad`,
   `/terminos`, `/eliminar-datos`.
 - México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Mexico_City`, plantillas `es_MX`.
@@ -55,8 +59,8 @@ negocio:**
 
 ## 4. Base de datos
 
-Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`. Se
-corren a mano en el SQL Editor de Supabase; las tres son idempotentes. **No desplegar el bot de Mundo Motos antes de correr
+Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`,
+`0004_reparto_leads.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot de Mundo Motos antes de correr
 0003**: los intereses nuevos chocarían con el check anterior de `clientes.interes`.
 
 Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:

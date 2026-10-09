@@ -116,8 +116,8 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
  * Se llama SOLO desde un efecto: en el servidor no hay localStorage y leerlo
  * en el primer render daría un mismatch de hidratación.
  */
-function cargarFiltrosGuardados(): FiltrosBandejaGuardados {
-  const porDefecto: FiltrosBandejaGuardados = { canal: "todas", estado: "todas", etapa: "todas", seleccionadaId: null };
+function cargarFiltrosGuardados(estadoPorDefecto: FiltroEstadoBandeja): FiltrosBandejaGuardados {
+  const porDefecto: FiltrosBandejaGuardados = { canal: "todas", estado: estadoPorDefecto, etapa: "todas", seleccionadaId: null };
   try {
     const crudo = localStorage.getItem(BANDEJA_STORAGE_KEY);
     if (!crudo) return porDefecto;
@@ -304,7 +304,7 @@ const CAPA_COMPLETA = "fixed inset-x-0 top-0 flex h-dvh flex-col overflow-hidden
  * (lista | hilo | ficha) y apilado por debajo. Modo "app" (/app/chats):
  * siempre apilado, lista → hilo → ficha a pantalla completa.
  */
-export default function Bandeja({ usuarioId, modo, inicial }: BandejaProps) {
+export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "todas" }: BandejaProps) {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const router = useRouter();
   const pathname = usePathname();
@@ -486,8 +486,8 @@ export default function Bandeja({ usuarioId, modo, inicial }: BandejaProps) {
 
   /* --- Persistencia de filtros y selección --- */
   useEffect(() => {
-    despachar({ tipo: "restaurar", guardados: cargarFiltrosGuardados() });
-  }, []);
+    despachar({ tipo: "restaurar", guardados: cargarFiltrosGuardados(estadoPorDefecto) });
+  }, [estadoPorDefecto]);
 
   // En apilado, con la lista a la vista, no hay ningún chat "abierto": se
   // guarda null para que los avisos no callen los mensajes de ese contacto.

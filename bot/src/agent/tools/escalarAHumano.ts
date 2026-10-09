@@ -30,7 +30,8 @@ export const escalarAHumanoTool: AgentTool<z.infer<typeof inputSchema>> = {
     required: ["motivo"],
   },
   handler: async (input, ctx) => {
-    await escalarConversacion(ctx.conversacionId);
+    // Los mocks de las pruebas devuelven undefined: de ahí el `?.`.
+    const asignada = await escalarConversacion(ctx.conversacionId);
 
     // Evento propio (distinto del `estado` genérico que ya inserta el
     // trigger de 0002_omnicanal.sql al cambiar a 'escalada'): es lo que el panel
@@ -44,7 +45,8 @@ export const escalarAHumanoTool: AgentTool<z.infer<typeof inputSchema>> = {
     try {
       await sendTextIfWindowOpen(
         env.ESCALATION_PHONE,
-        `Conversación escalada (${ctx.canal}). Cliente: ${ctx.contactName ?? "sin nombre"} (${ctx.telefono ?? "sin teléfono"}). Motivo: ${input.motivo}`,
+        `Conversación escalada (${ctx.canal}). Cliente: ${ctx.contactName ?? "sin nombre"} (${ctx.telefono ?? "sin teléfono"}). ` +
+          `${asignada?.asignadaNombre ? `Asignada a: ${asignada.asignadaNombre}. ` : ""}Motivo: ${input.motivo}`,
       );
     } catch (err) {
       // No dejamos que un fallo en la notificación tumbe la escalada en sí

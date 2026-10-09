@@ -11,6 +11,8 @@ type ItemMenu = {
   label: string;
   /** Muestra el contador de conversaciones sin responder. */
   badge?: boolean;
+  /** Solo administración y asistentes (la base tampoco deja a un vendedor leerlo). */
+  soloStaff?: boolean;
 };
 
 const SECCIONES: { grupo: string; items: ItemMenu[] }[] = [
@@ -20,6 +22,7 @@ const SECCIONES: { grupo: string; items: ItemMenu[] }[] = [
       { href: "/admin/chats", label: "Chats", badge: true },
       { href: "/admin/canales", label: "Canales" },
       { href: "/admin/multimedia", label: "Multimedia del bot" },
+      { href: "/admin/reparto", label: "Reparto de leads", soloStaff: true },
     ],
   },
 ];
@@ -63,7 +66,7 @@ export default function AdminSidebar({
               {s.grupo}
             </span>
             <ul className="flex flex-col gap-0.5">
-              {s.items.map((item) => {
+              {s.items.filter((item) => !item.soloStaff || rol !== "vendedor").map((item) => {
                 const activo =
                   item.href === "/admin"
                     ? pathname === "/admin"
