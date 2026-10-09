@@ -211,7 +211,9 @@ Para que lleguen:
 1. **Permisos** `leads_retrieval` y `pages_manage_ads` (y `ads_management` para ver el nombre del anuncio) en la
    app y en el token de la Página (§3). Quien genera el token debe poder **anunciar** en la Página (tarea
    ADVERTISE). Si el token ya existía, vuelve a autorizar la app con los permisos nuevos y comprueba con
-   `debug_token` que `scopes` incluya `leads_retrieval`.
+   `debug_token` que `scopes` incluya `leads_retrieval`. Atajo: genera el token de usuario en el Explorador de la
+   Graph API, cópialo y corre `python3 scripts/conectar-pagina-meta.py`. El script saca el token de la página (no
+   vence), lo guarda en Railway, suscribe la página a `leadgen` y lista los formularios, sin mostrar ningún token.
 2. **Webhook**: objeto Page, campo `leadgen` (§5), y la Página suscrita con `leadgen` en `subscribed_fields`.
 3. **Acceso a clientes potenciales**: Business Settings → Integraciones → **Acceso a clientes potenciales**
    (Leads Access). Si el negocio personalizó el acceso, la app (o el usuario del sistema) debe estar en la lista
