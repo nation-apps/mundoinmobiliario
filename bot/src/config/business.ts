@@ -34,8 +34,11 @@ export const NEGOCIO = {
   financiamiento:
     "hay venta de contado y financiada. El financiamiento está sujeto a documentación, revisión de Buró de Crédito, " +
     "aprobación y disponibilidad",
-  /** Requisitos, enganche mínimo, plazos y financieras habilitadas: no hay una tabla autorizada todavía. */
-  requisitosCredito: POR_DEFINIR,
+  /** Del documento «INFORMACIÓN CRM» (9-oct-2026). Enganche mínimo, plazos y qué financiera aplica: los confirma un asesor. */
+  requisitosCredito:
+    "las financieras revisan el Buró de Crédito con los datos del cliente y piden INE, comprobante de domicilio y " +
+    "estado de cuenta o comprobante de ingresos; con eso deciden si aprueban el crédito para la unidad que busca. El " +
+    "enganche, los plazos y la financiera los confirma un asesor",
   /** Tarifas de servicios de taller definidos. */
   tarifasTaller: POR_DEFINIR,
   garantia: POR_DEFINIR,
@@ -44,7 +47,8 @@ export const NEGOCIO = {
   sucursal: "Mundo de Motos – TVS Motor Cancún, Avenida Yaxchilán 573, Cancún, Quintana Roo",
   /** Enlace oficial de Google Maps: falta que el negocio lo comparta. */
   mapa: POR_DEFINIR,
-  horarioTexto: "lunes a viernes de 9 am a 6 pm y sábado de 9 am a 2 pm",
+  /** Del documento «INFORMACIÓN CRM» (9-oct-2026). Las citas se agendan dentro de este horario. */
+  horarioTexto: "lunes a viernes de 9 am a 7 pm, y sábado y domingo de 9 am a 2 pm",
   email: "mundodemotossureste@gmail.com",
   /** No hay un sitio propio confirmado (el de TVS México es de la marca, no de la sucursal). */
   web: POR_DEFINIR,

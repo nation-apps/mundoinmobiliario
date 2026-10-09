@@ -26,7 +26,7 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 - **Voz humana y fiabilidad** (heredadas de B&B): lee y muestra «escribiendo…», pausa según el largo de la respuesta, junta
   mensajes seguidos en una sola respuesta, reintenta los envíos que fallan, no repite preguntas, no contesta a bots ajenos,
   y la etiqueta **Anulado** hace que el bot ignore a un contacto.
-- **México:** teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Mexico_City`, plantillas `es_MX`.
+- **México:** teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.
 
 ## Panel de administración (`admin/`)
 

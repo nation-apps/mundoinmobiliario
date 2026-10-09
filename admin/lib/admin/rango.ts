@@ -3,7 +3,7 @@
  * horario de verano desde 2022, pero se usa `Intl` con el nombre de la zona en
  * vez de un offset fijo, así un cambio de regla no rompe las fechas.
  */
-export const ZONA_NEGOCIO = "America/Mexico_City";
+export const ZONA_NEGOCIO = "America/Cancun";
 
 /** "2026-10-05" a partir de un instante UTC, leído como día del negocio. */
 export function diaDe(isoUTC: string): string {

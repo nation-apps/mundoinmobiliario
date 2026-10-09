@@ -20,7 +20,7 @@ Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aur
   aviso de escalamiento dice a quién está asignada. Arranca apagado.
 - Panel de administración en `admin/` (Next.js 16): chats, canales y multimedia. Páginas públicas para Meta: `/privacidad`,
   `/terminos`, `/eliminar-datos`.
-- México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Mexico_City`, plantillas `es_MX`.
+- México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.
 
 ### Dónde vive cada cosa
 

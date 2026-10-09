@@ -51,7 +51,7 @@ const envSchema = z.object({
   /** URL pública del bot (Railway), p. ej. https://mundoinmobiliario-production.up.railway.app. */
   PUBLIC_BASE_URL: z.string().url(),
 
-  BUSINESS_TIMEZONE: z.string().default("America/Mexico_City"),
+  BUSINESS_TIMEZONE: z.string().default("America/Cancun"),
   /** Número (52 + 10 dígitos) que recibe el aviso de "conversación escalada" y el de tope de gasto. */
   ESCALATION_PHONE: z.string().min(1),
   RATE_LIMIT_MAX_PER_MINUTE: z.coerce.number().int().positive().default(20),

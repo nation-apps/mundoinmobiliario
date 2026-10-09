@@ -21,7 +21,7 @@ describe("prompt de Mundo Motos", () => {
   it("todo dato pendiente se convierte en «no lo sabes, lo confirma un asesor» y no se inventa", async () => {
     const p = await buildSystemPrompt("whatsapp");
     expect(p).toMatch(/Precios de motos, refacciones y accesorios: NO lo sabes todavía\. No lo inventes: di que un asesor te lo confirma/);
-    expect(p).toMatch(/Requisitos, enganche mínimo, plazos y financieras: NO lo sabes todavía/);
+    expect(p).toMatch(/Garantía: NO lo sabes todavía/);
     expect(p).not.toMatch(/POR_DEFINIR/);
     // Lo mismo en el texto de cada canal (TikTok mencionaba el número del bot).
     for (const canal of ["messenger", "instagram", "tiktok", "web"] as const) {
@@ -40,7 +40,10 @@ describe("prompt de Mundo Motos", () => {
     const p = await buildSystemPrompt("whatsapp");
     // Datos de la sucursal.
     expect(p).toMatch(/Avenida Yaxchilán 573, Cancún/);
-    expect(p).toMatch(/lunes a viernes de 9 am a 6 pm y sábado de 9 am a 2 pm/);
+    expect(p).toMatch(/lunes a viernes de 9 am a 7 pm, y sábado y domingo de 9 am a 2 pm/);
+    // Requisitos del crédito del documento «INFORMACIÓN CRM», sin prometer aprobación.
+    expect(p).toMatch(/INE, comprobante de domicilio y\s+estado de cuenta o comprobante de ingresos/);
+    expect(p).toMatch(/Citas y visitas: solo dentro del horario de atención/);
     // Sin seminuevas, sin pruebas de manejo prometidas, sin lo que no hay en inventario.
     expect(p).toMatch(/No compramos, vendemos ni tomamos a cuenta motos usadas o seminuevas/);
     expect(p).toMatch(/Ofrece una visita para conocer la moto, no una prueba/);
