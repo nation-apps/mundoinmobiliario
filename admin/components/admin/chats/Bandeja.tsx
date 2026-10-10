@@ -1,8 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import {
+  BellOff,
+  BellRing,
+  ChevronDown,
+  CircleCheck,
+  Clock3,
+  Hand,
+  Inbox,
+  Layers,
+  ListFilter,
+  MessageCircleReply,
+  Radio,
+  Search,
+  UserRound,
+  UserRoundX,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { estadoCanales } from "@/lib/admin/bot-api";
 import {
@@ -28,10 +46,12 @@ import {
   type FiltrosBandejaGuardados,
 } from "@/lib/admin/chats-tipos";
 import { Chip } from "@/components/admin/ui";
+import { Menu, MenuOpcion, MenuTitulo } from "@/components/admin/Menu";
 import { useAvisos } from "./Avisos";
+import CanalIcono from "./CanalIcono";
 import ClientPanel from "./ClientPanel";
 import Hilo from "./Hilo";
-import ListaConversaciones from "./ListaConversaciones";
+import ListaConversaciones, { ETAPA_TONO } from "./ListaConversaciones";
 
 /* ---------- Vista: filtros, selección y pantalla ---------- */
 
@@ -218,8 +238,8 @@ const suscribirXl = suscribirMedia(MEDIA_XL);
 
 /* ---------- Piezas de la cabecera ---------- */
 
-const CLASES_CHIP_ACTIVO = "border-ink bg-ink text-bg";
-const CLASES_CHIP_INACTIVO = "border-line text-ink-soft hover:border-ink";
+const CLASES_CHIP_ACTIVO = "border-ink bg-ink text-white";
+const CLASES_CHIP_INACTIVO = "border-line bg-porcelain text-ink-soft hover:border-line-strong";
 
 /** `Chip` de ui.tsx mide ~32 px y no acepta className: en táctil va esta versión de 44 px. */
 function ChipTactil({ activo, onClick, children }: { activo: boolean; onClick: () => void; children: string }) {
@@ -228,7 +248,7 @@ function ChipTactil({ activo, onClick, children }: { activo: boolean; onClick: (
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`min-h-11 shrink-0 whitespace-nowrap border px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors ${
+      className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border px-4 py-1.5 text-[13px] font-medium transition-colors ${
         activo ? CLASES_CHIP_ACTIVO : CLASES_CHIP_INACTIVO
       }`}
     >
@@ -277,11 +297,84 @@ function BotonAvisos({ tactil }: { tactil: boolean }) {
       aria-pressed={avisosActivos}
       onClick={() => (avisosActivos ? desactivar() : activar())}
       title={avisosActivos ? "Dejar de avisar cuando llega un mensaje" : "Avisar con sonido cuando llega un mensaje"}
-      className={`admin-btn ghost shrink-0 ${tactil ? "min-h-11" : ""}`}
+      className={`inline-flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] font-medium transition-colors ${tactil ? "min-h-11" : ""} ${
+        avisosActivos
+          ? "border-accent/45 bg-accent-soft text-accent-deep hover:border-accent"
+          : "border-line bg-porcelain text-ink-soft hover:border-line-strong hover:text-ink"
+      }`}
     >
-      <span aria-hidden className={`size-1.5 rounded-full ${avisosActivos ? "bg-accent" : "bg-line"}`} />
+      {avisosActivos ? <BellRing size={16} aria-hidden /> : <BellOff size={16} aria-hidden />}
       {avisosActivos ? "Avisos activados" : "Activar avisos"}
     </button>
+  );
+}
+
+/* ---------- Filtros desplegables ---------- */
+
+const OPCIONES_ETAPA: { id: FiltroEtapaBandeja; label: string }[] = [
+  { id: "todas", label: "Todas" },
+  ...ETAPAS.map((e) => ({ id: e, label: ETAPA_LABEL[e] })),
+];
+
+const ICONO_ESTADO: Record<FiltroEstadoBandeja, LucideIcon> = {
+  todas: Inbox,
+  sin_responder: Clock3,
+  mias: UserRound,
+  sin_asignar: UserRoundX,
+  escaladas: Hand,
+  cerradas: CircleCheck,
+};
+
+function iconoFiltroCanal(id: FiltroCanalBandeja): ReactNode {
+  if (id === "todas") return <Layers size={16} strokeWidth={1.9} aria-hidden />;
+  if (id === "comentarios") return <MessageCircleReply size={16} strokeWidth={1.9} aria-hidden />;
+  return <CanalIcono canal={id} size={16} />;
+}
+
+const CLASE_FILTRO =
+  "inline-flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] transition-colors aria-expanded:ring-3 aria-expanded:ring-accent-soft max-lg:h-11";
+
+/** Un filtro de la bandeja como menú: muestra lo elegido y, en cada opción, cuántas conversaciones quedarían. */
+function FiltroDesplegable<T extends string>({
+  nombre,
+  icono,
+  opciones,
+  valor,
+  conteos,
+  onCambiar,
+}: {
+  nombre: string;
+  icono: ReactNode;
+  opciones: { id: T; label: string; icono?: ReactNode }[];
+  valor: T;
+  conteos: Record<T, number>;
+  onCambiar: (id: T) => void;
+}) {
+  const elegida = opciones.find((o) => o.id === valor) ?? opciones[0];
+  const activo = valor !== opciones[0]?.id;
+  return (
+    <Menu
+      etiqueta={`Filtrar por ${nombre.toLowerCase()}`}
+      ancho={250}
+      claseBoton={`${CLASE_FILTRO} ${
+        activo ? "border-accent/45 bg-accent-soft text-accent-deep" : "border-line bg-porcelain text-ink hover:border-line-strong"
+      }`}
+      boton={
+        <>
+          <span className={activo ? "text-accent" : "text-muted"}>{icono}</span>
+          <span className={activo ? "text-accent-deep/80" : "text-muted"}>{nombre}</span>
+          <span className="font-medium">{elegida?.label}</span>
+          <ChevronDown size={14} aria-hidden className={activo ? "text-accent" : "text-muted"} />
+        </>
+      }
+    >
+      <MenuTitulo>{nombre}</MenuTitulo>
+      {opciones.map((o) => (
+        <MenuOpcion key={o.id} elegida={o.id === valor} onElegir={() => onCambiar(o.id)} icono={o.icono} detalle={conteos[o.id] ?? 0}>
+          {o.label}
+        </MenuOpcion>
+      ))}
+    </Menu>
   );
 }
 
@@ -599,99 +692,129 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
 
   /* --- Piezas compartidas por las cabeceras --- */
 
-  const selectorEtapa = (
-    <select
-      aria-label="Filtrar por etapa"
-      value={filtroEtapa}
-      onChange={(e) => filtrar({ filtroEtapa: e.target.value as FiltroEtapaBandeja })}
-      // `.admin-input` no está en una capa de Tailwind: su width solo cede con `!`.
-      // En táctil, 16 px de letra para que iOS no haga zoom al enfocar.
-      className={`admin-input !w-auto shrink-0 ${apilado ? "h-11 !text-base" : ""}`}
-    >
-      <option value="todas">Toda etapa</option>
-      {ETAPAS.map((e) => (
-        <option key={e} value={e}>
-          {ETAPA_LABEL[e]}
-        </option>
-      ))}
-    </select>
-  );
+  const conteos = useMemo(() => {
+    // Cuántas quedarían con cada opción, sin tocar los demás filtros (sobre las LIMITE_BANDEJA cargadas).
+    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, busqueda };
+    const contar = (cambio: Partial<Filtros>) =>
+      conversaciones.reduce((n, c) => n + (coincide(c, { ...base, ...cambio }, usuarioId) ? 1 : 0), 0);
+    return {
+      canal: Object.fromEntries(FILTROS_CANAL_BANDEJA.map((f) => [f.id, contar({ canal: f.id })])) as Record<FiltroCanalBandeja, number>,
+      estado: Object.fromEntries(FILTROS_ESTADO_BANDEJA.map((f) => [f.id, contar({ estado: f.id })])) as Record<FiltroEstadoBandeja, number>,
+      etapa: Object.fromEntries(OPCIONES_ETAPA.map((f) => [f.id, contar({ etapa: f.id })])) as Record<FiltroEtapaBandeja, number>,
+    };
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, busqueda, usuarioId]);
 
-  const campoBusqueda = (
-    <input
-      type="search"
-      aria-label="Buscar conversaciones"
-      value={busqueda}
-      onChange={(e) => filtrar({ busqueda: e.target.value })}
-      placeholder={apilado ? "Buscar nombre, teléfono o mensaje…" : "Buscar por nombre, teléfono, @usuario o mensaje…"}
-      className={apilado ? "admin-input h-11 min-w-0 !text-base" : "admin-input ml-auto max-w-xs"}
+  const hayFiltros = filtroCanal !== "todas" || filtroEstado !== "todas" || filtroEtapa !== "todas" || busqueda.trim() !== "";
+
+  const selectorEtapa = (
+    <FiltroDesplegable
+      nombre="Etapa"
+      icono={<Layers size={15} aria-hidden />}
+      opciones={OPCIONES_ETAPA.map((o) => ({
+        ...o,
+        icono: <span aria-hidden className="size-2 rounded-full" style={{ background: o.id === "todas" ? "var(--line-strong)" : ETAPA_TONO[o.id].punto }} />,
+      }))}
+      valor={filtroEtapa}
+      conteos={conteos.etapa}
+      onCambiar={(id) => filtrar({ filtroEtapa: id })}
     />
   );
 
-  const subtituloPanel = [
-    `${resumen.sinResponder} sin responder`,
-    // Solo los canales con algo: cinco contadores en cero son ruido.
-    ...CANALES.filter((canal) => resumen.porCanal[canal] > 0).map((canal) => `${resumen.porCanal[canal]} ${CANAL_LABEL[canal]}`),
-  ].join(" · ");
+  const filtrosDesplegables = (
+    <div role="group" aria-label="Filtros de la bandeja" className={apilado ? FILA_DESLIZABLE : FILA_ENVUELTA}>
+      <FiltroDesplegable
+        nombre="Canal"
+        icono={<Radio size={15} aria-hidden />}
+        opciones={FILTROS_CANAL_BANDEJA.map((o) => ({ ...o, icono: iconoFiltroCanal(o.id) }))}
+        valor={filtroCanal}
+        conteos={conteos.canal}
+        onCambiar={(id) => filtrar({ filtroCanal: id })}
+      />
+      <FiltroDesplegable
+        nombre="Estado"
+        icono={<ListFilter size={15} aria-hidden />}
+        opciones={FILTROS_ESTADO_BANDEJA.map((o) => {
+          const Icono = ICONO_ESTADO[o.id];
+          return { ...o, icono: <Icono size={16} strokeWidth={1.9} aria-hidden /> };
+        })}
+        valor={filtroEstado}
+        conteos={conteos.estado}
+        onCambiar={(id) => filtrar({ filtroEstado: id })}
+      />
+      {selectorEtapa}
+      {hayFiltros && (
+        <button
+          type="button"
+          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", busqueda: "" })}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-[13px] text-muted transition-colors hover:text-ink max-lg:h-11"
+        >
+          <X size={14} aria-hidden />
+          Limpiar
+        </button>
+      )}
+    </div>
+  );
+
+  const campoBusqueda = (
+    <div className={`relative ${apilado ? "w-full" : "w-full max-w-sm lg:ml-auto"}`}>
+      <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+      <input
+        type="search"
+        aria-label="Buscar conversaciones"
+        value={busqueda}
+        onChange={(e) => filtrar({ busqueda: e.target.value })}
+        placeholder={apilado ? "Buscar nombre, teléfono o mensaje…" : "Buscar por nombre, teléfono, @usuario o mensaje…"}
+        // `.admin-input` no está en una capa de Tailwind: su padding solo cede con `!`.
+        // En táctil, 16 px de letra para que iOS no haga zoom al enfocar.
+        className={`admin-input !pl-9 ${apilado ? "h-11 !text-base" : "h-9 !py-0"}`}
+      />
+    </div>
+  );
+
+  const CLASE_LECTURA = "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12px]";
+  const lecturas = (
+    <ul aria-label="Resumen de la bandeja" className={`flex items-center gap-1.5 ${apilado ? FILA_DESLIZABLE : "flex-wrap"}`}>
+      <li
+        className={`${CLASE_LECTURA} shrink-0 ${
+          resumen.sinResponder > 0 ? "border-redline/30 bg-redline/[0.06] text-redline" : "border-line bg-porcelain text-ink-soft"
+        }`}
+      >
+        <span aria-hidden className={resumen.sinResponder > 0 ? "punto-vivo" : "size-1.5 rounded-full bg-current"} />
+        <span className="t-mono font-semibold tabular-nums">{resumen.sinResponder}</span> sin responder
+      </li>
+      <li className={`${CLASE_LECTURA} shrink-0 border-line bg-porcelain text-ink-soft`}>
+        <Hand size={13} aria-hidden />
+        <span className="t-mono font-semibold tabular-nums text-ink">{resumen.conPersona}</span> con una persona
+      </li>
+      {CANALES.filter((canal) => resumen.porCanal[canal] > 0).map((canal) => (
+        <li key={canal} title={`${resumen.porCanal[canal]} abiertas en ${CANAL_LABEL[canal]}`} className={`${CLASE_LECTURA} shrink-0 border-line bg-porcelain text-ink`}>
+          <CanalIcono canal={canal} size={15} />
+          <span className="t-mono font-semibold tabular-nums">{resumen.porCanal[canal]}</span>
+          <span className="sr-only">abiertas en {CANAL_LABEL[canal]}</span>
+        </li>
+      ))}
+    </ul>
+  );
 
   const cabeceraPanel = (
     <header className={`shrink-0 ${apilado ? "mb-4" : "pb-4"}`}>
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <span className="t-brace block">Operación</span>
-          <h1 className="t-display mt-2 text-[clamp(26px,3vw,36px)] leading-none">Conversaciones</h1>
-          <p className="mt-2 text-sm text-ink-soft">{subtituloPanel}</p>
+          <span className="t-brace">Operación</span>
+          <h1 className="t-titulo mt-2.5 text-[clamp(28px,3vw,38px)]">Conversaciones</h1>
         </div>
         <BotonAvisos tactil={apilado} />
       </div>
-
+      <div className="mt-3">{lecturas}</div>
       {apilado ? (
-        <div className="mt-4 flex flex-col gap-2">
-          <FilaChips
-            etiqueta="Filtrar por canal"
-            opciones={FILTROS_CANAL_BANDEJA}
-            valor={filtroCanal}
-            onCambiar={(id) => filtrar({ filtroCanal: id })}
-            tactil
-            className={FILA_DESLIZABLE}
-          />
-          <FilaChips
-            etiqueta="Filtrar por estado"
-            opciones={FILTROS_ESTADO_BANDEJA}
-            valor={filtroEstado}
-            onCambiar={(id) => filtrar({ filtroEstado: id })}
-            tactil
-            className={FILA_DESLIZABLE}
-          />
-          <div className="flex gap-2">
-            {selectorEtapa}
-            {campoBusqueda}
-          </div>
+        <div className="mt-4 flex flex-col gap-2.5">
+          {campoBusqueda}
+          {filtrosDesplegables}
         </div>
       ) : (
-        <div className="mt-4 flex flex-col gap-2">
-          <div className={FILA_ENVUELTA}>
-            <FilaChips
-              etiqueta="Filtrar por canal"
-              opciones={FILTROS_CANAL_BANDEJA}
-              valor={filtroCanal}
-              onCambiar={(id) => filtrar({ filtroCanal: id })}
-              tactil={false}
-              className={FILA_ENVUELTA}
-            />
-            {campoBusqueda}
-          </div>
-          <div className={FILA_ENVUELTA}>
-            <FilaChips
-              etiqueta="Filtrar por estado"
-              opciones={FILTROS_ESTADO_BANDEJA}
-              valor={filtroEstado}
-              onCambiar={(id) => filtrar({ filtroEstado: id })}
-              tactil={false}
-              className={FILA_ENVUELTA}
-            />
-            {selectorEtapa}
-          </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {filtrosDesplegables}
+          {campoBusqueda}
         </div>
       )}
     </header>

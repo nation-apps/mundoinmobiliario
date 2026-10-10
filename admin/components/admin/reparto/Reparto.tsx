@@ -204,7 +204,7 @@ export default function Reparto({
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-line text-left text-[10px] uppercase tracking-[0.14em] text-muted">
+              <tr className="t-mono border-b border-line text-left text-[10.5px] uppercase tracking-[0.1em] text-muted">
                 <th className="py-2 font-semibold">Persona</th>
                 <th className="py-2 font-semibold">
                   {borrador.modo === "aleatorio" ? "En el sorteo" : borrador.modo === "porcentaje" ? "Porcentaje" : ""}
@@ -281,7 +281,7 @@ export default function Reparto({
       </section>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {problema && borrador.modo !== "apagado" && <p className="text-sm text-[#a82f2f]">{problema}</p>}
+        {problema && borrador.modo !== "apagado" && <p className="text-sm text-redline">{problema}</p>}
         <button
           type="button"
           onClick={() => setBorrador(guardado)}

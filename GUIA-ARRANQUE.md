@@ -18,7 +18,7 @@ Railway y Supabase sigue `docs/RUNBOOK-META-DESDE-CERO.md` (escrito con AZ y Aur
   porcentaje, solo formularios o todas las conversaciones nuevas, y el cliente que vuelve sigue con su vendedor. Lo hace un
   trigger al crear la conversación (`0004_reparto_leads.sql`); el vendedor ve el aviso y su chat en el filtro «Mías», y el
   aviso de escalamiento dice a quién está asignada. Arranca apagado.
-- Panel de administración en `admin/` (Next.js 16): chats, canales y multimedia. Páginas públicas para Meta: `/privacidad`,
+- Panel de administración en `admin/` (Next.js 16): chats, métricas (solo administración), canales, multimedia y reparto. Páginas públicas para Meta: `/privacidad`,
   `/terminos`, `/eliminar-datos`.
 - México: teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.
 

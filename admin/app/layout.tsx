@@ -1,16 +1,23 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Saira_Condensed } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const saira = Saira_Condensed({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: ["600", "700"],
+  variable: "--font-saira",
 });
 
-const inter = Inter({
+const plex = IBM_Plex_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="es" className={`${saira.variable} ${plex.variable} ${plexMono.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

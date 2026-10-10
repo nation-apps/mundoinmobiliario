@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight, CircleAlert, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
 /**
@@ -13,6 +14,7 @@ export default function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -40,49 +42,63 @@ export default function LoginForm({ next }: { next?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="admin-card p-7">
+    <form onSubmit={onSubmit} className="admin-card p-6 sm:p-7">
       <div className="flex flex-col gap-5">
         <div>
           <label className="admin-label" htmlFor="email">
             Correo
           </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            className="admin-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="tu@correo.com"
-          />
+          <div className="relative">
+            <Mail size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="admin-input !pl-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@correo.com"
+            />
+          </div>
         </div>
         <div>
           <label className="admin-label" htmlFor="password">
             Contraseña
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="admin-input"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="relative">
+            <LockKeyhole size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input
+              id="password"
+              type={verClave ? "text" : "password"}
+              required
+              autoComplete="current-password"
+              className="admin-input !pl-10 !pr-11"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setVerClave((v) => !v)}
+              aria-label={verClave ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+              aria-pressed={verClave}
+              className="absolute right-1 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center text-muted transition-colors hover:text-ink"
+            >
+              {verClave ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+            </button>
+          </div>
         </div>
 
         {error && (
-          <p
-            role="alert"
-            className="border border-accent/40 bg-accent/5 px-3 py-2 text-sm text-accent-deep"
-          >
+          <p role="alert" className="flex items-start gap-2 rounded-lg border border-redline/25 bg-redline/[0.06] px-3 py-2.5 text-sm text-redline">
+            <CircleAlert size={16} aria-hidden className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}
 
-        <button type="submit" disabled={enviando} className="admin-btn w-full">
+        <button type="submit" disabled={enviando} className="admin-btn h-11 w-full">
           {enviando ? "Entrando…" : "Entrar"}
+          {!enviando && <ArrowRight size={16} aria-hidden />}
         </button>
       </div>
     </form>

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Images } from "lucide-react";
 import Multimedia, { type ItemMultimedia } from "@/components/admin/multimedia/Multimedia";
 import { PageHeader } from "@/components/admin/ui";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
@@ -23,7 +24,12 @@ export default async function MultimediaPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Operación" titulo="Multimedia del bot" />
+      <PageHeader
+        eyebrow="Ajustes"
+        titulo="Multimedia del bot"
+        icono={<Images size={20} strokeWidth={1.9} />}
+        descripcion="Fotos, videos y documentos que el bot y el equipo pueden mandar en los chats."
+      />
       <Multimedia items={(data ?? []) as ItemMultimedia[]} urlBase={urlBase} />
     </>
   );

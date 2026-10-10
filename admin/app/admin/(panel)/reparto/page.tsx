@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Shuffle } from "lucide-react";
 import Reparto from "@/components/admin/reparto/Reparto";
 import { PageHeader } from "@/components/admin/ui";
 import { desdeHaceDias, type ConteoReparto, type MiembroReparto, type RepartoConfig } from "@/lib/admin/reparto";
@@ -41,7 +42,12 @@ export default async function RepartoPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Operación" titulo="Reparto de leads" />
+      <PageHeader
+        eyebrow="Ajustes"
+        titulo="Reparto de leads"
+        icono={<Shuffle size={20} strokeWidth={1.9} />}
+        descripcion="Cómo se asignan los chats nuevos entre los vendedores: al azar o por porcentaje."
+      />
       <Reparto
         inicial={(configRes.data as RepartoConfig | null) ?? null}
         equipo={(equipoRes.data ?? []) as MiembroReparto[]}

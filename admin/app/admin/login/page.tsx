@@ -35,14 +35,20 @@ export default async function LoginPage({
   const next = destinoSeguro((await searchParams).next);
 
   return (
-    <main className="relative flex min-h-svh items-center justify-center bg-bg px-5">
+    <main className="relative flex min-h-svh items-center justify-center bg-pit px-5 py-12">
       <div className="relative w-full max-w-sm">
-        <div className="mb-9 text-center">
-          <span className="t-display block text-4xl">
-            Mundo <span className="t-script text-accent">Motos</span>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <span
+            aria-hidden
+            className="t-display flex size-14 items-center justify-center rounded-2xl bg-accent text-[26px] font-bold text-white shadow-[0_10px_30px_-10px_rgba(43,80,236,0.7)]"
+          >
+            <span className="-skew-x-[9deg]">MM</span>
           </span>
-          <span className="mt-3 block text-[10px] font-semibold uppercase tracking-[0.28em] text-muted">
-            Panel interno
+          <span className="t-titulo mt-5 block text-[34px] text-white">
+            Mundo <span className="t-script text-[#93a6ff]">Motos</span>
+          </span>
+          <span className="t-mono mt-2 block text-[10.5px] uppercase tracking-[0.2em] text-white/45">
+            Panel de ventas · TVS Motor Cancún
           </span>
         </div>
         <LoginForm next={next} />

@@ -47,17 +47,18 @@ type Tono = "bien" | "neutro" | "aviso" | "mal";
 const TONO: Record<Tono, { fondo: string; texto: string }> = {
   bien: { fondo: "rgba(12,163,12,0.10)", texto: "#0a7d0a" },
   neutro: { fondo: "rgba(29,19,21,0.06)", texto: "#8d7b76" },
-  aviso: { fondo: "rgba(250,178,25,0.16)", texto: "#8a6200" },
-  mal: { fondo: "rgba(208,59,59,0.10)", texto: "#a82f2f" },
+  aviso: { fondo: "rgba(242,165,22,0.18)", texto: "#8a5a00" },
+  mal: { fondo: "rgba(212,32,41,0.10)", texto: "#a3161d" },
 };
 
 /** Mismo dibujo que `EstadoBadge` de ui.tsx; el texto siempre dice el estado. */
 function Insignia({ tono, children }: { tono: Tono; children: ReactNode }) {
   return (
     <span
-      className="inline-block shrink-0 whitespace-nowrap px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium"
       style={{ background: TONO[tono].fondo, color: TONO[tono].texto }}
     >
+      <span aria-hidden className="size-1.5 rounded-full bg-current" />
       {children}
     </span>
   );
@@ -84,12 +85,12 @@ function Interruptor({
         aria-checked={activo}
         disabled={deshabilitado}
         onClick={() => onCambiar(!activo)}
-        className={`relative h-5 w-9 shrink-0 border transition-colors disabled:opacity-50 ${
-          activo ? "border-accent bg-accent" : "border-line bg-bg-soft"
+        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+          activo ? "bg-accent" : "bg-line-strong"
         }`}
       >
         <span
-          className={`absolute left-0 top-0.5 size-3.5 bg-porcelain transition-transform ${
+          className={`absolute left-0 top-0.5 size-4 rounded-full bg-porcelain shadow-sm transition-transform ${
             activo ? "translate-x-[18px]" : "translate-x-0.5"
           }`}
         />

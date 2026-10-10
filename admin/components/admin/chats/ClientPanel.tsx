@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { ArrowLeft, Plus, Tag, X } from "lucide-react";
 import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
 import { BotApiError, guardarTelefonoContacto } from "@/lib/admin/bot-api";
@@ -196,8 +197,8 @@ function textoEvento(evento: EventoConversacion, staff: StaffMiembro[]): string 
 function Seccion({ titulo, accion, children }: { titulo: string; accion?: ReactNode; children: ReactNode }) {
   return (
     <section className="shrink-0 border-b border-line px-5 py-4">
-      <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-line pb-2">
-        <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">{titulo}</h3>
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h3 className="t-brace">{titulo}</h3>
         {accion}
       </div>
       {children}
@@ -225,9 +226,9 @@ function ChipFicha({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={activo}
-      className={`border text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors disabled:opacity-50 ${
-        tactil ? "min-h-11 px-4 py-2" : "px-3 py-1.5"
-      } ${activo ? "border-ink bg-ink text-bg" : "border-line text-ink-soft hover:border-ink"}`}
+      className={`rounded-full border text-[12.5px] font-medium transition-colors disabled:opacity-50 ${
+        tactil ? "min-h-11 px-4 py-2" : "px-3 py-1"
+      } ${activo ? "border-ink bg-ink text-white" : "border-line bg-porcelain text-ink-soft hover:border-line-strong hover:text-ink"}`}
     >
       {children}
     </button>
@@ -238,7 +239,7 @@ function Esqueleto({ filas = 2 }: { filas?: number }) {
   return (
     <div className="flex flex-col gap-2" aria-hidden>
       {Array.from({ length: filas }, (_, i) => (
-        <div key={i} className="h-8 animate-pulse bg-bg-soft" style={{ animationDelay: `${i * 80}ms` }} />
+        <div key={i} className="h-8 animate-pulse rounded-md bg-bg-soft" style={{ animationDelay: `${i * 80}ms` }} />
       ))}
     </div>
   );
@@ -677,10 +678,8 @@ function Ficha({
     <aside className={"flex min-h-0 flex-col overflow-y-auto bg-porcelain " + className}>
       {onVolver && (
         <div className="sticky top-0 z-10 flex shrink-0 items-center gap-1 border-b border-line bg-porcelain px-2 py-2">
-          <button type="button" onClick={onVolver} aria-label="Volver al chat" className="flex size-11 shrink-0 items-center justify-center text-ink">
-            <span aria-hidden className="text-xl leading-none">
-              ‹
-            </span>
+          <button type="button" onClick={onVolver} aria-label="Volver al chat" className="flex size-11 shrink-0 items-center justify-center text-ink hover:bg-bg-soft">
+            <ArrowLeft size={20} aria-hidden />
           </button>
           <h2 className="t-display truncate text-lg leading-tight">Ficha del contacto</h2>
         </div>
@@ -689,7 +688,7 @@ function Ficha({
       {/* 1. Identidad */}
       <section className="shrink-0 border-b border-line px-5 py-4">
         <div className="flex items-center gap-2.5">
-          <CanalIcono canal={conversacion.canal} size={20} />
+          <CanalIcono canal={conversacion.canal} leadAds={conversacion.hilo_externo === HILO_LEAD_ADS} size={24} />
           <h3 className="t-display min-w-0 break-words text-xl leading-tight">{nombreVisible}</h3>
         </div>
         {emailVisible && (
@@ -938,15 +937,14 @@ function Ficha({
                   onClick={() => void quitarEtiqueta(e)}
                   aria-label={`Quitar etiqueta ${e.nombre}`}
                   title="Quitar"
-                  className={`inline-flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70 ${
-                    tactil ? "min-h-11 px-3" : "px-2 py-1"
+                  className={`inline-flex items-center gap-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-70 ${
+                    tactil ? "min-h-11 px-3" : "px-2.5 py-1"
                   }`}
                   style={{ background: tono.fondo, color: tono.texto }}
                 >
+                  <Tag size={11} aria-hidden />
                   {e.nombre}
-                  <span aria-hidden className="text-sm leading-none">
-                    ×
-                  </span>
+                  <X size={12} aria-hidden />
                 </button>
               );
             })}
@@ -960,11 +958,12 @@ function Ficha({
                 key={e.id}
                 type="button"
                 onClick={() => void asignarEtiqueta(e)}
-                className={`border border-dashed border-line text-xs text-ink-soft transition-colors hover:border-solid hover:border-ink hover:text-ink ${
-                  tactil ? "min-h-11 px-3" : "px-2 py-1"
+                className={`inline-flex items-center gap-1 rounded-full border border-dashed border-line-strong text-xs text-ink-soft transition-colors hover:border-solid hover:border-accent hover:text-accent-deep ${
+                  tactil ? "min-h-11 px-3" : "px-2.5 py-1"
                 }`}
               >
-                + {e.nombre}
+                <Plus size={12} aria-hidden />
+                {e.nombre}
               </button>
             ))}
           </div>

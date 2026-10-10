@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { ArrowLeft, Bot, ChevronDown, Mail, Paperclip, Send, Sparkles, StickyNote, UserRoundX } from "lucide-react";
+import { LogoMarca } from "@/components/admin/iconos/Marcas";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { CLASE_DISPARADOR, Menu, MenuOpcion, MenuSeparador, MenuTitulo, MenuAccion } from "@/components/admin/Menu";
 import {
   BotApiError,
   enviarMensajeHumano,
@@ -19,6 +22,7 @@ import {
   describirIdentidad,
   horaCorta,
   horasRestantesVentana,
+  iniciales,
   primerNombre,
   puedeRespuestaPrivada,
   ventanaAbierta,
@@ -33,6 +37,10 @@ import {
   type StaffMiembro,
 } from "@/lib/admin/chats-tipos";
 import CanalIcono from "./CanalIcono";
+import { ETAPA_TONO } from "./ListaConversaciones";
+
+/** Tipo de cada archivo de la biblioteca, a la derecha de su nombre en el menú de adjuntar. */
+const TIPO_ADJUNTO: Record<PlantillaMedia["tipo"], string> = { image: "Foto", video: "Video", audio: "Audio", document: "Doc" };
 
 /* ---------- Burbujas ---------- */
 
@@ -122,14 +130,17 @@ function Burbuja({
   onResponderComentario: (m: Mensaje, modo: "publico" | "privado") => void;
 }) {
   if (mensaje.tipo === "sistema") {
-    return <p className="py-1 text-center text-[11px] text-muted">{mensaje.contenido}</p>;
+    return (
+      <p className="t-mono mx-auto max-w-[85%] rounded-full bg-bg-soft px-3 py-1 text-center text-[10.5px] text-muted">{mensaje.contenido}</p>
+    );
   }
   if (mensaje.tipo === "nota") {
     const autor = mensaje.autor_id ? staffPorId.get(mensaje.autor_id)?.nombre : null;
     return (
       <div className="flex justify-end">
-        <div className="max-w-[78%] border border-gold/50 bg-[rgba(176,141,87,0.12)] px-3 py-2">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#6e5630]">
+        <div className="max-w-[78%] rounded-2xl rounded-br-md border border-amber/50 bg-[rgba(242,165,22,0.10)] px-3.5 py-2.5">
+          <p className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-ink">
+            <StickyNote size={12} aria-hidden />
             Nota interna{autor ? ` · ${autor}` : ""} · {horaCorta(mensaje.created_at)}
           </p>
           <p className="whitespace-pre-wrap break-words text-sm text-ink">{mensaje.contenido}</p>
@@ -144,7 +155,15 @@ function Burbuja({
 
   return (
     <div className={`flex ${esCliente ? "justify-start" : "justify-end"}`}>
-      <div className={`max-w-[78%] px-3 py-2 ${esCliente ? "bg-bg-soft text-ink" : "bg-ink text-porcelain"}`}>
+      <div
+        className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${
+          esCliente
+            ? "rounded-bl-md border border-line bg-porcelain text-ink"
+            : esHumano
+              ? "rounded-br-md bg-accent text-white"
+              : "rounded-br-md bg-ink text-white"
+        }`}
+      >
         {mensaje.tipo === "comentario" && (
           <p className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${esCliente ? "text-muted" : "text-porcelain/70"}`}>
             Comentario
@@ -191,8 +210,13 @@ function Burbuja({
           </p>
         )}
         <div className={`mt-1 flex items-center gap-1 text-[10px] ${esCliente ? "text-muted" : "text-porcelain/60"}`}>
-          {!esCliente && <span className="uppercase tracking-[0.12em]">{esHumano ? "Equipo" : "Bot"}</span>}
-          <span className={!esCliente ? "ml-auto" : ""}>{horaCorta(mensaje.created_at)}</span>
+          {!esCliente && (
+            <span className="t-mono flex items-center gap-1 uppercase tracking-[0.1em]">
+              {!esHumano && <Bot size={11} aria-hidden />}
+              {esHumano ? "Equipo" : "Bot"}
+            </span>
+          )}
+          <span className={`t-mono ${!esCliente ? "ml-auto" : ""}`}>{horaCorta(mensaje.created_at)}</span>
         </div>
       </div>
     </div>
@@ -268,7 +292,6 @@ export default function Hilo({
   const [comentarioActivo, setComentarioActivo] = useState<{ mensaje: Mensaje; modo: "publico" | "privado" } | null>(null);
   const [textoComentario, setTextoComentario] = useState("");
   const [respondiendoComentario, setRespondiendoComentario] = useState(false);
-  const [menuPlantillas, setMenuPlantillas] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
 
   const conversacionId = conversacion?.id ?? null;
@@ -318,7 +341,6 @@ export default function Hilo({
     setModoCompositor("responder");
     setTexto("");
     setSelectorAtajos(false);
-    setMenuPlantillas(false);
     setComentarioActivo(null);
     setTextoComentario("");
   }
@@ -512,7 +534,6 @@ export default function Hilo({
 
   async function enviarPlantilla(plantillaId: string) {
     if (!conversacion) return;
-    setMenuPlantillas(false);
     setEnviando(true);
     try {
       await enviarPlantillaMensaje(conversacion.id, plantillaId);
@@ -566,6 +587,14 @@ export default function Hilo({
           : ventanaMeta(conversacion, humanAgentAprobado);
   const puedeEnviarTexto = modoCompositor === "nota" || (!esComentario && ventana.abierta);
   const respuestasDelCanal = respuestasRapidas.filter((r) => r.activa && (!r.canal || r.canal === conversacion.canal));
+  // Alguien que ya no está activo en el equipo sigue figurando con el nombre que guarda la conversación.
+  const asignadaA = conversacion.asignada_a
+    ? (staffPorId.get(conversacion.asignada_a) ?? {
+        user_id: conversacion.asignada_a,
+        nombre: conversacion.asignada_nombre ?? "Otra persona",
+        rol: "",
+      })
+    : null;
   const enlaceWaMe = conversacion.cliente_telefono
     ? `https://wa.me/${conversacion.cliente_telefono.replace(/\D/g, "")}?text=${encodeURIComponent(
         "Hola, te escribimos de Mundo de Motos por el mensaje que nos dejaste.",
@@ -578,11 +607,11 @@ export default function Hilo({
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           {onVolver && (
-            <button type="button" onClick={onVolver} aria-label="Volver a los chats" className="flex size-11 shrink-0 items-center justify-center text-ink">
-              <span aria-hidden className="text-xl leading-none">‹</span>
+            <button type="button" onClick={onVolver} aria-label="Volver a los chats" className="flex size-11 shrink-0 items-center justify-center text-ink hover:bg-bg-soft">
+              <ArrowLeft size={20} aria-hidden />
             </button>
           )}
-          <CanalIcono canal={conversacion.canal} size={22} />
+          <CanalIcono canal={conversacion.canal} leadAds={conversacion.hilo_externo === HILO_LEAD_ADS} size={26} />
           <button type="button" onClick={onAbrirContacto} className="min-w-0 text-left" disabled={!onAbrirContacto}>
             <h2 className="t-display truncate text-lg leading-tight">{describirIdentidad(conversacion)}</h2>
             <p className="truncate text-[11px] text-muted">
@@ -608,45 +637,101 @@ export default function Hilo({
 
         {/* Sin shrink-0: con la ventana a medio ancho los controles se salían de la columna y tapaban la ficha. */}
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          <select
-            value={conversacion.etapa}
-            onChange={(e) => cambiarEtapa(e.target.value as Etapa)}
-            aria-label="Etapa"
-            className="h-8 border border-line bg-porcelain px-2 text-xs max-lg:h-11 max-lg:text-base"
+          <Menu
+            etiqueta="Etapa"
+            ancho={220}
+            alinear="fin"
+            claseBoton={CLASE_DISPARADOR}
+            boton={
+              <>
+                <span aria-hidden className="size-2 rounded-full" style={{ background: ETAPA_TONO[conversacion.etapa].punto }} />
+                <span className="sr-only">Etapa:</span>
+                <span className="font-medium">{ETAPA_LABEL[conversacion.etapa]}</span>
+                <ChevronDown size={14} aria-hidden className="text-muted" />
+              </>
+            }
           >
+            <MenuTitulo>Etapa</MenuTitulo>
             {ETAPAS.map((e) => (
-              <option key={e} value={e}>
+              <MenuOpcion
+                key={e}
+                elegida={conversacion.etapa === e}
+                onElegir={() => {
+                  if (e !== conversacion.etapa) void cambiarEtapa(e);
+                }}
+                icono={<span aria-hidden className="size-2 rounded-full" style={{ background: ETAPA_TONO[e].punto }} />}
+              >
                 {ETAPA_LABEL[e]}
-              </option>
+              </MenuOpcion>
             ))}
-          </select>
-          <select
-            value={conversacion.asignada_a ?? ""}
-            onChange={(e) => asignar(e.target.value || null)}
-            aria-label="Asignada a"
-            className="h-8 max-w-[150px] border border-line bg-porcelain px-2 text-xs max-lg:h-11 max-lg:text-base"
+          </Menu>
+          <Menu
+            etiqueta="Asignada a"
+            ancho={240}
+            alinear="fin"
+            claseBoton={`${CLASE_DISPARADOR} max-w-[190px]`}
+            boton={
+              <>
+                {asignadaA ? (
+                  <span aria-hidden className="t-display flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] text-white">
+                    {iniciales(asignadaA.nombre)}
+                  </span>
+                ) : (
+                  <UserRoundX size={15} aria-hidden className="shrink-0 text-muted" />
+                )}
+                <span className="sr-only">Asignada a:</span>
+                <span className="min-w-0 truncate font-medium">
+                  {asignadaA ? (asignadaA.user_id === usuarioId ? "Yo" : primerNombre(asignadaA.nombre)) : "Sin asignar"}
+                </span>
+                <ChevronDown size={14} aria-hidden className="shrink-0 text-muted" />
+              </>
+            }
           >
-            <option value="">Sin asignar</option>
-            {staff.map((s) => (
-              <option key={s.user_id} value={s.user_id}>
-                {s.user_id === usuarioId ? `Yo (${primerNombre(s.nombre)})` : s.nombre}
-              </option>
+            <MenuTitulo>Asignar a</MenuTitulo>
+            {staff.map((m) => (
+              <MenuOpcion
+                key={m.user_id}
+                elegida={conversacion.asignada_a === m.user_id}
+                onElegir={() => {
+                  if (m.user_id !== conversacion.asignada_a) void asignar(m.user_id);
+                }}
+                icono={
+                  <span aria-hidden className="t-display flex size-5 items-center justify-center rounded-full bg-bg-soft text-[10px] text-ink-soft">
+                    {iniciales(m.nombre)}
+                  </span>
+                }
+              >
+                {m.user_id === usuarioId ? `Yo (${primerNombre(m.nombre)})` : m.nombre}
+              </MenuOpcion>
             ))}
-          </select>
+            <MenuSeparador />
+            <MenuOpcion
+              elegida={conversacion.asignada_a === null}
+              onElegir={() => {
+                if (conversacion.asignada_a !== null) void asignar(null);
+              }}
+              icono={<UserRoundX size={16} strokeWidth={1.9} aria-hidden />}
+            >
+              Sin asignar
+            </MenuOpcion>
+          </Menu>
           {/* Reabrir una cerrada se hace desde la ficha, que maneja etapa, motivo y el choque con otra abierta. */}
           {!esComentario && !esWeb && conversacion.estado !== "cerrada" && (
-            <label className="flex min-h-11 shrink-0 cursor-pointer select-none items-center gap-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em]">
-              <span className={modoHumano ? "text-muted" : "text-ink"}>Bot</span>
+            <label className="flex min-h-9 shrink-0 cursor-pointer select-none items-center gap-2 rounded-lg border border-line bg-porcelain px-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] max-lg:min-h-11">
+              <span className={`flex items-center gap-1 ${modoHumano ? "text-muted" : "text-ink"}`}>
+                <Bot size={13} aria-hidden />
+                Bot
+              </span>
               <button
                 type="button"
                 role="switch"
                 aria-checked={modoHumano}
                 disabled={cambiandoModo}
                 onClick={() => alternarModo(!modoHumano)}
-                className={`relative h-5 w-9 border transition-colors ${modoHumano ? "border-accent bg-accent" : "border-line bg-bg-soft"}`}
+                className={`relative h-5 w-9 rounded-full transition-colors disabled:opacity-60 ${modoHumano ? "bg-accent" : "bg-line-strong"}`}
               >
                 {/* left-0 es necesario: dentro de un <button> el contenido se centra, y sin él la perilla arranca en el medio y en "Yo" se sale de la pista. */}
-                <span className={`absolute left-0 top-0.5 size-3.5 bg-porcelain transition-transform ${modoHumano ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+                <span className={`absolute left-0 top-0.5 size-4 rounded-full bg-porcelain shadow-sm transition-transform ${modoHumano ? "translate-x-[18px]" : "translate-x-0.5"}`} />
               </button>
               <span className={modoHumano ? "text-ink" : "text-muted"}>Yo</span>
             </label>
@@ -654,8 +739,9 @@ export default function Hilo({
           {iaApagada && !esComentario && !esWeb && (
             <span
               title="La IA de este canal está apagada en Canales: el bot no responde en ningún chat de este canal."
-              className="shrink-0 border border-line px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-bg px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted"
             >
+              <Bot size={12} aria-hidden />
               IA del canal apagada
             </span>
           )}
@@ -694,7 +780,7 @@ export default function Hilo({
       {/* Compositor */}
       <form onSubmit={enviar} className="relative shrink-0 border-t border-line px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="flex border border-line" role="tablist" aria-label="Modo del compositor">
+          <div className="flex rounded-lg border border-line bg-bg p-0.5" role="tablist" aria-label="Modo del compositor">
             {(["responder", "nota"] as ModoCompositor[]).map((m) => (
               <button
                 key={m}
@@ -702,10 +788,15 @@ export default function Hilo({
                 role="tab"
                 aria-selected={modoCompositor === m}
                 onClick={() => setModoCompositor(m)}
-                className={`px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] max-lg:min-h-11 ${
-                  modoCompositor === m ? "bg-ink text-porcelain" : "text-ink-soft hover:text-ink"
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors max-lg:min-h-11 ${
+                  modoCompositor === m
+                    ? m === "nota"
+                      ? "bg-porcelain text-amber-ink shadow-sm"
+                      : "bg-porcelain text-ink shadow-sm"
+                    : "text-muted hover:text-ink"
                 }`}
               >
+                {m === "responder" ? <Send size={12} aria-hidden /> : <StickyNote size={12} aria-hidden />}
                 {m === "responder" ? "Responder" : "Nota interna"}
               </button>
             ))}
@@ -715,8 +806,9 @@ export default function Hilo({
               type="button"
               onClick={pedirSugerencia}
               disabled={sugiriendo}
-              className="min-h-11 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent hover:text-accent-deep disabled:opacity-50"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-accent transition-colors hover:bg-accent-soft hover:text-accent-deep disabled:opacity-50 max-lg:min-h-11"
             >
+              <Sparkles size={14} aria-hidden className={sugiriendo ? "animate-pulse" : ""} />
               {sugiriendo ? "Pensando…" : "Sugerir con IA"}
             </button>
           )}
@@ -737,12 +829,12 @@ export default function Hilo({
           </p>
         )}
         {modoCompositor === "responder" && esComentario && (
-          <p className="mb-2 bg-bg-soft px-3 py-2 text-xs text-ink-soft">
+          <p className="mb-2 rounded-lg bg-bg-soft px-3 py-2 text-xs text-ink-soft">
             Es una conversación de comentarios: responde con los botones de cada comentario, arriba.
           </p>
         )}
         {modoCompositor === "responder" && esWeb && (
-          <div className="border border-line bg-bg-soft px-3 py-3 text-xs">
+          <div className="rounded-xl border border-line bg-bg px-3.5 py-3 text-xs">
             <p className="text-ink-soft">
               Este mensaje llegó por {conversacion.hilo_externo === HILO_LEAD_ADS ? "el formulario de un anuncio" : "el formulario del sitio"}: no
               se responde por aquí. Contáctalo por WhatsApp
@@ -750,17 +842,20 @@ export default function Hilo({
             </p>
             <div className="mt-2.5 flex flex-wrap gap-2">
               {chatWhatsappId && (
-                <button type="button" onClick={() => onAbrirConversacion(chatWhatsappId)} className="border border-ink bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-porcelain max-lg:min-h-11">
+                <button type="button" onClick={() => onAbrirConversacion(chatWhatsappId)} className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:border-accent hover:bg-accent max-lg:min-h-11">
+                  <LogoMarca marca="whatsapp" size={13} />
                   Abrir su chat de WhatsApp
                 </button>
               )}
               {enlaceWaMe && (
-                <a href={enlaceWaMe} target="_blank" rel="noreferrer" className="border border-ink px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">
+                <a href={enlaceWaMe} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-porcelain px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink transition-colors hover:border-[#1daa61] hover:text-[#12804a] max-lg:min-h-11">
+                  <LogoMarca marca="whatsapp" size={13} className="text-[#1daa61]" />
                   Escribir por WhatsApp
                 </a>
               )}
               {conversacion.cliente_email && (
-                <a href={`mailto:${conversacion.cliente_email}`} className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-soft max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">
+                <a href={`mailto:${conversacion.cliente_email}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-soft transition-colors hover:text-ink max-lg:min-h-11">
+                  <Mail size={13} aria-hidden />
                   Responder por correo
                 </a>
               )}
@@ -768,7 +863,7 @@ export default function Hilo({
           </div>
         )}
         {modoCompositor === "responder" && !esComentario && !esWeb && !ventana.abierta && (
-          <div className="mb-2 bg-[rgba(250,178,25,0.16)] px-3 py-2 text-xs text-[#8a6200]">
+          <div className="mb-2 rounded-lg bg-[rgba(242,165,22,0.14)] px-3 py-2 text-xs text-amber-ink">
             {conversacion.canal === "whatsapp"
               ? "Pasaron más de 24 horas desde el último mensaje del cliente. WhatsApp no permite texto libre; solo una plantilla aprobada (desde la ficha del contacto)."
               : "motivo" in ventana
@@ -778,7 +873,7 @@ export default function Hilo({
         )}
 
         {selectorAtajos && respuestasDelCanal.length > 0 && (
-          <div className="absolute bottom-full left-4 z-10 mb-1 max-h-56 w-72 overflow-y-auto border border-line bg-porcelain p-1 shadow-lg">
+          <div className="absolute bottom-full left-4 z-10 mb-1 max-h-56 w-72 overflow-y-auto rounded-xl border border-line bg-porcelain p-1.5 shadow-[0_12px_32px_-8px_rgba(10,15,26,0.28)]">
             {respuestasDelCanal
               .filter((r) => texto.length < 2 || r.atajo.startsWith(texto.slice(1).toLowerCase()))
               .map((r) => (
@@ -789,9 +884,9 @@ export default function Hilo({
                     setTexto(aplicarVariables(r.contenido));
                     setSelectorAtajos(false);
                   }}
-                  className="flex w-full flex-col items-start px-2.5 py-1.5 text-left hover:bg-bg-soft"
+                  className="flex w-full flex-col items-start rounded-md px-2.5 py-1.5 text-left hover:bg-bg-soft"
                 >
-                  <span className="text-xs font-semibold">/{r.atajo}</span>
+                  <span className="t-mono text-xs font-semibold text-accent-deep">/{r.atajo}</span>
                   <span className="text-[11px] text-muted">{r.titulo}</span>
                 </button>
               ))}
@@ -801,26 +896,27 @@ export default function Hilo({
         {(modoCompositor === "nota" || !esWeb) && (
           <div className="flex items-end gap-2">
             {modoCompositor === "responder" && !esComentario && plantillas.length > 0 && (
-              <div className="relative">
-                <button
-                  type="button"
-                  disabled={!ventana.abierta || enviando}
-                  onClick={() => setMenuPlantillas((v) => !v)}
-                  aria-label="Adjuntar multimedia de la biblioteca"
-                  className="h-10 border border-line px-3 text-xs disabled:opacity-50 max-lg:h-11"
-                >
-                  Adjuntar
-                </button>
-                {menuPlantillas && (
-                  <div className="absolute bottom-full left-0 z-10 mb-1 w-64 border border-line bg-porcelain p-1 shadow-lg">
-                    {plantillas.map((p) => (
-                      <button key={p.id} type="button" onClick={() => enviarPlantilla(p.id)} className="block w-full px-2.5 py-1.5 text-left text-xs hover:bg-bg-soft max-lg:flex max-lg:min-h-11 max-lg:items-center">
-                        {p.nombre}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Menu
+                etiqueta="Adjuntar multimedia de la biblioteca"
+                soloIcono
+                lado="arriba"
+                ancho={280}
+                deshabilitado={!ventana.abierta || enviando}
+                claseBoton="inline-flex h-10 shrink-0 items-center gap-1.5 border border-line bg-porcelain px-3 text-xs text-ink-soft transition-colors hover:border-line-strong hover:text-ink disabled:opacity-50 aria-expanded:border-accent max-lg:h-11"
+                boton={
+                  <>
+                    <Paperclip size={15} aria-hidden />
+                    <span className="max-sm:sr-only">Adjuntar</span>
+                  </>
+                }
+              >
+                <MenuTitulo>Multimedia del bot</MenuTitulo>
+                {plantillas.map((p) => (
+                  <MenuAccion key={p.id} onElegir={() => void enviarPlantilla(p.id)} detalle={TIPO_ADJUNTO[p.tipo]}>
+                    {p.nombre}
+                  </MenuAccion>
+                ))}
+              </Menu>
             )}
             {/* En táctil la letra va a 16 px: iOS hace zoom al enfocar campos más chicos. */}
             <textarea
@@ -847,13 +943,16 @@ export default function Hilo({
               }
               disabled={!puedeEnviarTexto || enviando || (esComentario && modoCompositor === "responder")}
               rows={2}
-              className="min-h-0 flex-1 resize-none border border-line bg-porcelain px-3 py-2 text-sm outline-none focus:border-ink disabled:opacity-60 max-lg:text-base"
+              className="min-h-0 flex-1 resize-none border border-line bg-porcelain px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-3 focus:ring-accent-soft disabled:opacity-60 max-lg:text-base"
             />
             <button
               type="submit"
               disabled={!puedeEnviarTexto || enviando || !texto.trim() || (esComentario && modoCompositor === "responder")}
-              className="h-10 border border-ink bg-ink px-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-porcelain disabled:opacity-40 max-lg:h-11"
+              className={`inline-flex h-10 items-center gap-2 px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-white transition-colors disabled:opacity-40 max-lg:h-11 ${
+                modoCompositor === "nota" ? "bg-amber-ink hover:bg-[#6f4800]" : "bg-ink hover:bg-accent"
+              }`}
             >
+              {modoCompositor === "nota" ? <StickyNote size={14} aria-hidden /> : <Send size={14} aria-hidden />}
               {modoCompositor === "nota" ? "Guardar" : "Enviar"}
             </button>
           </div>
@@ -869,7 +968,7 @@ export default function Hilo({
 
       {comentarioActivo && (
         <div className="absolute inset-0 z-20 flex items-end justify-center bg-ink/30 p-4 sm:items-center" onClick={() => setComentarioActivo(null)}>
-          <div className="w-full max-w-sm border border-line bg-porcelain p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-porcelain p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="t-display text-lg">Responder {comentarioActivo.modo === "publico" ? "en público" : "por privado"}</h3>
             <p className="mb-3 mt-1 text-xs text-muted">
               {comentarioActivo.modo === "privado"

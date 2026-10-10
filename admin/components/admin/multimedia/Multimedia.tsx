@@ -163,7 +163,7 @@ export default function Multimedia({ items, urlBase }: { items: ItemMultimedia[]
           </label>
 
           <label className="flex items-center gap-2.5 text-sm">
-            <input type="checkbox" checked={activo} onChange={(ev) => setActivo(ev.target.checked)} className="size-4 accent-[#1d1315]" />
+            <input type="checkbox" checked={activo} onChange={(ev) => setActivo(ev.target.checked)} className="size-4 accent-[var(--accent)]" />
             Activo (el bot ya puede usarlo)
           </label>
 
@@ -238,9 +238,9 @@ function Fila({ item, urlBase }: { item: ItemMultimedia; urlBase: string }) {
       <a href={url} target="_blank" rel="noreferrer" className="shrink-0" aria-label={`Abrir ${item.nombre}`}>
         {item.tipo === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={item.nombre} className="size-24 border border-line object-cover" />
+          <img src={url} alt={item.nombre} className="size-24 rounded-xl border border-line object-cover" />
         ) : (
-          <span className="flex size-24 items-center justify-center border border-dashed border-line text-[10px] uppercase tracking-[0.12em] text-muted">
+          <span className="flex size-24 items-center justify-center rounded-xl border border-dashed border-line-strong text-[10px] uppercase tracking-[0.12em] text-muted">
             {TIPO_LABEL[item.tipo]}
           </span>
         )}
@@ -273,7 +273,7 @@ function Fila({ item, urlBase }: { item: ItemMultimedia; urlBase: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-[15px] font-medium text-ink">{item.nombre}</h3>
               <span className="text-[10px] uppercase tracking-[0.14em] text-muted">{TIPO_LABEL[item.tipo]}</span>
-              {!item.activo && <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a82f2f]">Apagado</span>}
+              {!item.activo && <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-redline">Apagado</span>}
             </div>
             <p className="mt-1.5 text-sm text-ink-soft">
               <span className="admin-label !mb-0">Nota para el bot: </span>
@@ -295,7 +295,7 @@ function Fila({ item, urlBase }: { item: ItemMultimedia; urlBase: string }) {
               </button>
               {seguro ? (
                 <>
-                  <button type="button" disabled={ocupado} onClick={eliminar} className="admin-btn !bg-[#a82f2f] !border-[#a82f2f]">
+                  <button type="button" disabled={ocupado} onClick={eliminar} className="admin-btn !border-redline !bg-redline">
                     Sí, eliminar
                   </button>
                   <button type="button" onClick={() => setSeguro(false)} className="admin-btn ghost">
@@ -303,7 +303,7 @@ function Fila({ item, urlBase }: { item: ItemMultimedia; urlBase: string }) {
                   </button>
                 </>
               ) : (
-                <button type="button" onClick={() => setSeguro(true)} className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a82f2f]">
+                <button type="button" onClick={() => setSeguro(true)} className="text-xs font-semibold uppercase tracking-[0.14em] text-redline">
                   Eliminar
                 </button>
               )}

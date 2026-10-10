@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { RadioTower } from "lucide-react";
 import Canales from "@/components/admin/chats/Canales";
 import { PageHeader } from "@/components/admin/ui";
 import { CANALES_CONFIGURABLES, type CanalConfig } from "@/lib/admin/chats-tipos";
@@ -33,7 +34,12 @@ export default async function CanalesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Operación" titulo="Canales" />
+      <PageHeader
+        eyebrow="Ajustes"
+        titulo="Canales"
+        icono={<RadioTower size={20} strokeWidth={1.9} />}
+        descripcion="Qué canales están conectados, si el bot responde en cada uno y los datos para Meta."
+      />
       <Canales inicial={filas} />
     </>
   );

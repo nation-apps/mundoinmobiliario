@@ -31,7 +31,11 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 ## Panel de administración (`admin/`)
 
 - **Chats:** bandeja en tiempo real, hilo, respuesta manual del asesor, sugerencia de la IA, ficha del cliente con su perfil de
-  compra, etiquetas y notas.
+  compra, etiquetas y notas. Filtros de canal, estado y etapa en menús desplegables con el conteo de cada opción; la campana
+  del menú lateral lista los chats que esperan respuesta.
+- **Métricas** (solo administración): entradas por día y canal, origen de cada lead (las campañas de Meta), etapa actual,
+  cierres, desempeño por vendedor, mediana de la primera respuesta de una persona (con meta de 5 min) y a qué hora escriben.
+  Periodos: hoy, 7, 30 y 90 días y el mes en curso, en hora de Cancún (`lib/admin/metricas.ts`, cálculo puro).
 - **Canales:** encender/apagar WhatsApp, Messenger e Instagram y la IA por canal; estado del webhook y del token.
 - **Multimedia del bot:** catálogos, fichas técnicas, PDFs y videos que el bot puede enviar, cada uno con su nota de «cuándo mandarlo».
 - Entra con un usuario de Supabase Auth que tenga fila en la tabla `staff`. El navegador nunca habla directo con el bot: el

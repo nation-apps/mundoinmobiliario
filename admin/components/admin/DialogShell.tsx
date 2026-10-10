@@ -88,7 +88,7 @@ export default function DialogShell({
         aria-label="Cerrar"
         tabIndex={-1}
         onClick={onCerrar}
-        className="absolute inset-0 bg-ink/45"
+        className="absolute inset-0 rounded-none bg-pit/50 backdrop-blur-[2px]"
       />
       <div
         ref={hojaRef}
@@ -97,7 +97,7 @@ export default function DialogShell({
         aria-labelledby={tituloId}
         aria-describedby={descripcion ? descripcionId : undefined}
         style={{ maxWidth: ancho }}
-        className="relative flex max-h-[92svh] w-full flex-col border border-line bg-porcelain shadow-xl"
+        className="relative flex max-h-[92svh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-porcelain shadow-[0_24px_60px_-20px_rgba(10,15,26,0.45)] sm:rounded-2xl"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
           <div>
