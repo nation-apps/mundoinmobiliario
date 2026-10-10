@@ -35,6 +35,9 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   del menú lateral lista los chats que esperan respuesta.
 - **Coexistencia de WhatsApp:** el teléfono de ventas puede seguir en la app WhatsApp Business y a la vez en el CRM; lo que el
   equipo escribe desde el celular se refleja en el chat y lo pasa a «Yo» (`docs/referencia/COEXISTENCIA-WHATSAPP.md`).
+- **Embudo comercial:** tablero por etapas (Nueva, En atención, Con teléfono, Con visita, Propuesta, Cerrada) con una tarjeta por
+  conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; cerrar pide el motivo (ganada, perdida…). Filtros
+  por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.
 - **Métricas** (solo administración): entradas por día y canal, origen de cada lead (las campañas de Meta), etapa actual,
   cierres, desempeño por vendedor, mediana de la primera respuesta de una persona (con meta de 5 min) y a qué hora escriben.
   Periodos: hoy, 7, 30 y 90 días y el mes en curso, en hora de Cancún (`lib/admin/metricas.ts`, cálculo puro).

@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Gauge,
   Images,
+  Kanban,
   LogOut,
   Menu as IconoMenu,
   MessagesSquare,
@@ -43,6 +44,7 @@ const GRUPOS: Grupo[] = [
     nombre: "Operación",
     items: [
       { href: "/admin/chats", label: "Chats", icono: MessagesSquare, badge: true },
+      { href: "/admin/embudo", label: "Embudo", icono: Kanban },
       { href: "/admin/metricas", label: "Métricas", icono: Gauge, soloStaff: true },
     ],
   },

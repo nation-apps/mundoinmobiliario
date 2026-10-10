@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import {
   BellOff,
   BellRing,
-  ChevronDown,
   CircleCheck,
   Clock3,
   Hand,
@@ -46,7 +45,7 @@ import {
   type FiltrosBandejaGuardados,
 } from "@/lib/admin/chats-tipos";
 import { Chip } from "@/components/admin/ui";
-import { Menu, MenuOpcion, MenuTitulo } from "@/components/admin/Menu";
+import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
 import { useAvisos } from "./Avisos";
 import CanalIcono from "./CanalIcono";
 import ClientPanel from "./ClientPanel";
@@ -329,53 +328,6 @@ function iconoFiltroCanal(id: FiltroCanalBandeja): ReactNode {
   if (id === "todas") return <Layers size={16} strokeWidth={1.9} aria-hidden />;
   if (id === "comentarios") return <MessageCircleReply size={16} strokeWidth={1.9} aria-hidden />;
   return <CanalIcono canal={id} size={16} />;
-}
-
-const CLASE_FILTRO =
-  "inline-flex h-9 shrink-0 items-center gap-2 border px-3 text-[13px] transition-colors aria-expanded:ring-3 aria-expanded:ring-accent-soft max-lg:h-11";
-
-/** Un filtro de la bandeja como menú: muestra lo elegido y, en cada opción, cuántas conversaciones quedarían. */
-function FiltroDesplegable<T extends string>({
-  nombre,
-  icono,
-  opciones,
-  valor,
-  conteos,
-  onCambiar,
-}: {
-  nombre: string;
-  icono: ReactNode;
-  opciones: { id: T; label: string; icono?: ReactNode }[];
-  valor: T;
-  conteos: Record<T, number>;
-  onCambiar: (id: T) => void;
-}) {
-  const elegida = opciones.find((o) => o.id === valor) ?? opciones[0];
-  const activo = valor !== opciones[0]?.id;
-  return (
-    <Menu
-      etiqueta={`Filtrar por ${nombre.toLowerCase()}`}
-      ancho={250}
-      claseBoton={`${CLASE_FILTRO} ${
-        activo ? "border-accent/45 bg-accent-soft text-accent-deep" : "border-line bg-porcelain text-ink hover:border-line-strong"
-      }`}
-      boton={
-        <>
-          <span className={activo ? "text-accent" : "text-muted"}>{icono}</span>
-          <span className={activo ? "text-accent-deep/80" : "text-muted"}>{nombre}</span>
-          <span className="font-medium">{elegida?.label}</span>
-          <ChevronDown size={14} aria-hidden className={activo ? "text-accent" : "text-muted"} />
-        </>
-      }
-    >
-      <MenuTitulo>{nombre}</MenuTitulo>
-      {opciones.map((o) => (
-        <MenuOpcion key={o.id} elegida={o.id === valor} onElegir={() => onCambiar(o.id)} icono={o.icono} detalle={conteos[o.id] ?? 0}>
-          {o.label}
-        </MenuOpcion>
-      ))}
-    </Menu>
-  );
 }
 
 /** En la app móvil solo van a la vista los tres estados que se usan de pie; el resto, en "Más filtros". */
