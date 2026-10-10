@@ -152,6 +152,9 @@ function Burbuja({
   const esCliente = mensaje.rol === "user";
   const esHumano = mensaje.rol === "humano";
   const permalink = typeof mensaje.metadata.permalink === "string" ? mensaje.metadata.permalink : null;
+  // Lo que el equipo escribió fuera del panel: desde la app WhatsApp Business del celular o la bandeja de Meta.
+  const etiquetaVia =
+    mensaje.metadata.via === "whatsapp_business_app" ? "celular" : mensaje.metadata.via === "business_suite" ? "Business Suite" : null;
 
   return (
     <div className={`flex ${esCliente ? "justify-start" : "justify-end"}`}>
@@ -213,7 +216,7 @@ function Burbuja({
           {!esCliente && (
             <span className="t-mono flex items-center gap-1 uppercase tracking-[0.1em]">
               {!esHumano && <Bot size={11} aria-hidden />}
-              {esHumano ? "Equipo" : "Bot"}
+              {esHumano ? `Equipo${etiquetaVia ? ` · ${etiquetaVia}` : ""}` : "Bot"}
             </span>
           )}
           <span className={`t-mono ${!esCliente ? "ml-auto" : ""}`}>{horaCorta(mensaje.created_at)}</span>

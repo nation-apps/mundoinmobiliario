@@ -33,6 +33,9 @@ crea al empezar (ese solo escribe a 5 destinatarios de una lista; con cualquier 
 Un número conectado a la Cloud API **no puede seguir usándose en la app WhatsApp / WhatsApp Business** del
 celular (Meta: "Numbers already in use with WhatsApp cannot be registered unless they are deleted first").
 
+> **Mundo Motos:** el bot ya procesa la coexistencia (lo que el equipo escribe desde el celular se refleja en el panel);
+> ver [`COEXISTENCIA-WHATSAPP.md`](COEXISTENCIA-WHATSAPP.md).
+
 La **coexistencia** (mismo número en la app y en la API, con historial sincronizado) existe y Perú está
 soportado según fuentes secundarias, pero **solo se activa mediante el registro embebido de un Solution
 Partner o Tech Provider**; una app propia como la de AZ no puede activarla desde el App Dashboard. Si algún

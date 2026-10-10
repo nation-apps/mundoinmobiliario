@@ -3,8 +3,15 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { verifyMetaSignature } from "../lib/metaSignature.js";
 import { formaDelPayload } from "../lib/formaPayload.js";
-import { parseInboundMessages, parseFailedStatuses, describeParsePayloadError } from "../whatsapp/parser.js";
+import {
+  parseInboundMessages,
+  parseFailedStatuses,
+  parseEcosApp,
+  resumenSincronizacion,
+  describeParsePayloadError,
+} from "../whatsapp/parser.js";
 import { handleInboundMessage } from "../agent/handleMessage.js";
+import { handleEcoApp } from "../agent/handleEcoApp.js";
 import { marcarMensajeFallido } from "../db/repositories/mensajes.js";
 
 // Fase 1: dedup en memoria (suficiente para una sola instancia). Cuando
@@ -48,6 +55,20 @@ async function processWebhookAsync(body: unknown): Promise<void> {
   }
 
   await processFailedStatuses(body);
+
+  // Coexistencia: lo que el equipo escribe desde el celular se refleja en el panel, y Meta avisa cuando termina de
+  // mandar el historial y los contactos de la app (no se importan: llenarían el panel de chats viejos).
+  for (const sync of resumenSincronizacion(body)) {
+    logger.info({ campo: sync.campo, elementos: sync.elementos }, "Sincronización de la app WhatsApp Business recibida (no se importa)");
+  }
+  for (const eco of parseEcosApp(body)) {
+    if (isDuplicate(eco.id)) continue;
+    try {
+      await handleEcoApp(eco);
+    } catch (err) {
+      logger.error({ err, messageId: eco.id }, "Fallo reflejando un mensaje enviado desde la app WhatsApp Business");
+    }
+  }
 
   const messages = parseInboundMessages(body);
   for (const message of messages) {
