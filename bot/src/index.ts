@@ -12,6 +12,7 @@ import { estadoConexion } from "./meta/client.js";
 import { actualizarEstadoCanal } from "./db/repositories/canales.js";
 import { registrarNumeroSiHaceFalta } from "./whatsapp/registro.js";
 import { iniciarReenvios } from "./seguimientos/reenvios.js";
+import { iniciarReconciliacionLeads } from "./meta/reconciliarLeads.js";
 
 // Sin el log automático de requests: Fastify escribe `req.url` completo y el
 // handshake de Meta trae el token de verificación en la query
@@ -85,6 +86,7 @@ if (whatsappConfigurado) {
 }
 
 iniciarReenvios();
+iniciarReconciliacionLeads();
 
 if (metaConfigurado) {
   estadoConexion()

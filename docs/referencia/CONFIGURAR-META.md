@@ -179,6 +179,15 @@ Con una cuenta **que tenga rol en la app**: DM a la Página (o a la cuenta de IG
 responder en público y por privado. En **Canales** del panel: Messenger "configurado" con el nombre de la Página
 y el vencimiento del token, Instagram con su @usuario.
 
+### Revisión automática de formularios (si el webhook no avisa)
+
+Meta avisa de cada lead por webhook, pero hay páginas a las que el aviso no llega (pasó con TVS Motor Cancún: unos 25 leads
+al día en Meta y ninguno en el panel; esa página además tiene GoHighLevel conectado). Por eso el bot, cada
+`LEADS_RECONCILIAR_MIN` minutos (5), lee los formularios **activos** de cada página de `META_PAGINAS` y registra los leads de
+las últimas `LEADS_VENTANA_MIN` minutos (120) que todavía no están guardados. Se reconocen por `leadgen:<id>`, el mismo
+identificador del webhook, así que nunca se duplican. Máximo 50 por vuelta. Se apaga con `LEADS_RECONCILIAR_ACTIVO=false`.
+Un formulario nuevo de una página conectada entra solo. Código: `bot/src/meta/reconciliarLeads.ts`.
+
 ## 10. Métricas de contenido
 
 `src/meta/insights.ts` guarda cada 6 h una foto diaria de alcance, interacciones y seguidores en

@@ -69,6 +69,11 @@ const envSchema = z.object({
 
   // Reenvío automático de respuestas que no llegaron (src/seguimientos/reenvios.ts). REENVIOS_ACTIVOS=false lo apaga.
   REENVIOS_ACTIVOS: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  // Revisión de formularios de anuncios (src/meta/reconciliarLeads.ts): trae los leads que el webhook de Meta no avisó.
+  LEADS_RECONCILIAR_ACTIVO: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  LEADS_RECONCILIAR_MIN: z.coerce.number().int().min(1).max(60).default(5),
+  /** Cuánto hacia atrás se miran los leads en cada vuelta. */
+  LEADS_VENTANA_MIN: z.coerce.number().int().min(10).max(1440).default(120),
 
   // Orígenes del panel admin autorizados a llamar a /admin/* (separados por
   // coma). El panel de Mundo Motos llama al bot desde el servidor, pero se deja la
