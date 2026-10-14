@@ -31,6 +31,11 @@ const MENSAJES: Record<string, string> = {
   bot_no_configurado: "Falta configurar la URL del bot en el servidor (BOT_API_URL).",
   sin_sesion: "Tu sesión se cerró. Vuelve a entrar al panel.",
   forbidden: "Tu usuario no tiene permiso para esta acción.",
+  stripe_no_configurado: "El cobro todavía no está configurado en el servidor.",
+  stripe_error: "Stripe no pudo crear la sesión de pago. Inténtalo de nuevo en un momento.",
+  ya_activa: "La suscripción ya está activa.",
+  sin_cliente: "Todavía no hay un pago registrado que administrar.",
+  panel_url_no_configurada: "Falta configurar la dirección pública del panel en el servidor.",
 };
 
 async function llamar<T>(ruta: string, init?: RequestInit): Promise<T> {
@@ -100,4 +105,14 @@ export type PlantillaWhatsApp = { name: string; status: string; language: string
 
 export function listarPlantillasWhatsapp(): Promise<{ plantillas: PlantillaWhatsApp[] }> {
   return llamar("plantillas");
+}
+
+/** Crea la sesión de pago de la suscripción en Stripe; devuelve a dónde mandar a la persona. */
+export function iniciarPago(): Promise<{ url: string }> {
+  return llamar("pagos/checkout", { method: "POST", body: "{}" });
+}
+
+/** Portal de Stripe: cambiar la tarjeta, ver facturas o cancelar. */
+export function abrirPortalDePago(): Promise<{ url: string }> {
+  return llamar("pagos/portal", { method: "POST", body: "{}" });
 }

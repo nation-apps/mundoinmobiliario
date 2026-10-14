@@ -4,6 +4,7 @@ import Reparto from "@/components/admin/reparto/Reparto";
 import { PageHeader } from "@/components/admin/ui";
 import { desdeHaceDias, type ConteoReparto, type MiembroReparto, type RepartoConfig } from "@/lib/admin/reparto";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reparto de leads" };
@@ -14,6 +15,7 @@ const DIAS_ESTADISTICAS = 30;
 export default async function RepartoPage() {
   const staff = await getStaff();
   if (!staff) redirect("/admin/login?next=/admin/reparto");
+  await exigirSuscripcion(staff.rol);
   // Un vendedor no configura el reparto (y la base tampoco se lo deja leer: is_staff()).
   if (staff.rol === "vendedor") redirect("/admin/chats");
 

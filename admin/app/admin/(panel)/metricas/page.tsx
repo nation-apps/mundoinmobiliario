@@ -4,6 +4,7 @@ import TableroMetricas from "@/components/admin/metricas/TableroMetricas";
 import { cargarMetricas } from "@/lib/admin/metricas-carga";
 import { PERIODO_POR_DEFECTO, esPeriodo } from "@/lib/admin/metricas";
 import { getStaff } from "@/lib/supabase/server-auth";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Métricas" };
@@ -11,6 +12,7 @@ export const metadata = { title: "Métricas" };
 export default async function MetricasPage({ searchParams }: { searchParams: Promise<{ periodo?: string | string[] }> }) {
   const staff = await getStaff();
   if (!staff) redirect("/admin/login?next=/admin/metricas");
+  await exigirSuscripcion(staff.rol);
   // Quien vende ve los chats; las métricas del equipo son de administración.
   if (staff.rol === "vendedor") redirect("/admin/chats");
 

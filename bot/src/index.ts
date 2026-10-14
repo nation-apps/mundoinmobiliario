@@ -7,6 +7,7 @@ import { healthRoutes } from "./routes/health.js";
 import { webhookRoutes } from "./routes/webhook.js";
 import { metaWebhookRoutes } from "./routes/metaWebhook.js";
 import { adminRoutes } from "./routes/admin.js";
+import { stripeRoutes } from "./routes/stripe.js";
 import { publicRoutes } from "./routes/public.js";
 import { estadoConexion } from "./meta/client.js";
 import { actualizarEstadoCanal } from "./db/repositories/canales.js";
@@ -59,6 +60,7 @@ await app.register(cors, {
 await app.register(healthRoutes);
 await app.register(webhookRoutes);
 await app.register(metaWebhookRoutes);
+await app.register(stripeRoutes);
 await app.register(adminRoutes);
 await app.register(publicRoutes);
 

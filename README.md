@@ -38,6 +38,9 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 - **Embudo comercial:** tablero por etapas (Nueva, En atención, Con teléfono, Con visita, Propuesta, Cerrada) con una tarjeta por
   conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; cerrar pide el motivo (ganada, perdida…). Filtros
   por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.
+- **Suscripción** (solo administración): cobro del CRM de 39 USD al mes con Stripe Checkout; el panel muestra el estado y,
+  con `SUSCRIPCION_OBLIGATORIA=true`, cierra el acceso si no hay suscripción vigente (5 días de gracia tras un cobro fallido).
+  Guía: `docs/referencia/CONFIGURAR-STRIPE.md`.
 - **Métricas** (solo administración): entradas por día y canal, origen de cada lead (las campañas de Meta), etapa actual,
   cierres, desempeño por vendedor, mediana de la primera respuesta de una persona (con meta de 5 min) y a qué hora escriben.
   Periodos: hoy, 7, 30 y 90 días y el mes en curso, en hora de Cancún (`lib/admin/metricas.ts`, cálculo puro).

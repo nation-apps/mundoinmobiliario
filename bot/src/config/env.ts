@@ -70,6 +70,14 @@ const envSchema = z.object({
   // Reenvío automático de respuestas que no llegaron (src/seguimientos/reenvios.ts). REENVIOS_ACTIVOS=false lo apaga.
   REENVIOS_ACTIVOS: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
   // Revisión de formularios de anuncios (src/meta/reconciliarLeads.ts): trae los leads que el webhook de Meta no avisó.
+  // Cobro del CRM con Stripe (src/stripe/*). Sin STRIPE_SECRET_KEY la sección de suscripción del panel queda apagada.
+  STRIPE_SECRET_KEY: vacioComoAusente(z.string().min(10).optional()),
+  STRIPE_WEBHOOK_SECRET: vacioComoAusente(z.string().min(10).optional()),
+  /** `price_…` del producto en Stripe; sin él se cobra STRIPE_PRECIO_CENTAVOS al mes en línea. */
+  STRIPE_PRICE_ID: vacioComoAusente(z.string().min(3).optional()),
+  STRIPE_PRECIO_CENTAVOS: z.coerce.number().int().min(100).default(3900),
+  /** Dirección pública del panel (a ella vuelve Stripe tras pagar). Sin ella se usa la primera de ADMIN_ORIGINS. */
+  PANEL_PUBLIC_URL: vacioComoAusente(z.string().url().optional()),
   LEADS_RECONCILIAR_ACTIVO: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
   LEADS_RECONCILIAR_MIN: z.coerce.number().int().min(1).max(60).default(5),
   /** Cuánto hacia atrás se miran los leads en cada vuelta. */

@@ -3,6 +3,7 @@ import { Images } from "lucide-react";
 import Multimedia, { type ItemMultimedia } from "@/components/admin/multimedia/Multimedia";
 import { PageHeader } from "@/components/admin/ui";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Multimedia del bot" };
@@ -12,6 +13,7 @@ export default async function MultimediaPage() {
   // entre páginas del panel: cada página comprueba la sesión por su cuenta.
   const staff = await getStaff();
   if (!staff) redirect("/admin/login?next=/admin/multimedia");
+  await exigirSuscripcion(staff.rol);
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase

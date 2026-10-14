@@ -5,6 +5,7 @@ import Embudo from "@/components/admin/embudo/Embudo";
 import { PageHeader } from "@/components/admin/ui";
 import { leerEmbudo } from "@/lib/admin/embudo-consulta";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Embudo" };
@@ -13,6 +14,7 @@ export default async function EmbudoPage() {
   // El layout ya redirige, pero los layouts no se re-evalúan al navegar entre páginas del panel.
   const staff = await getStaff();
   if (!staff) redirect("/admin/login?next=/admin/embudo");
+  await exigirSuscripcion(staff.rol);
 
   const supabase = (await createServerSupabase()) as unknown as SupabaseClient;
   const { datos, error } = await leerEmbudo(supabase);

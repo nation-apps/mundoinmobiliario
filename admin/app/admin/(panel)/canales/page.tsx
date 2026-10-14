@@ -4,6 +4,7 @@ import Canales from "@/components/admin/chats/Canales";
 import { PageHeader } from "@/components/admin/ui";
 import { CANALES_CONFIGURABLES, type CanalConfig } from "@/lib/admin/chats-tipos";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Canales" };
@@ -13,6 +14,7 @@ export default async function CanalesPage() {
   // entre páginas del panel: cada página comprueba la sesión por su cuenta.
   const staff = await getStaff();
   if (!staff) redirect("/admin/login?next=/admin/canales");
+  await exigirSuscripcion(staff.rol);
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase

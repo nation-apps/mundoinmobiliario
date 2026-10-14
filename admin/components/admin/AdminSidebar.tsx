@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   ChevronDown,
+  CreditCard,
   Gauge,
   Images,
   Kanban,
@@ -34,6 +35,8 @@ type ItemMenu = {
   badge?: boolean;
   /** Solo administración y asistentes (la base tampoco deja a un vendedor leerlo). */
   soloStaff?: boolean;
+  /** Solo quien administra el panel (cobros). */
+  soloAdmin?: boolean;
 };
 
 type Grupo = { id: string; nombre: string; icono?: LucideIcon; plegable?: boolean; items: ItemMenu[] };
@@ -57,6 +60,7 @@ const GRUPOS: Grupo[] = [
       { href: "/admin/canales", label: "Canales", icono: RadioTower },
       { href: "/admin/multimedia", label: "Multimedia del bot", icono: Images },
       { href: "/admin/reparto", label: "Reparto de leads", icono: Shuffle, soloStaff: true },
+      { href: "/admin/suscripcion", label: "Suscripción", icono: CreditCard, soloAdmin: true },
     ],
   },
 ];
@@ -267,7 +271,7 @@ export default function AdminSidebar({
 
       <nav className={`flex-1 overflow-y-auto overflow-x-hidden ${rail ? "px-2" : "px-3"}`} aria-label="Secciones del panel">
         {GRUPOS.map((g) => {
-          const items = g.items.filter((item) => !item.soloStaff || rol !== "vendedor");
+          const items = g.items.filter((item) => (!item.soloStaff || rol !== "vendedor") && (!item.soloAdmin || rol === "admin"));
           if (items.length === 0) return null;
           const contieneActual = items.some((item) => esActivo(item.href));
           const plegado = !rail && g.plegable === true && plegadosVigentes.includes(g.id) && !contieneActual;

@@ -5,6 +5,7 @@ import { cargarDatosBandeja } from "@/lib/admin/chats-carga";
 import { RUTA_CHATS_PANEL } from "@/lib/admin/chats-tipos";
 import { getStaff } from "@/lib/supabase/server-auth";
 import CargandoChats from "./loading";
+import { exigirSuscripcion } from "@/lib/admin/acceso-suscripcion";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function ChatsPage() {
   // el usuarioId que necesita la bandeja ("Mías", asignaciones, notas).
   const staff = await getStaff();
   if (!staff) redirect(`/admin/login?next=${RUTA_CHATS_PANEL}`);
+  await exigirSuscripcion(staff.rol);
 
   const inicial = await cargarDatosBandeja();
 

@@ -28,6 +28,9 @@ import { runAgent } from "../agent/runner.js";
 import { responderComentarioPublico, responderComentarioPrivado, estadoConexion, marcarVisto } from "../meta/client.js";
 import { vincularIdentidadMensajeria } from "../meta/identidades.js";
 import type { CanalMeta } from "../meta/parser.js";
+import { AppError } from "../lib/errors.js";
+import { leerSuscripcion } from "../db/repositories/suscripcion.js";
+import { crearCheckout, crearPortal } from "../stripe/cliente.js";
 
 // Exactamente uno de los dos: o el staff escribe texto, o elige una
 // plantilla multimedia de la biblioteca — nunca ambos ni ninguno.
@@ -522,5 +525,47 @@ export async function adminRoutes(app: FastifyInstance) {
 
     logger.info({ clienteId: cliente.id, conversacionId: conversacion.id }, "Mensaje de WhatsApp iniciado desde la ficha del contacto");
     return reply.status(201).send({ mensaje, conversacionId: conversacion.id });
+  });
+
+  /* ---- Suscripción del CRM (Stripe) ---- */
+
+  /** A dónde vuelve Stripe: la página de suscripción del panel. */
+  function volverAlPanel(): string {
+    const base = env.PANEL_PUBLIC_URL ?? env.ADMIN_ORIGINS.split(",").map((o) => o.trim()).find(Boolean);
+    if (!base) throw new AppError("Falta la dirección pública del panel (PANEL_PUBLIC_URL)", "panel_url_no_configurada", 503);
+    return `${base.replace(/\/$/, "")}/admin/suscripcion`;
+  }
+
+  // Solo quien administra el panel cobra o cambia el pago: un asistente o un vendedor no.
+  async function requireAdmin(header: string | undefined) {
+    const staff = await requireStaff(header);
+    if (staff.rol !== "admin") throw new AppError("Solo la administración puede gestionar el pago", "forbidden", 403);
+    return staff;
+  }
+
+  app.post("/admin/pagos/checkout", async (request: FastifyRequest, reply: FastifyReply) => {
+    const staff = await requireAdmin(request.headers.authorization);
+    const actual = await leerSuscripcion();
+    if (actual.estado === "activa" || actual.estado === "en_prueba") {
+      return reply.status(409).send({ error: "ya_activa", mensaje: "La suscripción ya está activa." });
+    }
+    const sesion = await crearCheckout({
+      correo: staff.email,
+      clienteId: actual.stripe_customer_id,
+      volverA: volverAlPanel(),
+    });
+    logger.info({ staffId: staff.id }, "Sesión de pago de Stripe creada");
+    return reply.send(sesion);
+  });
+
+  app.post("/admin/pagos/portal", async (request: FastifyRequest, reply: FastifyReply) => {
+    const staff = await requireAdmin(request.headers.authorization);
+    const actual = await leerSuscripcion();
+    if (!actual.stripe_customer_id) {
+      return reply.status(409).send({ error: "sin_cliente", mensaje: "Todavía no hay un pago registrado que administrar." });
+    }
+    const sesion = await crearPortal({ clienteId: actual.stripe_customer_id, volverA: volverAlPanel() });
+    logger.info({ staffId: staff.id }, "Sesión del portal de Stripe creada");
+    return reply.send(sesion);
   });
 }

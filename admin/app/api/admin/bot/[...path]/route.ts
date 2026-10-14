@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Solo se exponen las rutas /admin/* del bot. Ejemplo:
  *   POST /api/admin/bot/mensajes  →  POST {BOT_API_URL}/admin/mensajes
  */
-const RUTAS_PERMITIDAS = /^(mensajes|comentarios\/[^/]+\/responder|ia\/sugerencia|clientes\/[^/]+\/(telefono|whatsapp)|canales\/estado|conversaciones\/[^/]+\/visto|plantillas|promociones)$/;
+const RUTAS_PERMITIDAS = /^(mensajes|comentarios\/[^/]+\/responder|ia\/sugerencia|clientes\/[^/]+\/(telefono|whatsapp)|canales\/estado|pagos\/(checkout|portal)|conversaciones\/[^/]+\/visto|plantillas|promociones)$/;
 
 async function reenviar(req: Request, path: string[]): Promise<Response> {
   const base = process.env.BOT_API_URL;
