@@ -20,7 +20,7 @@ const PAGINA = 1000;
 const TOPE = 20_000;
 
 const COLUMNAS =
-  "id, canal, origen, hilo_externo, estado, etapa, motivo_cierre, asignada_a, fuente, created_at, primera_respuesta_at, primera_respuesta_humana_at";
+  "id, canal, origen, hilo_externo, estado, etapa, motivo_cierre, motivo_perdida, asignada_a, fuente, created_at, primera_respuesta_at, primera_respuesta_humana_at";
 
 type Pagina<T> = (desde: number, hasta: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
 

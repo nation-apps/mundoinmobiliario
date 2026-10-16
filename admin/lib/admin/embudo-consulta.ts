@@ -4,7 +4,7 @@ import type { ClienteEtiqueta, ConversacionResumen, Etiqueta, StaffMiembro } fro
 
 /** Tope de tarjetas abiertas por seguridad: más que esto en un negocio de esta escala sería un error de carga. */
 const TOPE_ABIERTAS = 600;
-const TOPE_CERRADAS = 150;
+const TOPE_CERRADAS = 300;
 
 export type DatosEmbudo = {
   conversaciones: ConversacionResumen[];
@@ -23,13 +23,13 @@ export async function leerEmbudo(supabase: SupabaseClient): Promise<{ datos: Dat
     supabase
       .from("conversaciones_resumen")
       .select("*")
-      .neq("etapa", "cerrado")
+      .not("etapa", "in", "(vendido,no_vendido)")
       .order("actividad_at", { ascending: false })
       .limit(TOPE_ABIERTAS),
     supabase
       .from("conversaciones_resumen")
       .select("*")
-      .eq("etapa", "cerrado")
+      .in("etapa", ["vendido", "no_vendido"])
       .gte("actividad_at", desde)
       .order("actividad_at", { ascending: false })
       .limit(TOPE_CERRADAS),

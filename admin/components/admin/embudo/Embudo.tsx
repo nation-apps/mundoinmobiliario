@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CircleCheck, CircleX, Ellipsis, GripVertical, Inbox, Layers, Megaphone, MessageSquareText, Minus, Search, Users, X } from "lucide-react";
+import { CircleX, Ellipsis, GripVertical, Inbox, Layers, Megaphone, MessageSquareText, Search, Users, X } from "lucide-react";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAvisos } from "@/components/admin/chats/Avisos";
 import CanalIcono from "@/components/admin/chats/CanalIcono";
@@ -16,13 +16,15 @@ import {
   ETAPA_LABEL,
   HILO_LEAD_ADS,
   INTERES_LABEL,
-  MOTIVOS_CIERRE,
+  MOTIVOS_PERDIDA,
   MOTIVO_CIERRE_LABEL,
+  MOTIVO_PERDIDA_LABEL,
   campanaCorta,
+  esEtapaFinal,
   describirIdentidad,
   esperaRespuesta,
   iniciales,
-  primerNombre,
+  nombreCorto,
   telefonoBonito,
   tiempoRelativo,
   type Canal,
@@ -30,7 +32,7 @@ import {
   type Etapa,
   type Etiqueta,
   type Interes,
-  type MotivoCierre,
+  type MotivoPerdida,
 } from "@/lib/admin/chats-tipos";
 import { armarColumnas, FILTROS_VACIOS, origenesDisponibles, patchParaMover, type FiltrosEmbudo } from "@/lib/admin/embudo";
 import { leerEmbudo, type DatosEmbudo } from "@/lib/admin/embudo-consulta";
@@ -93,7 +95,7 @@ function Tarjeta({
   const pendiente = esperaRespuesta(c) && c.estado !== "cerrada";
   const campana = campanaCorta(c.fuente);
   const interes = lineaInteres(c);
-  const cerrada = c.etapa === "cerrado";
+  const perdida = c.etapa === "no_vendido";
   return (
     <article
       draggable
@@ -144,9 +146,9 @@ function Tarjeta({
 
       <p className={`mt-2 line-clamp-2 text-xs leading-snug ${pendiente ? "text-ink" : "text-ink-soft"}`}>{vistaPrevia(c)}</p>
 
-      {(interes || campana || etiquetas.length > 0 || (cerrada && c.motivo_cierre)) && (
+      {(interes || campana || etiquetas.length > 0 || perdida) && (
         <div className="mt-2 flex flex-wrap items-center gap-1">
-          {cerrada && c.motivo_cierre && <MotivoInsignia motivo={c.motivo_cierre} />}
+          {perdida && <PerdidaInsignia c={c} />}
           {interes && <span className="max-w-full truncate rounded-full bg-bg-soft px-2 py-px text-[10.5px] font-medium text-ink-soft">{interes}</span>}
           {campana && (
             <span
@@ -172,9 +174,9 @@ function Tarjeta({
         {c.asignada_nombre ? (
           <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] text-ink-soft" title={`Asignada a ${c.asignada_nombre}`}>
             <span aria-hidden className="t-display flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] text-white">
-              {iniciales(c.asignada_nombre)}
+              {iniciales(nombreCorto(c.asignada_nombre))}
             </span>
-            <span className="truncate">{primerNombre(c.asignada_nombre)}</span>
+            <span className="truncate">{nombreCorto(c.asignada_nombre)}</span>
           </span>
         ) : (
           <span className="text-[11.5px] text-muted">Sin asignar</span>
@@ -187,14 +189,18 @@ function Tarjeta({
   );
 }
 
-function MotivoInsignia({ motivo }: { motivo: MotivoCierre }) {
-  const Icono = motivo === "ganado" ? CircleCheck : motivo === "perdido" ? CircleX : Minus;
-  const clase =
-    motivo === "ganado" ? "bg-signal/10 text-signal-ink" : motivo === "perdido" ? "bg-redline/10 text-redline" : "bg-bg-soft text-ink-soft";
+/** Por qué se perdió la venta; si se cerró por otra cosa (spam, sin respuesta), ese motivo. */
+function PerdidaInsignia({ c }: { c: ConversacionResumen }) {
+  const texto = c.motivo_perdida
+    ? MOTIVO_PERDIDA_LABEL[c.motivo_perdida]
+    : c.motivo_cierre && c.motivo_cierre !== "perdido"
+      ? MOTIVO_CIERRE_LABEL[c.motivo_cierre]
+      : "Sin motivo";
+  const clase = c.motivo_perdida ? "bg-redline/10 text-redline" : "bg-bg-soft text-ink-soft";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-px text-[10.5px] font-medium ${clase}`}>
-      <Icono size={11} aria-hidden />
-      {MOTIVO_CIERRE_LABEL[motivo]}
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-px text-[10.5px] font-medium ${clase}`}>
+      <CircleX size={11} aria-hidden className="shrink-0" />
+      <span className="truncate">{texto}</span>
     </span>
   );
 }
@@ -219,7 +225,7 @@ export default function Embudo({
   const [filtros, setFiltros] = useState<FiltrosEmbudo>(soloMias ? { ...FILTROS_VACIOS, vendedor: "mias" } : FILTROS_VACIOS);
   const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
   const [columnaSobre, setColumnaSobre] = useState<Etapa | null>(null);
-  const [cierre, setCierre] = useState<{ id: string; motivo: MotivoCierre } | null>(null);
+  const [perdida, setPerdida] = useState<{ id: string; motivo: MotivoPerdida | null } | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   /* --- Tiempo real: cualquier cambio vuelve a leer el tablero, con 400 ms de espera --- */
@@ -287,13 +293,13 @@ export default function Embudo({
 
   const columnas = useMemo(() => armarColumnas(datos.conversaciones, filtros, usuarioId), [datos.conversaciones, filtros, usuarioId]);
   const origenes = useMemo(() => origenesDisponibles(datos.conversaciones), [datos.conversaciones]);
-  const abiertas = columnas.filter((c) => c.etapa !== "cerrado").reduce((n, c) => n + c.conversaciones.length, 0);
+  const abiertas = columnas.filter((c) => !esEtapaFinal(c.etapa)).reduce((n, c) => n + c.conversaciones.length, 0);
   const sinResponder = columnas.reduce((n, c) => n + c.sinResponder, 0);
   const hayFiltros = filtros.vendedor !== "" || filtros.canal !== "" || filtros.origen !== "" || filtros.busqueda.trim() !== "";
 
   /* --- Mover una tarjeta --- */
   const guardarMovimiento = useCallback(
-    async (id: string, destino: Etapa, motivo?: MotivoCierre) => {
+    async (id: string, destino: Etapa, motivo?: MotivoPerdida) => {
       const actual = datos.conversaciones.find((c) => c.id === id);
       if (!actual) return;
       const patch = patchParaMover(actual, destino, motivo);
@@ -303,7 +309,7 @@ export default function Embudo({
       const antes = actual;
       setDatos((d) => ({
         ...d,
-        conversaciones: d.conversaciones.map((c) => (c.id === id ? { ...c, ...patch, motivo_cierre: patch.motivo_cierre ?? null } : c)),
+        conversaciones: d.conversaciones.map((c) => (c.id === id ? { ...c, ...patch, motivo_cierre: patch.motivo_cierre ?? null, motivo_perdida: patch.motivo_perdida ?? null } : c)),
       }));
       moviendo.current += 1;
       setGuardando(true);
@@ -321,7 +327,13 @@ export default function Embudo({
         toast.error("No se pudo mover la conversación.");
         return;
       }
-      toast.success(destino === "cerrado" ? "Conversación cerrada" : `Movida a «${ETAPA_LABEL[destino]}»`);
+      toast.success(
+        destino === "no_vendido" && motivo
+          ? `No vendido · ${MOTIVO_PERDIDA_LABEL[motivo]}`
+          : destino === "vendido"
+            ? "Venta registrada"
+            : `Movida a «${ETAPA_LABEL[destino]}»`,
+      );
       void recargar();
     },
     [datos.conversaciones, supabase, recargar],
@@ -331,8 +343,8 @@ export default function Embudo({
     (id: string, destino: Etapa) => {
       const c = datos.conversaciones.find((x) => x.id === id);
       if (!c || c.etapa === destino) return;
-      // Cerrar pide el motivo: es lo que después alimenta «ganadas» y «perdidas».
-      if (destino === "cerrado") setCierre({ id, motivo: "otro" });
+      // «No vendido» pide por qué se perdió la venta: es lo que alimenta el pareto de Métricas.
+      if (destino === "no_vendido") setPerdida({ id, motivo: c.motivo_perdida ?? null });
       else void guardarMovimiento(id, destino);
     },
     [datos.conversaciones, guardarMovimiento],
@@ -462,7 +474,7 @@ export default function Embudo({
                 {col.conversaciones.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-line-strong px-3 py-8 text-center text-xs text-muted">
                     <Inbox size={18} strokeWidth={1.6} aria-hidden />
-                    {arrastrandoId ? "Suelta aquí" : col.etapa === "cerrado" ? "Sin cierres en los últimos 30 días" : "Sin conversaciones"}
+                    {arrastrandoId ? "Suelta aquí" : esEtapaFinal(col.etapa) ? "Sin cierres en los últimos 30 días" : "Sin conversaciones"}
                   </div>
                 ) : (
                   col.conversaciones.map((c) => (
@@ -492,63 +504,69 @@ export default function Embudo({
         })}
       </div>
 
-      <CierreDialogo
-        cierre={cierre}
-        onCambiarMotivo={(motivo) => setCierre((c) => (c ? { ...c, motivo } : c))}
-        onCerrar={() => setCierre(null)}
+      <PerdidaDialogo
+        perdida={perdida}
+        onCambiarMotivo={(motivo) => setPerdida((p) => (p ? { ...p, motivo } : p))}
+        onCerrar={() => setPerdida(null)}
         onConfirmar={() => {
-          if (!cierre) return;
-          const { id, motivo } = cierre;
-          setCierre(null);
-          void guardarMovimiento(id, "cerrado", motivo);
+          if (!perdida?.motivo) return;
+          const { id, motivo } = perdida;
+          setPerdida(null);
+          void guardarMovimiento(id, "no_vendido", motivo);
         }}
       />
     </div>
   );
 }
 
-function CierreDialogo({
-  cierre,
+function PerdidaDialogo({
+  perdida,
   onCambiarMotivo,
   onCerrar,
   onConfirmar,
 }: {
-  cierre: { id: string; motivo: MotivoCierre } | null;
-  onCambiarMotivo: (m: MotivoCierre) => void;
+  perdida: { id: string; motivo: MotivoPerdida | null } | null;
+  onCambiarMotivo: (m: MotivoPerdida) => void;
   onCerrar: () => void;
   onConfirmar: () => void;
 }): ReactNode {
   return (
     <DialogShell
-      abierto={cierre !== null}
+      abierto={perdida !== null}
       onCerrar={onCerrar}
-      titulo="Cerrar la conversación"
-      descripcion="El bot deja de responder aquí. Si el contacto vuelve a escribir, se abre una conversación nueva."
-      ancho="460px"
+      titulo="¿Por qué se perdió la venta?"
+      descripcion="La conversación pasa a «No vendido» y se cierra: el bot deja de responder aquí. Si el contacto vuelve a escribir, se abre una conversación nueva."
+      ancho="480px"
       pie={
         <>
           <button type="button" onClick={onCerrar} className="admin-btn ghost min-h-11">
             Cancelar
           </button>
-          <button type="button" onClick={onConfirmar} className="admin-btn min-h-11">
-            Cerrar conversación
+          <button type="button" onClick={onConfirmar} disabled={!perdida?.motivo} className="admin-btn min-h-11">
+            Pasar a No vendido
           </button>
         </>
       }
     >
-      <span className="admin-label">Motivo del cierre</span>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Motivo del cierre">
-        {MOTIVOS_CIERRE.map((m) => (
+      <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Por qué se perdió la venta">
+        {MOTIVOS_PERDIDA.map((m) => (
           <button
             key={m}
             type="button"
-            aria-pressed={cierre?.motivo === m}
+            role="radio"
+            aria-checked={perdida?.motivo === m}
             onClick={() => onCambiarMotivo(m)}
-            className={`min-h-11 rounded-full border px-4 text-[13px] font-medium transition-colors ${
-              cierre?.motivo === m ? "border-ink bg-ink text-white" : "border-line bg-porcelain text-ink-soft hover:border-line-strong hover:text-ink"
+            className={`flex min-h-11 items-center gap-2.5 rounded-xl border px-3.5 text-left text-[13.5px] font-medium transition-colors ${
+              perdida?.motivo === m ? "border-ink bg-ink text-white" : "border-line bg-porcelain text-ink-soft hover:border-line-strong hover:text-ink"
             }`}
           >
-            {MOTIVO_CIERRE_LABEL[m]}
+            <span
+              aria-hidden
+              className={`flex size-4 shrink-0 items-center justify-center rounded-full border ${perdida?.motivo === m ? "border-white" : "border-line-strong"}`}
+            >
+              {perdida?.motivo === m && <span className="size-2 rounded-full bg-white" />}
+            </span>
+            {MOTIVO_PERDIDA_LABEL[m]}
           </button>
         ))}
       </div>

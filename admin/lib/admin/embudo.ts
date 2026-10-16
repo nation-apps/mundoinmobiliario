@@ -4,9 +4,9 @@
  * components/admin/embudo/Embudo.tsx.
  */
 
-import { ETAPAS, esperaRespuesta, type ConversacionResumen, type Etapa, type MotivoCierre } from "./chats-tipos";
+import { ETAPAS, esEtapaFinal, esperaRespuesta, type ConversacionResumen, type Etapa, type MotivoPerdida } from "./chats-tipos";
 
-/** Cuántos días de conversaciones cerradas se muestran en la última columna. */
+/** Cuántos días de conversaciones cerradas se muestran en las columnas Vendido y No vendido. */
 export const DIAS_CERRADAS = 30;
 
 export type FiltrosEmbudo = {
@@ -61,7 +61,7 @@ export function armarColumnas(conversaciones: ConversacionResumen[], filtros: Fi
   }
   return ETAPAS.map((etapa) => {
     const lista = porEtapa.get(etapa) ?? [];
-    const cerrada = etapa === "cerrado";
+    const cerrada = esEtapaFinal(etapa);
     lista.sort((a, b) => {
       if (!cerrada) {
         const pa = esperaRespuesta(a) && a.estado !== "cerrada" ? 1 : 0;
@@ -82,20 +82,30 @@ export function armarColumnas(conversaciones: ConversacionResumen[], filtros: Fi
 export type PatchMover = {
   etapa: Etapa;
   estado?: "activa" | "cerrada";
-  motivo_cierre?: MotivoCierre | null;
+  motivo_cierre?: "ganado" | "perdido" | null;
+  motivo_perdida?: MotivoPerdida | null;
 };
 
 /**
- * - A una etapa de trabajo: solo cambia `etapa`. Si estaba cerrada, se reabre (`estado` activa, sin motivo): el bot
+ * - A una etapa de trabajo: solo cambia `etapa`. Si estaba cerrada, se reabre (`estado` activa, sin motivos): el bot
  *   no vuelve a hablar solo porque la reapertura no pasa por «Yo»/«Bot»; el estado de quien atiende lo decide el staff.
- * - A «Cerrada»: pide motivo (lo hace la pantalla) y cierra.
- * - Misma columna: no hay nada que guardar (null).
+ * - A «Vendido»: cierra como ganada.
+ * - A «No vendido»: pide por qué se perdió la venta (lo hace la pantalla) y cierra como perdida.
+ * - Misma columna: no hay nada que guardar (null), salvo cambiar el motivo de una venta perdida.
+ * El trigger conversaciones_etapa_asignacion (0009) aplica las mismas reglas por si algo llega por otro lado.
  */
-export function patchParaMover(c: Pick<ConversacionResumen, "etapa" | "estado">, destino: Etapa, motivo?: MotivoCierre): PatchMover | null {
+export function patchParaMover(
+  c: Pick<ConversacionResumen, "etapa" | "estado" | "motivo_perdida">,
+  destino: Etapa,
+  motivoPerdida?: MotivoPerdida,
+): PatchMover | null {
+  if (destino === "no_vendido") {
+    if (c.etapa === "no_vendido" && (!motivoPerdida || motivoPerdida === c.motivo_perdida)) return null;
+    return { etapa: "no_vendido", estado: "cerrada", motivo_cierre: "perdido", motivo_perdida: motivoPerdida ?? null };
+  }
   if (destino === c.etapa) return null;
-  if (destino === "cerrado") return { etapa: "cerrado", estado: "cerrada", motivo_cierre: motivo ?? "otro" };
-  if (c.estado === "cerrada") return { etapa: destino, estado: "activa", motivo_cierre: null };
-  if (c.etapa === "cerrado") return { etapa: destino, motivo_cierre: null };
+  if (destino === "vendido") return { etapa: "vendido", estado: "cerrada", motivo_cierre: "ganado", motivo_perdida: null };
+  if (c.estado === "cerrada") return { etapa: destino, estado: "activa", motivo_cierre: null, motivo_perdida: null };
   return { etapa: destino };
 }
 

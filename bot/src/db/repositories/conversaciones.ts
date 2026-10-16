@@ -11,11 +11,11 @@ export type CanalConversacion = "whatsapp" | "messenger" | "instagram" | "tiktok
 export type OrigenConversacion = "dm" | "comentario" | "formulario";
 export type EstadoConversacion = "activa" | "escalada" | "cerrada";
 /**
- * Solo avanza (lo garantizan triggers de Postgres): nuevo < en_atencion <
- * calificado < agendado < propuesta < cerrado. `propuesta` la pone el staff a
- * mano cuando manda una cotización formal; el bot no la toca.
+ * Proceso comercial (supabase/migrations/0009_proceso_comercial.sql). La mueve el equipo desde el panel; los triggers
+ * solo pasan Prospección → Seguimiento cuando responde una persona y No contesta → Seguimiento cuando el cliente
+ * vuelve a escribir. `vendido` y `no_vendido` van siempre con `estado = 'cerrada'`.
  */
-export type EtapaConversacion = "nuevo" | "en_atencion" | "calificado" | "agendado" | "propuesta" | "cerrado";
+export type EtapaConversacion = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "vendido" | "no_vendido";
 export type MotivoCierre = "ganado" | "perdido" | "spam" | "sin_respuesta" | "otro";
 
 export type Conversacion = {
@@ -32,7 +32,7 @@ export type Conversacion = {
   estado: EstadoConversacion;
   /** En qué punto va el lead. Lo mueven triggers de Postgres, no este código. */
   etapa: EtapaConversacion;
-  /** Solo con etapa 'cerrado'. Cerrar como 'ganado' pasa al contacto a `clientes.tipo = 'cliente'` (trigger). */
+  /** Solo con etapa 'vendido' o 'no_vendido'. Cerrar como 'ganado' pasa al contacto a `clientes.tipo = 'cliente'` (trigger). */
   motivo_cierre: MotivoCierre | null;
   asignada_a: string | null;
   /** De dónde vino («Campaña Formulario Meta TVS», «WhatsApp directo»…): lib/fuente.ts. */

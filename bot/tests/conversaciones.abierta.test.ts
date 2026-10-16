@@ -25,7 +25,7 @@ const CONVERSACION_ESCALADA = {
   canal: "whatsapp",
   origen: "dm",
   estado: "escalada",
-  etapa: "en_atencion",
+  etapa: "seguimiento",
 };
 
 beforeEach(() => falso.reiniciar());

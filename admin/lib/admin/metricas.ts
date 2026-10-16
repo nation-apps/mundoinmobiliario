@@ -11,7 +11,7 @@
  */
 
 import { ZONA_NEGOCIO } from "./rango";
-import type { Canal, Etapa, EstadoConversacion, MotivoCierre, OrigenConversacion, RolMensaje } from "./chats-tipos";
+import type { Canal, Etapa, EstadoConversacion, MotivoCierre, MotivoPerdida, OrigenConversacion, RolMensaje } from "./chats-tipos";
 
 /* ---------- Entradas ---------- */
 
@@ -24,6 +24,7 @@ export type FilaMetrica = {
   estado: EstadoConversacion;
   etapa: Etapa;
   motivo_cierre: MotivoCierre | null;
+  motivo_perdida?: MotivoPerdida | null;
   asignada_a: string | null;
   fuente: string | null;
   created_at: string;
@@ -192,9 +193,9 @@ export function esCampana(fuente: string | null): boolean {
   return fuente?.startsWith("Campaña ") ?? false;
 }
 
-/** Nadie la tomó: sigue abierta, en «Nueva» y sin respuesta de una persona. */
+/** Nadie la tomó: sigue abierta, en «Prospección» y sin respuesta de una persona. */
 function sinAtender(f: FilaMetrica): boolean {
-  return f.estado !== "cerrada" && f.etapa === "nuevo" && f.primera_respuesta_humana_at === null;
+  return f.estado !== "cerrada" && f.etapa === "prospeccion" && f.primera_respuesta_humana_at === null;
 }
 
 function minutosEntre(desde: string, hasta: string | null): number | null {
@@ -248,7 +249,7 @@ export type FilaOrigen = {
   campana: boolean;
   entradas: number;
   sinAtender: number;
-  conVisita: number;
+  oportunidad: number;
   ganadas: number;
   respuestaHumanaMin: number | null;
 };
@@ -265,9 +266,13 @@ export type FilaVendedor = {
   respuestaHumanaMin: number | null;
 };
 
-export type ConteoEtapa = { etapa: Exclude<Etapa, "cerrado">; total: number };
+export type EtapaAbierta = Exclude<Etapa, "vendido" | "no_vendido">;
+export type ConteoEtapa = { etapa: EtapaAbierta; total: number };
 
-export type Cierres = { ganadas: number; perdidas: number; otras: number };
+export type Cierres = { vendidas: number; noVendidas: number };
+
+/** Una barra del pareto de ventas perdidas. `motivo` null = cerrada en «No vendido» sin decir por qué. */
+export type ConteoPerdida = { motivo: MotivoPerdida | null; total: number; parte: number; acumulado: number };
 
 export type Metricas = {
   periodo: PeriodoId;
@@ -284,11 +289,41 @@ export type Metricas = {
   porVendedor: FilaVendedor[];
   etapas: ConteoEtapa[];
   cierres: Cierres;
+  /** ¿Por qué se perdió la venta? De mayor a menor (pareto); «sin motivo» siempre al final. */
+  perdidas: ConteoPerdida[];
   /** [lunes … domingo][0 … 23 h]: cuántas conversaciones empezaron a esa hora. */
   calor: number[][];
 };
 
-const ETAPAS_ABIERTAS: Exclude<Etapa, "cerrado">[] = ["nuevo", "en_atencion", "calificado", "agendado", "propuesta"];
+const ETAPAS_ABIERTAS: EtapaAbierta[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad"];
+const MOTIVOS_PERDIDA: MotivoPerdida[] = ["buro", "otra_marca", "enganche", "competencia", "sin_respuesta_7d"];
+
+/**
+ * Pareto de las ventas perdidas: cada motivo con su parte del total y la parte acumulada, de mayor a menor. Los cinco
+ * motivos salen siempre (aunque sea en cero) para que se vea qué NO está pasando; las cerradas en «No vendido» sin
+ * motivo van al final y no cuentan en el acumulado de los motivos (no dicen nada de por qué se cayeron).
+ */
+export function paretoPerdidas(filas: Pick<FilaMetrica, "etapa" | "motivo_perdida">[]): ConteoPerdida[] {
+  const perdidas = filas.filter((f) => f.etapa === "no_vendido");
+  const total = perdidas.length;
+  const conteo = new Map<MotivoPerdida, number>(MOTIVOS_PERDIDA.map((m) => [m, 0]));
+  let sinMotivo = 0;
+  for (const f of perdidas) {
+    const m = f.motivo_perdida;
+    if (m && conteo.has(m)) conteo.set(m, (conteo.get(m) ?? 0) + 1);
+    else sinMotivo++;
+  }
+  const orden = MOTIVOS_PERDIDA.map((motivo) => ({ motivo, n: conteo.get(motivo) ?? 0 })).sort(
+    (a, b) => b.n - a.n || MOTIVOS_PERDIDA.indexOf(a.motivo) - MOTIVOS_PERDIDA.indexOf(b.motivo),
+  );
+  let acumulado = 0;
+  const filasPareto: ConteoPerdida[] = orden.map(({ motivo, n }) => {
+    acumulado += n;
+    return { motivo, total: n, parte: total ? n / total : 0, acumulado: total ? acumulado / total : 0 };
+  });
+  if (sinMotivo > 0) filasPareto.push({ motivo: null, total: sinMotivo, parte: sinMotivo / total, acumulado: 1 });
+  return filasPareto;
+}
 
 function serieVacia(): Record<SerieEntrada, number> {
   return { anuncio: 0, instagram: 0, whatsapp: 0, messenger: 0, otros: 0 };
@@ -394,8 +429,8 @@ export function calcularMetricas({
     respuestaHumanaPreviaMin: mediana(minutosHumanos(previas)),
     respondidasPorPersona: tiemposHumanos.length,
     respuestaCualquieraMin: mediana(tiemposCualquiera),
-    ganadas: actuales.filter((f) => f.motivo_cierre === "ganado").length,
-    cerradas: actuales.filter((f) => f.estado === "cerrada").length,
+    ganadas: actuales.filter((f) => f.etapa === "vendido").length,
+    cerradas: actuales.filter((f) => f.etapa === "vendido" || f.etapa === "no_vendido").length,
   };
 
   // Serie en el tiempo
@@ -425,8 +460,8 @@ export function calcularMetricas({
       campana: esCampana(origen),
       entradas: lista.length,
       sinAtender: lista.filter(sinAtender).length,
-      conVisita: lista.filter((f) => f.etapa === "agendado" || f.etapa === "propuesta").length,
-      ganadas: lista.filter((f) => f.motivo_cierre === "ganado").length,
+      oportunidad: lista.filter((f) => f.etapa === "oportunidad").length,
+      ganadas: lista.filter((f) => f.etapa === "vendido").length,
       respuestaHumanaMin: mediana(minutosHumanos(lista)),
     }))
     .sort((a, b) => b.entradas - a.entradas || Number(b.campana) - Number(a.campana) || a.origen.localeCompare(b.origen, "es"));
@@ -447,8 +482,8 @@ export function calcularMetricas({
       asignadas: propias.length,
       abiertasAhora: vivas.length,
       sinResponderAhora: vivas.filter(esperando).length,
-      ganadas: propias.filter((f) => f.motivo_cierre === "ganado").length,
-      perdidas: propias.filter((f) => f.motivo_cierre === "perdido").length,
+      ganadas: propias.filter((f) => f.etapa === "vendido").length,
+      perdidas: propias.filter((f) => f.etapa === "no_vendido").length,
       respuestaHumanaMin: mediana(minutosHumanos(propias)),
     };
   };
@@ -463,12 +498,11 @@ export function calcularMetricas({
     etapa,
     total: actuales.filter((f) => f.estado !== "cerrada" && f.etapa === etapa).length,
   }));
-  const cerradas = actuales.filter((f) => f.estado === "cerrada");
   const cierres: Cierres = {
-    ganadas: cerradas.filter((f) => f.motivo_cierre === "ganado").length,
-    perdidas: cerradas.filter((f) => f.motivo_cierre === "perdido").length,
-    otras: cerradas.filter((f) => f.motivo_cierre !== "ganado" && f.motivo_cierre !== "perdido").length,
+    vendidas: actuales.filter((f) => f.etapa === "vendido").length,
+    noVendidas: actuales.filter((f) => f.etapa === "no_vendido").length,
   };
+  const perdidas = paretoPerdidas(actuales);
 
   // Mapa de calor: día de la semana × hora
   const calor = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
@@ -491,6 +525,7 @@ export function calcularMetricas({
     porVendedor,
     etapas,
     cierres,
+    perdidas,
     calor,
   };
 }

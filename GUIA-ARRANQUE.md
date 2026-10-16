@@ -67,7 +67,8 @@ el negocio:**
 ## 4. Base de datos
 
 Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`,
-`0004_reparto_leads.sql`, `0005_datos_negocio.sql`, `0006_fuente_lead.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
+`0004_reparto_leads.sql`, `0005_datos_negocio.sql`, `0006_fuente_lead.sql`, `0007_horario_crm.sql`, `0008_suscripcion.sql`,
+`0009_proceso_comercial.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
 migración**: los intereses del código tienen que existir en el check de `clientes.interes`.
 
 Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:
@@ -85,5 +86,5 @@ Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:
 ## 6. Prueba de punta a punta
 
 `curl <bot>/health` → `{"status":"ok"}`; escribir al número de prueba desde un celular verificado; ver la conversación en el
-panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que la etiqueta Anulado silencie al bot.
+panel, la respuesta, los botones, que un pedido de asesor escale la conversación y que una etiqueta «Anulado» (se crea a mano) silencie al bot.
 Para los leads: Lead Ads Testing Tool → el lead aparece en Chats y en **Canales** se ve «aviso suscrito» y «permiso» en Sí.

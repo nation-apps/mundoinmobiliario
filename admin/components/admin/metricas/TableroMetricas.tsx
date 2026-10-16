@@ -22,6 +22,7 @@ import { Menu, MenuOpcion, MenuTitulo, CLASE_DISPARADOR } from "@/components/adm
 import { ZONA_NEGOCIO } from "@/lib/admin/rango";
 import { PERIODOS, duracionCorta, type Metricas, type PeriodoId } from "@/lib/admin/metricas";
 import Etapas from "./Etapas";
+import VentasPerdidas from "./VentasPerdidas";
 import GraficaEntradas from "./GraficaEntradas";
 import MapaCalor from "./MapaCalor";
 import Tacometro, { META_RESPUESTA_MIN } from "./Tacometro";
@@ -260,11 +261,11 @@ export default function TableroMetricas({ metricas }: { metricas: Metricas }) {
             </p>
           </div>
 
-          <Indicador etiqueta="Ganadas" icono={<Trophy size={14} />} valor={kpis.ganadas}>
+          <Indicador etiqueta="Vendidas" icono={<Trophy size={14} />} valor={kpis.ganadas}>
             <p className="mt-2 text-[12px] text-muted">
               {kpis.cerradas === 0
                 ? "Ninguna cerrada todavía"
-                : `${Math.round((kpis.ganadas / kpis.cerradas) * 100)} % de ${kpis.cerradas} ${kpis.cerradas === 1 ? "cerrada" : "cerradas"}`}
+                : `${Math.round((kpis.ganadas / kpis.cerradas) * 100)} % de ${kpis.cerradas} ${kpis.cerradas === 1 ? "cerrada" : "cerradas"} (Vendido o No vendido)`}
             </p>
           </Indicador>
         </div>
@@ -275,6 +276,8 @@ export default function TableroMetricas({ metricas }: { metricas: Metricas }) {
           </div>
           <Etapas metricas={metricas} />
         </div>
+
+        <VentasPerdidas metricas={metricas} />
 
         <TablaOrigen metricas={metricas} />
         <TablaVendedores metricas={metricas} />

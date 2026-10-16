@@ -60,7 +60,7 @@ export function TablaOrigen({ metricas }: { metricas: Metricas }) {
   return (
     <Tarjeta
       titulo="Por origen"
-      nota="De qué campaña o canal vino cada conversación del periodo. «Sin atender»: siguen en «Nueva» y nadie del equipo les respondió."
+      nota="De qué campaña o canal vino cada conversación del periodo. «Sin atender»: siguen en «Prospección» y nadie del equipo les respondió. «Oportunidad»: hoy en «Oportunidad de venta»."
     >
       {porOrigen.length === 0 ? (
         <SinDatos alto={120}>Sin conversaciones en este periodo.</SinDatos>
@@ -74,8 +74,8 @@ export function TablaOrigen({ metricas }: { metricas: Metricas }) {
                 <Th derecha>Entradas</Th>
                 <Th derecha>Parte</Th>
                 <Th derecha>Sin atender</Th>
-                <Th derecha>Con visita</Th>
-                <Th derecha>Ganadas</Th>
+                <Th derecha>Oportunidad</Th>
+                <Th derecha>Vendidas</Th>
                 <Th derecha>1ª respuesta de una persona</Th>
               </tr>
             </thead>
@@ -111,7 +111,7 @@ export function TablaOrigen({ metricas }: { metricas: Metricas }) {
                       <Cero />
                     )}
                   </Td>
-                  <Td derecha>{o.conVisita || <Cero />}</Td>
+                  <Td derecha>{o.oportunidad || <Cero />}</Td>
                   <Td derecha>{o.ganadas ? <span className="font-semibold text-signal-ink">{o.ganadas}</span> : <Cero />}</Td>
                   <Td derecha>
                     <Respuesta minutos={o.respuestaHumanaMin} />
@@ -147,8 +147,8 @@ export function TablaVendedores({ metricas }: { metricas: Metricas }) {
                 <Th derecha>Parte</Th>
                 <Th derecha>Abiertas</Th>
                 <Th derecha>Sin responder</Th>
-                <Th derecha>Ganadas</Th>
-                <Th derecha>Perdidas</Th>
+                <Th derecha>Vendidas</Th>
+                <Th derecha>No vendidas</Th>
                 <Th derecha>1ª respuesta</Th>
               </tr>
             </thead>

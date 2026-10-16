@@ -9,7 +9,9 @@ import { ZONA_NEGOCIO } from "@/lib/admin/rango";
 export type Canal = "whatsapp" | "messenger" | "instagram" | "tiktok" | "web";
 export type OrigenConversacion = "dm" | "comentario" | "formulario";
 export type EstadoConversacion = "activa" | "escalada" | "cerrada";
-export type Etapa = "nuevo" | "en_atencion" | "calificado" | "agendado" | "propuesta" | "cerrado";
+export type Etapa = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "vendido" | "no_vendido";
+/** ¿Por qué se perdió la venta? Solo en etapa `no_vendido` (0009_proceso_comercial.sql). */
+export type MotivoPerdida = "buro" | "otra_marca" | "enganche" | "competencia" | "sin_respuesta_7d";
 export type MotivoCierre = "ganado" | "perdido" | "spam" | "sin_respuesta" | "otro";
 export type RolMensaje = "user" | "assistant" | "humano";
 export type TipoMensaje = "mensaje" | "comentario" | "nota" | "sistema";
@@ -31,9 +33,26 @@ export const CANAL_LABEL: Record<Canal, string> = {
   web: "Web",
 };
 
-export const ETAPAS: Etapa[] = ["nuevo", "en_atencion", "calificado", "agendado", "propuesta", "cerrado"];
+/** Proceso comercial, en orden. Las dos últimas cierran la conversación. */
+export const ETAPAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "vendido", "no_vendido"];
+export const ETAPAS_FINALES: Etapa[] = ["vendido", "no_vendido"];
+export const ETAPAS_ABIERTAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad"];
+
+export function esEtapaFinal(etapa: Etapa): boolean {
+  return etapa === "vendido" || etapa === "no_vendido";
+}
 
 export const ETAPA_LABEL: Record<Etapa, string> = {
+  prospeccion: "Prospección",
+  no_contesta: "No contesta",
+  seguimiento: "Seguimiento",
+  oportunidad: "Oportunidad de venta",
+  vendido: "Vendido",
+  no_vendido: "No vendido",
+};
+
+/** Nombres de las etapas de antes de 0009: siguen apareciendo en la actividad de las conversaciones viejas. */
+const ETAPA_LABEL_ANTERIOR: Record<string, string> = {
   nuevo: "Nueva",
   en_atencion: "En atención",
   calificado: "Con teléfono",
@@ -42,9 +61,24 @@ export const ETAPA_LABEL: Record<Etapa, string> = {
   cerrado: "Cerrada",
 };
 
+/** Nombre de una etapa, también de las anteriores al proceso comercial actual. */
+export function nombreEtapa(etapa: string): string {
+  return ETAPA_LABEL[etapa as Etapa] ?? ETAPA_LABEL_ANTERIOR[etapa] ?? etapa;
+}
+
+export const MOTIVOS_PERDIDA: MotivoPerdida[] = ["buro", "otra_marca", "enganche", "competencia", "sin_respuesta_7d"];
+
+export const MOTIVO_PERDIDA_LABEL: Record<MotivoPerdida, string> = {
+  buro: "Se encuentra en buró",
+  otra_marca: "Interesado en otra marca",
+  enganche: "No llega al enganche / cuota mensual",
+  competencia: "Se fue a la competencia",
+  sin_respuesta_7d: "No respondió +7 días",
+};
+
 export const MOTIVO_CIERRE_LABEL: Record<MotivoCierre, string> = {
-  ganado: "Ganada (compró / rentó)",
-  perdido: "Perdida",
+  ganado: "Vendido",
+  perdido: "Venta perdida",
   spam: "Spam",
   sin_respuesta: "Sin respuesta",
   otro: "Otro",
@@ -62,6 +96,8 @@ export type ConversacionResumen = {
   identidad_id: string | null;
   etapa: Etapa;
   motivo_cierre: MotivoCierre | null;
+  /** Solo en `no_vendido`. Opcional: antes de 0009 no existe. */
+  motivo_perdida?: MotivoPerdida | null;
   asignada_a: string | null;
   asignada_nombre: string | null;
   cliente_nombre: string | null;
@@ -244,6 +280,17 @@ export function telefonoBonito(telefono: string): string {
 
 export function primerNombre(nombre: string | null | undefined): string {
   return nombre?.trim().split(/\s+/)[0] ?? "";
+}
+
+/**
+ * Nombre corto de alguien del equipo para los lugares chicos (tarjetas, «Yo (…)»): «Ventas Cancún 1 - Giovanny» →
+ * «Giovanny» (lo que va después del guion); si no hay guion, el primer nombre.
+ */
+export function nombreCorto(nombre: string | null | undefined): string {
+  const limpio = nombre?.trim() ?? "";
+  const guion = limpio.lastIndexOf(" - ");
+  if (guion >= 0 && limpio.slice(guion + 3).trim()) return limpio.slice(guion + 3).trim();
+  return primerNombre(limpio);
 }
 
 export function iniciales(nombre: string): string {
@@ -449,6 +496,8 @@ export type FiltrosBandejaGuardados = {
   canal: FiltroCanalBandeja;
   estado: FiltroEstadoBandeja;
   etapa: FiltroEtapaBandeja;
+  /** "todas", "campana" o el texto de `fuente`. Opcional: lo guardado antes de este filtro no lo trae. */
+  origen?: string;
   seleccionadaId: string | null;
 };
 

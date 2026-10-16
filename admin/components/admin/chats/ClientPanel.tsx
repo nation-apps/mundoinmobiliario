@@ -7,6 +7,7 @@ import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
 import { BotApiError, guardarTelefonoContacto } from "@/lib/admin/bot-api";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { patchParaMover } from "@/lib/admin/embudo";
 import {
   CANAL_LABEL,
   COLORES_ETIQUETA,
@@ -18,12 +19,15 @@ import {
   INTERESES,
   INTERES_LABEL,
   MOTIVOS_CIERRE,
+  MOTIVOS_PERDIDA,
   MOTIVO_CIERRE_LABEL,
+  MOTIVO_PERDIDA_LABEL,
   TIPOS_CLIENTE,
   TIPO_CLIENTE_LABEL,
   describirIdentidad,
+  nombreEtapa,
   normalizarTelefonoMx,
-  primerNombre,
+  nombreCorto,
   telefonoBonito,
   tiempoRelativo,
   type ClienteFicha,
@@ -38,6 +42,7 @@ import {
   type Interes,
   type PerfilCompra,
   type MotivoCierre,
+  type MotivoPerdida,
   type StaffMiembro,
 } from "@/lib/admin/chats-tipos";
 import CanalIcono from "./CanalIcono";
@@ -66,6 +71,7 @@ type PatchSeguimiento = {
   etapa?: Etapa;
   asignada_a?: string | null;
   motivo_cierre?: MotivoCierre | null;
+  motivo_perdida?: MotivoPerdida | null;
 };
 
 function datosDe(cliente: ClienteFicha): DatosEditables {
@@ -135,8 +141,14 @@ function colorPorNombre(nombre: string): EtiquetaColor {
   return COLORES_ETIQUETA[hash % COLORES_ETIQUETA.length];
 }
 
-function firmaSeguimiento(c: { estado: string; etapa: string; asignada_a: string | null; motivo_cierre: string | null }): string {
-  return `${c.estado}|${c.etapa}|${c.asignada_a ?? ""}|${c.motivo_cierre ?? ""}`;
+function firmaSeguimiento(c: {
+  estado: string;
+  etapa: string;
+  asignada_a: string | null;
+  motivo_cierre: string | null;
+  motivo_perdida?: string | null;
+}): string {
+  return `${c.estado}|${c.etapa}|${c.asignada_a ?? ""}|${c.motivo_cierre ?? ""}|${c.motivo_perdida ?? ""}`;
 }
 
 function textoIdentidad(identidad: ClienteIdentidad): string {
@@ -159,7 +171,7 @@ function textoEvento(evento: EventoConversacion, staff: StaffMiembro[]): string 
     case "etapa": {
       const de = cadena(d.de);
       const a = cadena(d.a);
-      return `Etapa: ${de ? (ETAPA_LABEL[de as Etapa] ?? de) : "—"} → ${a ? (ETAPA_LABEL[a as Etapa] ?? a) : "—"}`;
+      return `Etapa: ${de ? nombreEtapa(de) : "—"} → ${a ? nombreEtapa(a) : "—"}`;
     }
     case "estado": {
       const de = cadena(d.de);
@@ -170,6 +182,8 @@ function textoEvento(evento: EventoConversacion, staff: StaffMiembro[]): string 
     }
     case "cierre": {
       const motivo = cadena(d.motivo);
+      const perdida = cadena(d.perdida);
+      if (perdida) return `Venta perdida · ${MOTIVO_PERDIDA_LABEL[perdida as MotivoPerdida] ?? perdida}`;
       return `Conversación cerrada${motivo ? ` · ${MOTIVO_CIERRE_LABEL[motivo as MotivoCierre] ?? motivo}` : ""}`;
     }
     case "fusion":
@@ -479,6 +493,8 @@ function Ficha({
   const asignadaA: string | null = ajuste && "asignada_a" in ajuste ? (ajuste.asignada_a ?? null) : conversacion.asignada_a;
   const motivoCierre: MotivoCierre | null =
     ajuste && "motivo_cierre" in ajuste ? (ajuste.motivo_cierre ?? null) : conversacion.motivo_cierre;
+  const motivoPerdida: MotivoPerdida | null =
+    ajuste && "motivo_perdida" in ajuste ? (ajuste.motivo_perdida ?? null) : (conversacion.motivo_perdida ?? null);
 
   /** El contacto volvió a escribir y el bot ya le abrió otra conversación: se ofrece saltar a esa. */
   async function avisarOtraAbierta() {
@@ -525,12 +541,18 @@ function Ficha({
     void actualizarConversacion({ asignada_a: agenteId }, { asignada_a: agenteId }, "No se pudo asignar la conversación.");
   }
 
+  // Vendido y No vendido cierran la conversación; volver a una etapa abierta la reabre (mismas reglas que el embudo).
   function cambiarEtapa(nueva: Etapa) {
-    void actualizarConversacion({ etapa: nueva }, { etapa: nueva }, "No se pudo cambiar la etapa.");
+    const patch = patchParaMover({ etapa, estado, motivo_perdida: motivoPerdida }, nueva);
+    if (!patch) return;
+    void actualizarConversacion(patch, patch, "No se pudo cambiar la etapa.");
   }
 
-  function cambiarMotivo(motivo: MotivoCierre) {
-    void actualizarConversacion({ motivo_cierre: motivo }, { motivo_cierre: motivo }, "No se pudo cambiar el motivo.");
+  async function elegirMotivoPerdida(motivo: MotivoPerdida) {
+    const patch = patchParaMover({ etapa, estado, motivo_perdida: motivoPerdida }, "no_vendido", motivo);
+    if (!patch) return;
+    const ok = await actualizarConversacion(patch, patch, "No se pudo guardar por qué se perdió la venta.");
+    if (ok && etapa !== "no_vendido") toast.success("La conversación pasó a «No vendido».");
   }
 
   async function elegirEstado(destino: EstadoConversacion) {
@@ -542,7 +564,7 @@ function Ficha({
     }
     if (estado === "cerrada") {
       // Reabrir: vuelve a la etapa de trabajo y se limpia el motivo.
-      const patch: PatchSeguimiento = { estado: destino, etapa: "en_atencion", motivo_cierre: null };
+      const patch: PatchSeguimiento = { estado: destino, etapa: "seguimiento", motivo_cierre: null, motivo_perdida: null };
       const ok = await actualizarConversacion(patch, patch, "No se pudo reabrir la conversación.");
       if (ok) toast.success("Conversación reabierta");
       return;
@@ -554,10 +576,11 @@ function Ficha({
   async function confirmarCierre() {
     const motivo = motivoElegido;
     setCierreAbierto(false);
-    // El trigger conversaciones_etapa_asignacion pasa la etapa a "cerrado".
+    // El trigger conversaciones_etapa_asignacion pasa la etapa a Vendido o No vendido según el motivo.
+    const final: Etapa = motivo === "ganado" ? "vendido" : "no_vendido";
     const ok = await actualizarConversacion(
-      { estado: "cerrada", motivo_cierre: motivo },
-      { estado: "cerrada", etapa: "cerrado", motivo_cierre: motivo },
+      { estado: "cerrada", etapa: final, motivo_cierre: motivo },
+      { estado: "cerrada", etapa: final, motivo_cierre: motivo },
       "No se pudo cerrar la conversación.",
     );
     if (ok) toast.success("Conversación cerrada");
@@ -867,7 +890,7 @@ function Ficha({
               )}
               {staff.map((s) => (
                 <option key={s.user_id} value={s.user_id}>
-                  {s.user_id === usuarioId ? `Yo (${primerNombre(s.nombre) || s.nombre})` : s.nombre}
+                  {s.user_id === usuarioId ? `Yo (${nombreCorto(s.nombre) || s.nombre})` : s.nombre}
                 </option>
               ))}
             </select>
@@ -902,25 +925,36 @@ function Ficha({
             {estado === "cerrada" && <p className="mt-2 text-xs text-muted">Para reabrirla, elige quién la atiende.</p>}
           </div>
 
-          {(estado === "cerrada" || etapa === "cerrado") && (
-            <label className="block">
-              <span className="admin-label">Motivo del cierre</span>
-              <select
-                value={motivoCierre ?? "otro"}
-                onChange={(e) => cambiarMotivo(e.target.value as MotivoCierre)}
-                disabled={guardandoSeguimiento}
-                className={campo}
-              >
-                {MOTIVOS_CIERRE.map((m) => (
-                  <option key={m} value={m}>
-                    {MOTIVO_CIERRE_LABEL[m]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
       </Seccion>
+
+      {/* 3b. Venta perdida: elegir un motivo pasa la conversación a «No vendido» (alimenta el pareto de Métricas). */}
+      {etapa !== "vendido" && (
+        <Seccion titulo="¿Por qué se perdió la venta?">
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Por qué se perdió la venta">
+            {MOTIVOS_PERDIDA.map((m) => (
+              <ChipFicha
+                key={m}
+                activo={etapa === "no_vendido" && motivoPerdida === m}
+                onClick={() => void elegirMotivoPerdida(m)}
+                disabled={guardandoSeguimiento}
+                tactil={tactil}
+              >
+                {MOTIVO_PERDIDA_LABEL[m]}
+              </ChipFicha>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            {etapa !== "no_vendido"
+              ? "Al elegir un motivo, la conversación pasa a «No vendido» y se cierra."
+              : motivoPerdida
+                ? "Toca otro motivo para cambiarlo."
+                : motivoCierre && motivoCierre !== "perdido"
+                  ? `Se cerró como «${MOTIVO_CIERRE_LABEL[motivoCierre]}». Si fue una venta perdida, elige el motivo.`
+                  : "Falta elegir el motivo: sin él no aparece en el pareto de Métricas."}
+          </p>
+        </Seccion>
+      )}
 
       {/* 4. Etiquetas */}
       <Seccion titulo="Etiquetas">

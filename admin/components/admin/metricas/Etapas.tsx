@@ -1,12 +1,12 @@
-import { CircleCheck, CircleX, Minus } from "lucide-react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { ETAPA_LABEL } from "@/lib/admin/chats-tipos";
 import type { Metricas } from "@/lib/admin/metricas";
 import { SinDatos, Tarjeta } from "./Tarjeta";
 
 /** Rampa ordinal (un tono, de claro a oscuro según avanza la etapa), validada con el validador de dataviz. */
-const RAMPA_ETAPAS = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#104281"];
+const RAMPA_ETAPAS = ["#86b6ef", "#5598e7", "#2a78d6", "#104281"];
 
-/** Dónde están hoy las conversaciones que entraron en el periodo, y cómo terminaron las cerradas. */
+/** Dónde están hoy las conversaciones que entraron en el periodo, y cuántas terminaron en Vendido o No vendido. */
 export default function Etapas({ metricas }: { metricas: Metricas }) {
   const { etapas, cierres, kpis } = metricas;
   const maximo = Math.max(1, ...etapas.map((e) => e.total));
@@ -40,18 +40,13 @@ export default function Etapas({ metricas }: { metricas: Metricas }) {
             <ul className="flex flex-wrap gap-x-4 gap-y-2 text-[13px]">
               <li className="flex items-center gap-1.5 text-ink-soft">
                 <CircleCheck size={15} aria-hidden className="text-signal" />
-                <span className="t-mono font-semibold tabular-nums text-ink">{cierres.ganadas}</span>
-                {cierres.ganadas === 1 ? "ganada" : "ganadas"}
+                <span className="t-mono font-semibold tabular-nums text-ink">{cierres.vendidas}</span>
+                {cierres.vendidas === 1 ? "vendida" : "vendidas"}
               </li>
               <li className="flex items-center gap-1.5 text-ink-soft">
                 <CircleX size={15} aria-hidden className="text-redline" />
-                <span className="t-mono font-semibold tabular-nums text-ink">{cierres.perdidas}</span>
-                {cierres.perdidas === 1 ? "perdida" : "perdidas"}
-              </li>
-              <li className="flex items-center gap-1.5 text-ink-soft">
-                <Minus size={15} aria-hidden className="text-muted" />
-                <span className="t-mono font-semibold tabular-nums text-ink">{cierres.otras}</span>
-                {cierres.otras === 1 ? "otra (spam, sin respuesta…)" : "otras (spam, sin respuesta…)"}
+                <span className="t-mono font-semibold tabular-nums text-ink">{cierres.noVendidas}</span>
+                no {cierres.noVendidas === 1 ? "vendida" : "vendidas"}
               </li>
             </ul>
           </div>

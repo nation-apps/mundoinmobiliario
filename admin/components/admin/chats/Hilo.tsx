@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Bot, ChevronDown, Mail, Paperclip, Send, Sparkles, StickyNote, UserRoundX } from "lucide-react";
 import { LogoMarca } from "@/components/admin/iconos/Marcas";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { patchParaMover } from "@/lib/admin/embudo";
 import { CLASE_DISPARADOR, Menu, MenuOpcion, MenuSeparador, MenuTitulo, MenuAccion } from "@/components/admin/Menu";
 import {
   BotApiError,
@@ -23,6 +24,7 @@ import {
   horaCorta,
   horasRestantesVentana,
   iniciales,
+  nombreCorto,
   primerNombre,
   puedeRespuestaPrivada,
   ventanaAbierta,
@@ -472,10 +474,17 @@ export default function Hilo({
 
   async function cambiarEtapa(etapa: Etapa) {
     if (!conversacion) return;
+    // Vendido y No vendido cierran la conversación; volver a una etapa abierta la reabre (mismas reglas que el embudo).
+    const patch = patchParaMover(conversacion, etapa);
+    if (!patch) return;
     // RLS no lanza error: si no devuelve filas, no se actualizó nada.
-    const { data, error } = await supabase.from("conversaciones").update({ etapa }).eq("id", conversacion.id).select("id");
-    if (error || !data?.length) toast.error("No se pudo cambiar la etapa.");
-    else onCambio?.(conversacion.id, { etapa });
+    const { data, error } = await supabase.from("conversaciones").update(patch).eq("id", conversacion.id).select("id");
+    if (error?.code === "23505") toast.error("Este contacto ya tiene otra conversación abierta.");
+    else if (error || !data?.length) toast.error("No se pudo cambiar la etapa.");
+    else {
+      onCambio?.(conversacion.id, patch);
+      if (etapa === "no_vendido") toast("Elige en la ficha por qué se perdió la venta.");
+    }
   }
 
   async function asignar(agenteId: string | null) {
@@ -677,14 +686,14 @@ export default function Hilo({
               <>
                 {asignadaA ? (
                   <span aria-hidden className="t-display flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] text-white">
-                    {iniciales(asignadaA.nombre)}
+                    {iniciales(nombreCorto(asignadaA.nombre))}
                   </span>
                 ) : (
                   <UserRoundX size={15} aria-hidden className="shrink-0 text-muted" />
                 )}
                 <span className="sr-only">Asignada a:</span>
                 <span className="min-w-0 truncate font-medium">
-                  {asignadaA ? (asignadaA.user_id === usuarioId ? "Yo" : primerNombre(asignadaA.nombre)) : "Sin asignar"}
+                  {asignadaA ? (asignadaA.user_id === usuarioId ? "Yo" : nombreCorto(asignadaA.nombre)) : "Sin asignar"}
                 </span>
                 <ChevronDown size={14} aria-hidden className="shrink-0 text-muted" />
               </>
@@ -704,7 +713,7 @@ export default function Hilo({
                   </span>
                 }
               >
-                {m.user_id === usuarioId ? `Yo (${primerNombre(m.nombre)})` : m.nombre}
+                {m.user_id === usuarioId ? `Yo (${nombreCorto(m.nombre)})` : m.nombre}
               </MenuOpcion>
             ))}
             <MenuSeparador />

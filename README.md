@@ -25,24 +25,25 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   (`docs/referencia/CONFIGURAR-META.md` §9).
 - **Voz humana y fiabilidad** (heredadas de B&B): lee y muestra «escribiendo…», pausa según el largo de la respuesta, junta
   mensajes seguidos en una sola respuesta, reintenta los envíos que fallan, no repite preguntas, no contesta a bots ajenos,
-  y la etiqueta **Anulado** hace que el bot ignore a un contacto.
+  y una etiqueta llamada **Anulado** (ya no viene creada; se crea a mano si hace falta) hace que el bot ignore a un contacto.
 - **México:** teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.
 
 ## Panel de administración (`admin/`)
 
 - **Chats:** bandeja en tiempo real, hilo, respuesta manual del asesor, sugerencia de la IA, ficha del cliente con su perfil de
-  compra, etiquetas y notas. Filtros de canal, estado y etapa en menús desplegables con el conteo de cada opción; la campana
+  compra, etiquetas y notas. Filtros de canal, estado, etapa y origen (campaña) en menús desplegables con el conteo de cada opción; la campana
   del menú lateral lista los chats que esperan respuesta.
 - **Coexistencia de WhatsApp:** el teléfono de ventas puede seguir en la app WhatsApp Business y a la vez en el CRM; lo que el
   equipo escribe desde el celular se refleja en el chat y lo pasa a «Yo» (`docs/referencia/COEXISTENCIA-WHATSAPP.md`).
-- **Embudo comercial:** tablero por etapas (Nueva, En atención, Con teléfono, Con visita, Propuesta, Cerrada) con una tarjeta por
-  conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; cerrar pide el motivo (ganada, perdida…). Filtros
-  por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.
+- **Embudo comercial:** tablero con el proceso comercial (Prospección, No contesta, Seguimiento, Oportunidad de venta, Vendido,
+  No vendido) con una tarjeta por conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; «No vendido» pide
+  por qué se perdió la venta (buró, otra marca, enganche o cuota, competencia, no respondió +7 días). Vendido y No vendido
+  cierran la conversación. Filtros por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.
 - **Suscripción** (solo administración): cobro del CRM de 39 USD al mes con Stripe Checkout; el panel muestra el estado y,
   con `SUSCRIPCION_OBLIGATORIA=true`, cierra el acceso si no hay suscripción vigente (5 días de gracia tras un cobro fallido).
   Guía: `docs/referencia/CONFIGURAR-STRIPE.md`.
 - **Métricas** (solo administración): entradas por día y canal, origen de cada lead (las campañas de Meta), etapa actual,
-  cierres, desempeño por vendedor, mediana de la primera respuesta de una persona (con meta de 5 min) y a qué hora escriben.
+  vendidas y no vendidas, pareto de «¿Por qué se perdió la venta?», desempeño por vendedor, mediana de la primera respuesta de una persona (con meta de 5 min) y a qué hora escriben.
   Periodos: hoy, 7, 30 y 90 días y el mes en curso, en hora de Cancún (`lib/admin/metricas.ts`, cálculo puro).
 - **Canales:** encender/apagar WhatsApp, Messenger e Instagram y la IA por canal; estado del webhook y del token.
 - **Multimedia del bot:** catálogos, fichas técnicas, PDFs y videos que el bot puede enviar, cada uno con su nota de «cuándo mandarlo».

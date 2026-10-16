@@ -18,12 +18,12 @@ import CanalIcono from "./CanalIcono";
 
 /** Tono de cada etapa: fondo y texto de la insignia, y el punto que la acompaña en menús y métricas. */
 export const ETAPA_TONO: Record<Etapa, { fondo: string; texto: string; punto: string }> = {
-  nuevo: { fondo: "rgba(10,15,26,0.06)", texto: "#364152", punto: "#8a96a8" },
-  en_atencion: { fondo: "rgba(43,80,236,0.10)", texto: "#1b37b3", punto: "#2b50ec" },
-  calificado: { fondo: "rgba(124,58,237,0.10)", texto: "#5b21b6", punto: "#7c3aed" },
-  agendado: { fondo: "rgba(14,159,90,0.12)", texto: "#0a6b3d", punto: "#0e9f5a" },
-  propuesta: { fondo: "rgba(242,165,22,0.18)", texto: "#8a5a00", punto: "#f2a516" },
-  cerrado: { fondo: "rgba(10,15,26,0.05)", texto: "#5f6b7d", punto: "#c2cad6" },
+  prospeccion: { fondo: "rgba(10,15,26,0.06)", texto: "#364152", punto: "#8a96a8" },
+  no_contesta: { fondo: "rgba(242,165,22,0.18)", texto: "#8a5a00", punto: "#f2a516" },
+  seguimiento: { fondo: "rgba(43,80,236,0.10)", texto: "#1b37b3", punto: "#2b50ec" },
+  oportunidad: { fondo: "rgba(124,58,237,0.10)", texto: "#5b21b6", punto: "#7c3aed" },
+  vendido: { fondo: "rgba(14,159,90,0.12)", texto: "#0a6b3d", punto: "#0e9f5a" },
+  no_vendido: { fondo: "rgba(225,29,72,0.09)", texto: "#9f1239", punto: "#e11d48" },
 };
 
 export const ETIQUETA_TONO: Record<string, { fondo: string; texto: string }> = {
@@ -126,7 +126,7 @@ export default function ListaConversaciones({
         const activa = c.id === seleccionadaId;
         const pendiente = esperaRespuesta(c);
         const etiquetas = etiquetasPorCliente.get(c.cliente_id) ?? [];
-        const tono = ETAPA_TONO[c.etapa] ?? ETAPA_TONO.nuevo;
+        const tono = ETAPA_TONO[c.etapa] ?? ETAPA_TONO.prospeccion;
         const campana = campanaCorta(c.fuente);
         return (
           <li key={c.id}>

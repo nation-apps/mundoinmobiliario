@@ -12,6 +12,7 @@ import {
   Inbox,
   Layers,
   ListFilter,
+  Megaphone,
   MessageCircleReply,
   Radio,
   Search,
@@ -32,6 +33,7 @@ import {
   FILTROS_CANAL_BANDEJA,
   FILTROS_ESTADO_BANDEJA,
   LIMITE_BANDEJA,
+  esEtapaFinal,
   esperaRespuesta,
   type BandejaProps,
   type Canal,
@@ -46,6 +48,7 @@ import {
 } from "@/lib/admin/chats-tipos";
 import { Chip } from "@/components/admin/ui";
 import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
+import { origenesDisponibles } from "@/lib/admin/embudo";
 import { useAvisos } from "./Avisos";
 import CanalIcono from "./CanalIcono";
 import ClientPanel from "./ClientPanel";
@@ -60,6 +63,8 @@ type Vista = {
   filtroCanal: FiltroCanalBandeja;
   filtroEstado: FiltroEstadoBandeja;
   filtroEtapa: FiltroEtapaBandeja;
+  /** "todas", "campana" (cualquiera de campaña) o el texto exacto de `fuente`, como en el embudo. */
+  filtroOrigen: string;
   /** No se guarda: una búsqueda vieja dejaría la lista vacía sin explicación. */
   busqueda: string;
   seleccionadaId: string | null;
@@ -69,7 +74,7 @@ type Vista = {
   restaurada: boolean;
 };
 
-type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "busqueda">>;
+type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "filtroOrigen" | "busqueda">>;
 
 type Accion =
   | { tipo: "restaurar"; guardados: FiltrosBandejaGuardados }
@@ -83,6 +88,7 @@ const VISTA_INICIAL: Vista = {
   filtroCanal: "todas",
   filtroEstado: "todas",
   filtroEtapa: "todas",
+  filtroOrigen: "todas",
   busqueda: "",
   seleccionadaId: null,
   pantalla: "lista",
@@ -99,6 +105,7 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
         filtroCanal: accion.guardados.canal,
         filtroEstado: accion.guardados.estado,
         filtroEtapa: accion.guardados.etapa,
+        filtroOrigen: accion.guardados.origen ?? "todas",
         seleccionadaId: accion.guardados.seleccionadaId,
         restaurada: true,
       };
@@ -116,6 +123,7 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
         filtroCanal: "todas",
         filtroEstado: "todas",
         filtroEtapa: "todas",
+        filtroOrigen: "todas",
         busqueda: "",
         seleccionadaId: accion.id,
         pantalla: "hilo",
@@ -136,7 +144,7 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
  * en el primer render daría un mismatch de hidratación.
  */
 function cargarFiltrosGuardados(estadoPorDefecto: FiltroEstadoBandeja): FiltrosBandejaGuardados {
-  const porDefecto: FiltrosBandejaGuardados = { canal: "todas", estado: estadoPorDefecto, etapa: "todas", seleccionadaId: null };
+  const porDefecto: FiltrosBandejaGuardados = { canal: "todas", estado: estadoPorDefecto, etapa: "todas", origen: "todas", seleccionadaId: null };
   try {
     const crudo = localStorage.getItem(BANDEJA_STORAGE_KEY);
     if (!crudo) return porDefecto;
@@ -147,6 +155,7 @@ function cargarFiltrosGuardados(estadoPorDefecto: FiltroEstadoBandeja): FiltrosB
       canal: FILTROS_CANAL_BANDEJA.find((f) => f.id === d.canal)?.id ?? "todas",
       estado: FILTROS_ESTADO_BANDEJA.find((f) => f.id === d.estado)?.id ?? "todas",
       etapa: ETAPAS.find((e) => e === d.etapa) ?? "todas",
+      origen: typeof d.origen === "string" && d.origen ? d.origen : "todas",
       seleccionadaId: typeof d.seleccionadaId === "string" ? d.seleccionadaId : null,
     };
   } catch {
@@ -160,6 +169,7 @@ type Filtros = {
   canal: FiltroCanalBandeja;
   estado: FiltroEstadoBandeja;
   etapa: FiltroEtapaBandeja;
+  origen: string;
   busqueda: string;
 };
 
@@ -173,9 +183,9 @@ function coincide(c: ConversacionResumen, filtros: Filtros, usuarioId: string): 
   const cerrada = c.estado === "cerrada";
   switch (filtros.estado) {
     case "todas":
-      // Las cerradas solo se ven en su filtro… salvo que se pida la etapa
-      // "Cerrada": ahí esconderlas dejaría la lista vacía sin explicación.
-      if (cerrada && filtros.etapa !== "cerrado") return false;
+      // Las cerradas solo se ven en su filtro… salvo que se pida «Vendido» o
+      // «No vendido»: ahí esconderlas dejaría la lista vacía sin explicación.
+      if (cerrada && (filtros.etapa === "todas" || !esEtapaFinal(filtros.etapa))) return false;
       break;
     case "sin_responder":
       if (cerrada || !esperaRespuesta(c)) return false;
@@ -195,6 +205,12 @@ function coincide(c: ConversacionResumen, filtros: Filtros, usuarioId: string): 
   }
 
   if (filtros.etapa !== "todas" && c.etapa !== filtros.etapa) return false;
+
+  if (filtros.origen === "campana") {
+    if (!c.fuente?.startsWith("Campaña ")) return false;
+  } else if (filtros.origen !== "todas" && c.fuente !== filtros.origen) {
+    return false;
+  }
 
   const termino = filtros.busqueda.trim().toLowerCase();
   if (!termino) return true;
@@ -366,7 +382,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   const [cargando, setCargando] = useState(false);
 
   const [vista, despachar] = useReducer(reducirVista, VISTA_INICIAL);
-  const { filtroCanal, filtroEstado, filtroEtapa, busqueda, seleccionadaId, pantalla, restaurada } = vista;
+  const { filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, seleccionadaId, pantalla, restaurada } = vista;
 
   // El servidor no tiene matchMedia: allí se asume escritorio en el panel y
   // apilado en la app; React corrige con el valor real al hidratar.
@@ -539,13 +555,19 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   const idGuardado = apilado && pantalla === "lista" ? null : seleccionadaId;
   useEffect(() => {
     if (!restaurada) return;
-    const datos: FiltrosBandejaGuardados = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, seleccionadaId: idGuardado };
+    const datos: FiltrosBandejaGuardados = {
+      canal: filtroCanal,
+      estado: filtroEstado,
+      etapa: filtroEtapa,
+      origen: filtroOrigen,
+      seleccionadaId: idGuardado,
+    };
     try {
       localStorage.setItem(BANDEJA_STORAGE_KEY, JSON.stringify(datos));
     } catch {
       // Modo privado o cuota llena: perder el filtro guardado no es grave.
     }
-  }, [restaurada, filtroCanal, filtroEstado, filtroEtapa, idGuardado]);
+  }, [restaurada, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, idGuardado]);
 
   /* --- ?c=<id>: "Abrir" en un aviso. Va DESPUÉS de restaurar para ganarle a lo guardado --- */
   useEffect(() => {
@@ -578,9 +600,9 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   }, [etiquetas, clienteEtiquetas]);
 
   const filtradas = useMemo(() => {
-    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, busqueda };
+    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, busqueda };
     return conversaciones.filter((c) => coincide(c, filtros, usuarioId));
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, busqueda, usuarioId]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, usuarioId]);
 
   // Se busca en TODAS, no en las filtradas: si no, con el filtro "Sin
   // responder" el hilo se cerraría solo apenas el staff contesta. Cuando es
@@ -610,6 +632,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       canal: cambio.filtroCanal ?? filtroCanal,
       estado: cambio.filtroEstado ?? filtroEstado,
       etapa: cambio.filtroEtapa ?? filtroEtapa,
+      origen: cambio.filtroOrigen ?? filtroOrigen,
       busqueda: cambio.busqueda ?? busqueda,
     };
     const soltar = seleccionada !== null && !coincide(seleccionada, siguientes, usuarioId);
@@ -644,19 +667,32 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
 
   /* --- Piezas compartidas por las cabeceras --- */
 
+  // De qué campaña o canal vino cada lead (`fuente`), igual que el filtro «Origen» del embudo.
+  const opcionesOrigen = useMemo(() => {
+    const fuentes = origenesDisponibles(conversaciones);
+    if (filtroOrigen !== "todas" && filtroOrigen !== "campana" && !fuentes.includes(filtroOrigen)) fuentes.push(filtroOrigen);
+    return [
+      { id: "todas", label: "Todos", icono: <Layers size={16} strokeWidth={1.9} aria-hidden /> },
+      { id: "campana", label: "Solo campañas", icono: <Megaphone size={16} strokeWidth={1.9} aria-hidden /> },
+      ...fuentes.map((f) => ({ id: f, label: f })),
+    ];
+  }, [conversaciones, filtroOrigen]);
+
   const conteos = useMemo(() => {
     // Cuántas quedarían con cada opción, sin tocar los demás filtros (sobre las LIMITE_BANDEJA cargadas).
-    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, busqueda };
+    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, busqueda };
     const contar = (cambio: Partial<Filtros>) =>
       conversaciones.reduce((n, c) => n + (coincide(c, { ...base, ...cambio }, usuarioId) ? 1 : 0), 0);
     return {
       canal: Object.fromEntries(FILTROS_CANAL_BANDEJA.map((f) => [f.id, contar({ canal: f.id })])) as Record<FiltroCanalBandeja, number>,
       estado: Object.fromEntries(FILTROS_ESTADO_BANDEJA.map((f) => [f.id, contar({ estado: f.id })])) as Record<FiltroEstadoBandeja, number>,
       etapa: Object.fromEntries(OPCIONES_ETAPA.map((f) => [f.id, contar({ etapa: f.id })])) as Record<FiltroEtapaBandeja, number>,
+      origen: Object.fromEntries(opcionesOrigen.map((f) => [f.id, contar({ origen: f.id })])) as Record<string, number>,
     };
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, busqueda, usuarioId]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, usuarioId, opcionesOrigen]);
 
-  const hayFiltros = filtroCanal !== "todas" || filtroEstado !== "todas" || filtroEtapa !== "todas" || busqueda.trim() !== "";
+  const hayFiltros =
+    filtroCanal !== "todas" || filtroEstado !== "todas" || filtroEtapa !== "todas" || filtroOrigen !== "todas" || busqueda.trim() !== "";
 
   const selectorEtapa = (
     <FiltroDesplegable
@@ -669,6 +705,17 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       valor={filtroEtapa}
       conteos={conteos.etapa}
       onCambiar={(id) => filtrar({ filtroEtapa: id })}
+    />
+  );
+
+  const selectorOrigen = (
+    <FiltroDesplegable
+      nombre="Origen"
+      icono={<Megaphone size={15} aria-hidden />}
+      opciones={opcionesOrigen}
+      valor={filtroOrigen}
+      conteos={conteos.origen}
+      onCambiar={(id) => filtrar({ filtroOrigen: id })}
     />
   );
 
@@ -694,10 +741,11 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
         onCambiar={(id) => filtrar({ filtroEstado: id })}
       />
       {selectorEtapa}
+      {selectorOrigen}
       {hayFiltros && (
         <button
           type="button"
-          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", busqueda: "" })}
+          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", filtroOrigen: "todas", busqueda: "" })}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-[13px] text-muted transition-colors hover:text-ink max-lg:h-11"
         >
           <X size={14} aria-hidden />
@@ -773,7 +821,10 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   );
 
   const filtrosExtraActivos =
-    (filtroCanal !== "todas" ? 1 : 0) + (filtroEtapa !== "todas" ? 1 : 0) + (ESTADOS_APP.includes(filtroEstado) ? 0 : 1);
+    (filtroCanal !== "todas" ? 1 : 0) +
+    (filtroEtapa !== "todas" ? 1 : 0) +
+    (filtroOrigen !== "todas" ? 1 : 0) +
+    (ESTADOS_APP.includes(filtroEstado) ? 0 : 1);
 
   const cabeceraApp = (
     <header className="mb-4 flex flex-col gap-3">
@@ -830,7 +881,10 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
             tactil
             className={FILA_ENVUELTA}
           />
-          <div className="flex">{selectorEtapa}</div>
+          <div className="flex flex-wrap gap-2">
+            {selectorEtapa}
+            {selectorOrigen}
+          </div>
         </div>
       </details>
     </header>
