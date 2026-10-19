@@ -3,6 +3,13 @@ import { logger } from "../lib/logger.js";
 import { AppError } from "../lib/errors.js";
 import { telefonoParaEnvio } from "../lib/telefono.js";
 
+/**
+ * Con WHATSAPP_QR_ACTIVO=true los envíos y descargas van por el número vinculado por QR (src/whatsapp-qr/). El módulo se
+ * carga solo cuando hace falta: con la API oficial ni se importa (ni arrastra Baileys ni la base de datos).
+ */
+const qrActivo = (): boolean => env.WHATSAPP_QR_ACTIVO;
+const modoQr = () => import("../whatsapp-qr/sesion.js");
+
 // v21.0 estaba fijo acá y esa versión caduca el 21-ene-2027 — ahora comparte
 // la misma variable que Messenger/Instagram (META_GRAPH_VERSION).
 const GRAPH_BASE_URL = `https://graph.facebook.com/${env.META_GRAPH_VERSION}`;
@@ -102,6 +109,7 @@ async function callGraphApi(body: Record<string, unknown>): Promise<string> {
  * bytes, ambos pasos con el mismo Bearer token.
  */
 export async function descargarMedia(mediaId: string): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (qrActivo()) return (await modoQr()).descargarMediaQr(mediaId);
   const metaRes = await fetch(`${GRAPH_BASE_URL}/${mediaId}`, {
     headers: { Authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}` },
   });
@@ -126,10 +134,12 @@ export async function descargarMedia(mediaId: string): Promise<{ buffer: Buffer;
  * Es solo cosmético: si falla, se ignora.
  */
 export async function marcarLeidoYEscribiendo(messageId: string): Promise<void> {
+  if (qrActivo()) return (await modoQr()).marcarLeidoYEscribiendoQr(messageId);
   await callGraphApi({ status: "read", message_id: messageId, typing_indicator: { type: "text" } });
 }
 
 export async function sendText(to: string, body: string): Promise<string> {
+  if (qrActivo()) return (await modoQr()).enviarTextoQr(to, body);
   return callGraphApi({
     to,
     type: "text",
@@ -151,6 +161,10 @@ export async function sendTemplate(params: {
   /** Si la plantilla tiene un botón de enlace con {{1}} al final de la URL, lo que va en ese {{1}}. */
   botonUrl?: string;
 }): Promise<string> {
+  if (qrActivo()) {
+    // Las plantillas son de la API oficial. Por QR no se le escribe primero a nadie: es lo que más bloquea los números.
+    throw new AppError("Con la conexión por QR no hay plantillas: solo se contesta a quien escribe", "whatsapp_qr_sin_plantillas", 409);
+  }
   const componentes: unknown[] = [];
   if (params.parametros && params.parametros.length > 0) {
     componentes.push({ type: "body", parameters: params.parametros.map((text) => ({ type: "text", text })) });
@@ -185,6 +199,7 @@ export async function sendMedia(params: {
   link: string;
   caption?: string | null;
 }): Promise<string> {
+  if (qrActivo()) return (await modoQr()).enviarMediaQr({ para: params.to, tipo: params.tipo, link: params.link, caption: params.caption ?? null });
   const media: Record<string, unknown> = { link: params.link };
   if (params.caption && params.tipo !== "audio") media.caption = params.caption;
 
@@ -201,6 +216,11 @@ export type ButtonOption = { id: string; title: string };
 export async function sendButtons(to: string, body: string, options: ButtonOption[]): Promise<string> {
   if (options.length === 0 || options.length > 3) {
     throw new AppError("sendButtons requiere entre 1 y 3 opciones", "invalid_buttons", 500);
+  }
+  if (qrActivo()) {
+    // Los botones interactivos son de la API oficial: por QR se muestran como lista y la persona contesta con el texto.
+    const lista = options.map((opt) => `• ${opt.title}`).join("\n");
+    return (await modoQr()).enviarTextoQr(to, `${body}\n\n${lista}\n(Responde con una de estas opciones)`);
   }
   return callGraphApi({
     to,

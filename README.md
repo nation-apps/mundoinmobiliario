@@ -26,6 +26,8 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 - **Voz humana y fiabilidad** (heredadas de B&B): lee y muestra «escribiendo…», pausa según el largo de la respuesta, junta
   mensajes seguidos en una sola respuesta, reintenta los envíos que fallan, no repite preguntas, no contesta a bots ajenos,
   y una etiqueta llamada **Anulado** (ya no viene creada; se crea a mano si hace falta) hace que el bot ignore a un contacto.
+- **WhatsApp por QR (no oficial, opcional):** el número se vincula escaneando un QR desde Canales (Baileys), sin pasar por la API de
+  Meta. Solo contesta a quien escribe y puede bloquear el número: ver `docs/referencia/WHATSAPP-QR.md`.
 - **México:** teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.
 
 ## Panel de administración (`admin/`)

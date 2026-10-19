@@ -36,6 +36,8 @@ const MENSAJES: Record<string, string> = {
   ya_activa: "La suscripción ya está activa.",
   sin_cliente: "Todavía no hay un pago registrado que administrar.",
   panel_url_no_configurada: "Falta configurar la dirección pública del panel en el servidor.",
+  whatsapp_qr_apagado: "La conexión por QR está apagada en el servidor (WHATSAPP_QR_ACTIVO).",
+  whatsapp_qr_desconectado: "WhatsApp por QR no está conectado.",
 };
 
 async function llamar<T>(ruta: string, init?: RequestInit): Promise<T> {
@@ -115,4 +117,26 @@ export function iniciarPago(): Promise<{ url: string }> {
 /** Portal de Stripe: cambiar la tarjeta, ver facturas o cancelar. */
 export function abrirPortalDePago(): Promise<{ url: string }> {
   return llamar("pagos/portal", { method: "POST", body: "{}" });
+}
+
+/** WhatsApp por QR (no oficial): lo que el bot dice de la sesión vinculada. */
+export type EstadoWhatsappQr = {
+  activo: boolean;
+  estado: "apagado" | "sin_sesion" | "esperando_qr" | "conectando" | "conectado" | "desconectado";
+  /** Imagen del QR (data URL) mientras se espera el escaneo. */
+  qr: string | null;
+  telefono: string | null;
+  error: string | null;
+};
+
+export function estadoWhatsappQr(): Promise<EstadoWhatsappQr> {
+  return llamar("whatsapp-qr");
+}
+
+export function conectarWhatsappQr(): Promise<EstadoWhatsappQr> {
+  return llamar("whatsapp-qr/iniciar", { method: "POST", body: "{}" });
+}
+
+export function desconectarWhatsappQr(): Promise<EstadoWhatsappQr> {
+  return llamar("whatsapp-qr/desconectar", { method: "POST", body: "{}" });
 }

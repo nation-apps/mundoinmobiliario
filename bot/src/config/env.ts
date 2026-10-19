@@ -78,6 +78,11 @@ const envSchema = z.object({
   STRIPE_PRECIO_CENTAVOS: z.coerce.number().int().min(100).default(3900),
   /** Dirección pública del panel (a ella vuelve Stripe tras pagar). Sin ella se usa la primera de ADMIN_ORIGINS. */
   PANEL_PUBLIC_URL: vacioComoAusente(z.string().url().optional()),
+  // Conexión de WhatsApp por QR (Baileys, NO oficial de Meta; puede bloquear el número). Con WHATSAPP_QR_ACTIVO=true los envíos
+  // y recepciones de WhatsApp van por ese número vinculado y no por la API de Meta. Ver src/whatsapp-qr/.
+  WHATSAPP_QR_ACTIVO: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  /** Tope de mensajes que salen por minuto por el número del QR (protege el número de un bloqueo por ráfagas). */
+  WHATSAPP_QR_MAX_POR_MINUTO: z.coerce.number().int().min(1).max(120).default(15),
   LEADS_RECONCILIAR_ACTIVO: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
   LEADS_RECONCILIAR_MIN: z.coerce.number().int().min(1).max(60).default(5),
   /** Cuánto hacia atrás se miran los leads en cada vuelta. */

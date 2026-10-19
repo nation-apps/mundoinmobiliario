@@ -31,6 +31,7 @@ import type { CanalMeta } from "../meta/parser.js";
 import { AppError } from "../lib/errors.js";
 import { leerSuscripcion } from "../db/repositories/suscripcion.js";
 import { crearCheckout, crearPortal } from "../stripe/cliente.js";
+import { cerrarSesionQr, estadoQr, iniciarSesionQr } from "../whatsapp-qr/sesion.js";
 
 // Exactamente uno de los dos: o el staff escribe texto, o elige una
 // plantilla multimedia de la biblioteca — nunca ambos ni ninguno.
@@ -567,5 +568,26 @@ export async function adminRoutes(app: FastifyInstance) {
     const sesion = await crearPortal({ clienteId: actual.stripe_customer_id, volverA: volverAlPanel() });
     logger.info({ staffId: staff.id }, "Sesión del portal de Stripe creada");
     return reply.send(sesion);
+  });
+
+  /* ---------- WhatsApp por QR (Baileys, no oficial): solo administración ---------- */
+
+  app.get("/admin/whatsapp-qr", async (request: FastifyRequest, reply: FastifyReply) => {
+    await requireAdmin(request.headers.authorization);
+    return reply.send(estadoQr());
+  });
+
+  app.post("/admin/whatsapp-qr/iniciar", async (request: FastifyRequest, reply: FastifyReply) => {
+    const staff = await requireAdmin(request.headers.authorization);
+    await iniciarSesionQr();
+    logger.info({ staffId: staff.id }, "Se pidió conectar WhatsApp por QR");
+    return reply.send(estadoQr());
+  });
+
+  app.post("/admin/whatsapp-qr/desconectar", async (request: FastifyRequest, reply: FastifyReply) => {
+    const staff = await requireAdmin(request.headers.authorization);
+    await cerrarSesionQr();
+    logger.info({ staffId: staff.id }, "Se desvinculó WhatsApp por QR");
+    return reply.send(estadoQr());
   });
 }

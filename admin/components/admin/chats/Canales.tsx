@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import CanalIcono from "@/components/admin/chats/CanalIcono";
+import WhatsappQr from "@/components/admin/chats/WhatsappQr";
 import { fechaHoraLima } from "@/components/admin/clientes/formato";
 import { BotApiError, estadoCanales } from "@/lib/admin/bot-api";
 import {
@@ -572,6 +573,8 @@ export default function Canales({ inicial }: CanalesProps) {
       )}
 
       <TarjetaWeb estado={estado} estadoCargando={estadoCargando} errorBot={errorBot} onReintentar={reintentar} />
+
+      <WhatsappQr />
 
       <CopiarEnMeta estado={estado} estadoCargando={estadoCargando} />
     </div>
