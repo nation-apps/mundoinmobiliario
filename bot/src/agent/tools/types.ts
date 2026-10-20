@@ -31,6 +31,8 @@ export type AgentContext = {
    */
   telefono: string | null;
   contactName: string | undefined;
+  /** Solo WhatsApp: la línea (número) de esta conversación; de ahí se manda cualquier archivo. */
+  linea?: string | null | undefined;
   /**
    * Botones de respuesta rápida que el asesor pidió con la marca
    * [[botones: A | B]] al final de su mensaje (ver lib/botones.ts). Los lee

@@ -9,11 +9,13 @@ import {
   metaVerifyToken,
 } from "../config/env.js";
 import { logger } from "../lib/logger.js";
+import { supabase } from "../db/client.js";
 import { requireStaff } from "../lib/adminAuth.js";
 import { normalizarTelefono } from "../lib/telefono.js";
 import {
   getConversacionConDestino,
   getOrCreateConversacionAbierta,
+  cambiarLineaConversacion,
   pasarAPersona,
   unirFormularioConWhatsapp,
 } from "../db/repositories/conversaciones.js";
@@ -32,7 +34,8 @@ import type { CanalMeta } from "../meta/parser.js";
 import { AppError } from "../lib/errors.js";
 import { leerSuscripcion } from "../db/repositories/suscripcion.js";
 import { crearCheckout, crearPortal } from "../stripe/cliente.js";
-import { cerrarSesionQr, estadoQr, iniciarSesionQr } from "../whatsapp-qr/sesion.js";
+import { cerrarSesionQr, estadoLineasQr, iniciarSesionQr, qrActivo } from "../whatsapp-qr/sesion.js";
+import { LINEA_POR_DEFECTO, esLineaValida, idsDeLineas, lineaPorFuente } from "../lib/lineas.js";
 
 // Exactamente uno de los dos: o el staff escribe texto, o elige una
 // plantilla multimedia de la biblioteca — nunca ambos ni ninguno.
@@ -41,6 +44,8 @@ const mensajeSchema = z
     conversacionId: z.string().uuid(),
     texto: z.string().trim().min(1).max(4000).optional(),
     plantillaId: z.string().uuid().optional(),
+    /** Solo WhatsApp: la línea desde la que se manda (si es otra que la del chat, el chat se pasa a ella). */
+    linea: z.string().max(30).optional(),
   })
   .refine((data) => Boolean(data.texto) !== Boolean(data.plantillaId), {
     message: "Manda exactamente uno: texto o plantillaId",
@@ -57,6 +62,8 @@ const promocionSchema = z.object({
 const whatsappClienteSchema = z
   .object({
     texto: z.string().trim().min(1).max(4000).optional(),
+    /** La línea desde la que se le escribe; sin ella, la de su origen (TVS o Mundo de Motos) o la de por defecto. */
+    linea: z.string().max(30).optional(),
     plantilla: z.string().trim().min(1).optional(),
     parametros: z.array(z.string().trim().min(1)).max(10).optional(),
   })
@@ -94,7 +101,10 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.status(400).send({ error: "invalid_body", detail: parsed.error.issues });
     }
-    const { conversacionId, texto, plantillaId } = parsed.data;
+    const { conversacionId, texto, plantillaId, linea: lineaPedida } = parsed.data;
+    if (lineaPedida !== undefined && !esLineaValida(lineaPedida)) {
+      return reply.status(400).send({ error: "linea_invalida", mensaje: `Líneas válidas: ${idsDeLineas().join(", ")}.` });
+    }
 
     const found = await getConversacionConDestino(conversacionId);
     if (!found) return reply.status(404).send({ error: "conversacion_no_encontrada" });
@@ -112,10 +122,13 @@ export async function adminRoutes(app: FastifyInstance) {
 
     const adapter = getCanalAdapter(found.conversacion.canal);
     const ultimoMensajeAt = found.conversacion.ultimo_mensaje_at;
+    // WhatsApp: se manda por la línea que eligió quien escribe; sin elegir, por la del chat (las anteriores a tener dos, la de TVS).
+    const esWhatsapp = found.conversacion.canal === "whatsapp";
+    const linea = esWhatsapp ? (lineaPedida ?? found.conversacion.linea ?? LINEA_POR_DEFECTO) : undefined;
 
     let mensaje;
     if (texto) {
-      const resultado = await adapter.enviarTexto({ destinatarioId: found.destinatarioId, texto, rol: "humano", ultimoMensajeAt });
+      const resultado = await adapter.enviarTexto({ destinatarioId: found.destinatarioId, texto, rol: "humano", ultimoMensajeAt, linea });
       if (!resultado.externalId) {
         return reply.status(409).send({ error: "ventana_cerrada", mensaje: resultado.motivoCierre });
       }
@@ -132,6 +145,7 @@ export async function adminRoutes(app: FastifyInstance) {
         caption: plantilla.caption,
         rol: "humano",
         ultimoMensajeAt,
+        linea,
       });
       if (!resultado.externalId) {
         return reply.status(409).send({ error: "ventana_cerrada", mensaje: resultado.motivoCierre });
@@ -145,6 +159,13 @@ export async function adminRoutes(app: FastifyInstance) {
         externalId: resultado.externalId,
         autorId: staff.id,
       });
+    }
+
+    // Si se escribió desde la otra línea, el chat se va con ella: así la respuesta del cliente cae en este mismo chat.
+    if (esWhatsapp && linea && linea !== found.conversacion.linea) {
+      await cambiarLineaConversacion(conversacionId, linea).catch((err: unknown) =>
+        logger.warn({ err, conversacionId }, "No se pudo cambiar la línea de la conversación"),
+      );
     }
 
     // Respondió una persona: el bot deja de contestar en este chat hasta que lo devuelvan a «Bot».
@@ -475,6 +496,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const cliente = await getClienteById(id);
     if (!cliente) return reply.status(404).send({ error: "cliente_no_encontrado" });
     if (!cliente.telefono) return reply.status(409).send({ error: "sin_telefono" });
+    if (parsed.data.linea !== undefined && !esLineaValida(parsed.data.linea)) {
+      return reply.status(400).send({ error: "linea_invalida", mensaje: `Líneas válidas: ${idsDeLineas().join(", ")}.` });
+    }
+    // La línea desde la que se le escribe: la que eligió quien escribe, o la de la marca de su origen, o la de por defecto.
+    const linea = parsed.data.linea ?? lineaPorFuente((cliente as { fuente?: string | null }).fuente) ?? LINEA_POR_DEFECTO;
 
     // Se lee ANTES de abrir la conversación: una recién creada no es un
     // mensaje entrante y no debe contar para la ventana. Si nunca escribió
@@ -483,13 +509,14 @@ export async function adminRoutes(app: FastifyInstance) {
     // (conversaciones_resumen.actividad_at incluye la respuesta del equipo).
     const ultimoEntrante = await getLastInboundAt(cliente.telefono);
     // Si es un lead de formulario, su registro se vuelve el chat de WhatsApp (no se abre un segundo).
-    await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+    await unirFormularioConWhatsapp(cliente.id, linea).catch((err: unknown) =>
       logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
     );
     const conversacion = await getOrCreateConversacionAbierta({
       clienteId: cliente.id,
       canal: "whatsapp",
       origen: "dm",
+      linea,
       ultimoMensajeAt: (ultimoEntrante ?? new Date(0)).toISOString(),
     });
 
@@ -501,6 +528,7 @@ export async function adminRoutes(app: FastifyInstance) {
         texto: parsed.data.texto,
         rol: "humano",
         ultimoMensajeAt: ultimoEntrante ? ultimoEntrante.toISOString() : null,
+        linea,
       });
       if (!resultado.externalId) {
         return reply.status(409).send({ error: "ventana_cerrada", mensaje: resultado.motivoCierre });
@@ -592,20 +620,45 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/admin/whatsapp-qr", async (request: FastifyRequest, reply: FastifyReply) => {
     await requireAdmin(request.headers.authorization);
-    return reply.send(estadoQr());
+    return reply.send({ activo: qrActivo(), lineas: estadoLineasQr() });
   });
+
+  const lineaQrSchema = z.object({ linea: z.string().max(30) });
 
   app.post("/admin/whatsapp-qr/iniciar", async (request: FastifyRequest, reply: FastifyReply) => {
     const staff = await requireAdmin(request.headers.authorization);
-    await iniciarSesionQr();
-    logger.info({ staffId: staff.id }, "Se pidió conectar WhatsApp por QR");
-    return reply.send(estadoQr());
+    const parsed = lineaQrSchema.safeParse(request.body);
+    if (!parsed.success || !esLineaValida(parsed.data.linea)) return reply.status(400).send({ error: "linea_invalida" });
+    await iniciarSesionQr(parsed.data.linea);
+    logger.info({ staffId: staff.id, linea: parsed.data.linea }, "Se pidió conectar una línea de WhatsApp por QR");
+    return reply.send({ activo: qrActivo(), lineas: estadoLineasQr() });
   });
 
   app.post("/admin/whatsapp-qr/desconectar", async (request: FastifyRequest, reply: FastifyReply) => {
     const staff = await requireAdmin(request.headers.authorization);
-    await cerrarSesionQr();
-    logger.info({ staffId: staff.id }, "Se desvinculó WhatsApp por QR");
-    return reply.send(estadoQr());
+    const parsed = lineaQrSchema.safeParse(request.body);
+    if (!parsed.success || !esLineaValida(parsed.data.linea)) return reply.status(400).send({ error: "linea_invalida" });
+    await cerrarSesionQr(parsed.data.linea);
+    logger.info({ staffId: staff.id, linea: parsed.data.linea }, "Se desvinculó una línea de WhatsApp por QR");
+    return reply.send({ activo: qrActivo(), lineas: estadoLineasQr() });
+  });
+
+  /**
+   * De qué líneas de WhatsApp recibe leads una persona del equipo (el reparto automático solo le asigna las de sus líneas).
+   * Solo administración.
+   */
+  app.post("/admin/equipo/:id/lineas", async (request: FastifyRequest, reply: FastifyReply) => {
+    const staff = await requireAdmin(request.headers.authorization);
+    const parsed = z.object({ lineas: z.array(z.string().max(30)).max(10) }).safeParse(request.body);
+    if (!parsed.success || !parsed.data.lineas.every((l) => esLineaValida(l))) {
+      return reply.status(400).send({ error: "linea_invalida", mensaje: `Líneas válidas: ${idsDeLineas().join(", ")}.` });
+    }
+    const { id } = request.params as { id: string };
+    const lineas = [...new Set(parsed.data.lineas)];
+    const { data, error } = await supabase.from("staff").update({ lineas }).eq("user_id", id).select("user_id");
+    if (error) throw error;
+    if (!data?.length) return reply.status(404).send({ error: "persona_no_encontrada" });
+    logger.info({ staffId: staff.id, personaId: id, lineas }, "Cambiaron las líneas de WhatsApp de una persona del equipo");
+    return reply.send({ lineas });
   });
 }

@@ -14,7 +14,7 @@ import { actualizarEstadoCanal } from "./db/repositories/canales.js";
 import { registrarNumeroSiHaceFalta } from "./whatsapp/registro.js";
 import { iniciarReenvios } from "./seguimientos/reenvios.js";
 import { iniciarReconciliacionLeads } from "./meta/reconciliarLeads.js";
-import { arrancarSesionQrSiHayGuardada } from "./whatsapp-qr/sesion.js";
+import { arrancarSesionesQrSiHayGuardadas } from "./whatsapp-qr/sesion.js";
 
 // Sin el log automático de requests: Fastify escribe `req.url` completo y el
 // handshake de Meta trae el token de verificación en la query
@@ -89,7 +89,7 @@ if (whatsappConfigurado) {
 }
 
 iniciarReenvios();
-arrancarSesionQrSiHayGuardada().catch((err: unknown) => logger.error({ err }, "Falló el arranque de WhatsApp por QR"));
+arrancarSesionesQrSiHayGuardadas().catch((err: unknown) => logger.error({ err }, "Falló el arranque de WhatsApp por QR"));
 iniciarReconciliacionLeads();
 
 if (metaConfigurado) {

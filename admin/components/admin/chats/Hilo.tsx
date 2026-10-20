@@ -17,6 +17,9 @@ import {
 } from "@/lib/admin/bot-api";
 import {
   CANAL_LABEL,
+  LINEAS_WHATSAPP,
+  etiquetaDeLinea,
+  lineaDeConversacion,
   ETAPAS,
   ETAPA_LABEL,
   HILO_LEAD_ADS,
@@ -286,6 +289,8 @@ export default function Hilo({
 }) {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
+  /** La línea de WhatsApp elegida para mandar en ESTE chat (atada a la conversación: al cambiar de chat vuelve a la suya). */
+  const [lineaElegida, setLineaElegida] = useState<{ conversacionId: string; linea: string } | null>(null);
   // Si ya llega con una conversación, arranca cargando (el efecto la trae).
   const [cargando, setCargando] = useState(conversacion !== null);
   const [texto, setTexto] = useState("");
@@ -315,6 +320,11 @@ export default function Hilo({
   const clienteId = conversacion?.cliente_id ?? null;
   const esWeb = canal === "web";
   const esComentario = conversacion?.origen === "comentario";
+  // WhatsApp con varias líneas: por defecto se contesta por la del chat; quien escribe puede elegir otra antes de mandar.
+  const esWhatsapp = canal === "whatsapp";
+  const lineaDelChat = conversacion ? lineaDeConversacion(conversacion) : null;
+  const lineaEfectiva = lineaElegida && conversacion && lineaElegida.conversacionId === conversacion.id ? lineaElegida.linea : lineaDelChat;
+  const lineaDeEnvio = esWhatsapp ? (lineaEfectiva ?? undefined) : undefined;
   const modoHumano = conversacion?.estado === "escalada";
   const humanAgentAprobado = estadoCanales?.metaHumanAgentAprobado ?? false;
   // La IA también se apaga por canal (Canales): con ella apagada el bot no responde aunque el chat diga «Bot».
@@ -539,7 +549,7 @@ export default function Hilo({
 
     setEnviando(true);
     try {
-      await enviarMensajeHumano(conversacion.id, texto.trim());
+      await enviarMensajeHumano(conversacion.id, texto.trim(), lineaDeEnvio);
       setTexto("");
     } catch (err) {
       toast.error(err instanceof BotApiError ? err.message : "No se pudo enviar el mensaje.");
@@ -552,7 +562,7 @@ export default function Hilo({
     if (!conversacion) return;
     setEnviando(true);
     try {
-      await enviarPlantillaMensaje(conversacion.id, plantillaId);
+      await enviarPlantillaMensaje(conversacion.id, plantillaId, lineaDeEnvio);
     } catch (err) {
       toast.error(err instanceof BotApiError ? err.message : "No se pudo enviar la multimedia.");
     } finally {
@@ -643,7 +653,7 @@ export default function Hilo({
                 </a>
               ) : (
                 <>
-                  {CANAL_LABEL[conversacion.canal]}
+                  {conversacion.canal === "whatsapp" ? etiquetaDeLinea(lineaDelChat) : CANAL_LABEL[conversacion.canal]}
                   {conversacion.cliente_telefono ? ` · ${conversacion.cliente_telefono}` : ""}
                 </>
               )}
@@ -906,6 +916,39 @@ export default function Hilo({
                   <span className="text-[11px] text-muted">{r.titulo}</span>
                 </button>
               ))}
+          </div>
+        )}
+
+        {modoCompositor === "responder" && esWhatsapp && LINEAS_WHATSAPP.length > 1 && (
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span>Enviar desde</span>
+            <Menu
+              etiqueta="Elegir la línea de WhatsApp desde la que se manda"
+              ancho={250}
+              lado="arriba"
+              claseBoton="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-porcelain px-3 text-[12.5px] font-medium text-ink transition-colors hover:border-line-strong aria-expanded:border-accent"
+              boton={
+                <>
+                  <CanalIcono canal="whatsapp" size={14} />
+                  {etiquetaDeLinea(lineaEfectiva)}
+                  <ChevronDown size={13} aria-hidden className="text-muted" />
+                </>
+              }
+            >
+              <MenuTitulo>Enviar desde</MenuTitulo>
+              {LINEAS_WHATSAPP.map((l) => (
+                <MenuOpcion
+                  key={l.id}
+                  elegida={l.id === lineaEfectiva}
+                  onElegir={() => setLineaElegida({ conversacionId: conversacion.id, linea: l.id })}
+                >
+                  {l.etiqueta}
+                </MenuOpcion>
+              ))}
+            </Menu>
+            {lineaEfectiva !== lineaDelChat && (
+              <span className="text-amber-ink">Al enviar, este chat pasa a {etiquetaDeLinea(lineaEfectiva)}.</span>
+            )}
           </div>
         )}
 

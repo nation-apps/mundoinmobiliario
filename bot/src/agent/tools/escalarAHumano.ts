@@ -47,6 +47,7 @@ export const escalarAHumanoTool: AgentTool<z.infer<typeof inputSchema>> = {
         env.ESCALATION_PHONE,
         `Conversación escalada (${ctx.canal}). Cliente: ${ctx.contactName ?? "sin nombre"} (${ctx.telefono ?? "sin teléfono"}). ` +
           `${asignada?.asignadaNombre ? `Asignada a: ${asignada.asignadaNombre}. ` : ""}Motivo: ${input.motivo}`,
+        ctx.linea,
       );
     } catch (err) {
       // No dejamos que un fallo en la notificación tumbe la escalada en sí

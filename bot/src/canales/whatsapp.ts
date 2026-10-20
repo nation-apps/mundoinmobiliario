@@ -14,23 +14,23 @@ const MOTIVO_VENTANA_CERRADA =
  */
 export const whatsappAdapter: CanalAdapter = {
   canal: "whatsapp",
-  async enviarTexto({ destinatarioId, texto, ultimoMensajeAt }): Promise<ResultadoEnvioCanal> {
+  async enviarTexto({ destinatarioId, texto, ultimoMensajeAt, linea }): Promise<ResultadoEnvioCanal> {
     const abierta = isWithin24hWindow(ultimoMensajeAt ? new Date(ultimoMensajeAt) : null);
     if (!abierta) {
       return { externalId: null, motivoCierre: MOTIVO_VENTANA_CERRADA };
     }
-    const messageId = await sendText(destinatarioId, texto);
+    const messageId = await sendText(destinatarioId, texto, linea);
     return { externalId: messageId };
   },
 
-  async enviarBotones({ destinatarioId, texto, opciones, ultimoMensajeAt }): Promise<ResultadoEnvioCanal> {
+  async enviarBotones({ destinatarioId, texto, opciones, ultimoMensajeAt, linea }): Promise<ResultadoEnvioCanal> {
     const abierta = isWithin24hWindow(ultimoMensajeAt ? new Date(ultimoMensajeAt) : null);
     if (!abierta) {
       return { externalId: null, motivoCierre: MOTIVO_VENTANA_CERRADA };
     }
     // Límites de WhatsApp: hasta 3 botones, título de 20 caracteres, cuerpo de 1024.
     const botones = opciones.slice(0, 3).map((titulo, i) => ({ id: `op_${i + 1}`, title: titulo.trim().slice(0, 20) }));
-    const messageId = await sendButtons(destinatarioId, texto.slice(0, 1024), botones);
+    const messageId = await sendButtons(destinatarioId, texto.slice(0, 1024), botones, linea);
     return { externalId: messageId };
   },
 
@@ -38,12 +38,12 @@ export const whatsappAdapter: CanalAdapter = {
     await marcarLeidoYEscribiendo(mensajeEntranteId);
   },
 
-  async enviarMedia({ destinatarioId, tipo, url, caption, ultimoMensajeAt }): Promise<ResultadoEnvioCanal> {
+  async enviarMedia({ destinatarioId, tipo, url, caption, ultimoMensajeAt, linea }): Promise<ResultadoEnvioCanal> {
     const abierta = isWithin24hWindow(ultimoMensajeAt ? new Date(ultimoMensajeAt) : null);
     if (!abierta) {
       return { externalId: null, motivoCierre: MOTIVO_VENTANA_CERRADA };
     }
-    const messageId = await sendMedia({ to: destinatarioId, tipo, link: url, caption: caption ?? null });
+    const messageId = await sendMedia({ to: destinatarioId, tipo, link: url, caption: caption ?? null, linea });
     return { externalId: messageId };
   },
 };

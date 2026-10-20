@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger.js";
 import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
+import { lineaPorMarca } from "../lib/lineas.js";
 import { registrarLeadWeb } from "../db/repositories/clientes.js";
 import {
   actualizarFuenteConversacion,
@@ -49,6 +50,8 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
   const datos = datosDelLead(lead.campos);
   const cliente = await registrarLeadWeb({ telefono: datos.telefono, nombre: datos.nombre, email: datos.email ?? undefined });
 
+  const linea = lineaPorMarca(marca);
+
   // Si ya está hablando con nosotros por WhatsApp, el formulario se suma a ESE chat (no se abre un registro aparte).
   const chatDeWhatsapp = await conversacionWhatsappAbierta(cliente.id);
 
@@ -62,6 +65,8 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
       hiloExterno: HILO_LEAD_ADS,
       cuentaId: evento.cuentaId,
       fuente: fuenteCampana("Formulario", marca),
+      // La línea de WhatsApp de su marca: por ahí se le escribe primero y de ella depende a quién se le reparte.
+      linea,
     }));
 
   try {
@@ -110,12 +115,14 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
   }
 
   // Solo el lead NUEVO llega hasta aquí (uno repetido salió arriba por el índice único): un mensaje por persona.
-  if (datos.telefono) {
+  // Sin saber la marca del anuncio no se sabe por qué línea escribirle: queda como formulario y lo atiende el equipo.
+  if (datos.telefono && linea) {
     const asesor = conversacion.asignada_a ? await nombreDeStaff(conversacion.asignada_a).catch(() => null) : null;
     encolarPrimerMensaje({
       conversacionId: conversacion.id,
       clienteId: cliente.id,
       telefono: datos.telefono,
+      linea,
       texto: textoPrimerMensaje({
         nombre: datos.nombre,
         campos: lead.campos,

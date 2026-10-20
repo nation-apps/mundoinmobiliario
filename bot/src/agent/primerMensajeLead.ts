@@ -173,6 +173,8 @@ export type PrimerMensaje = {
   clienteId: string;
   telefono: string;
   texto: string;
+  /** La línea de WhatsApp por la que se le escribe: la de la marca del anuncio (lib/lineas.ts). */
+  linea: string;
   leadgenId?: string;
 };
 
@@ -187,9 +189,9 @@ let procesando = false;
 const esperar = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 async function enviarUno(p: PrimerMensaje): Promise<boolean> {
-  const { estadoQr } = await import("../whatsapp-qr/sesion.js");
-  if (estadoQr().estado !== "conectado") {
-    log.warn("Sin WhatsApp conectado: no se le escribió a un lead (queda como formulario)");
+  const { estadoLineaQr } = await import("../whatsapp-qr/sesion.js");
+  if (estadoLineaQr(p.linea).estado !== "conectado") {
+    log.warn({ linea: p.linea }, "La línea de WhatsApp no está conectada: no se le escribió a un lead (queda como formulario)");
     return false;
   }
   const conversacion = await leerConversacion(p.conversacionId);
@@ -201,8 +203,8 @@ async function enviarUno(p: PrimerMensaje): Promise<boolean> {
   }
   if (await clienteAnulado(p.clienteId)) return false;
 
-  const externalId = await sendText(p.telefono, p.texto);
-  const convertida = await convertirEnWhatsapp(p.conversacionId);
+  const externalId = await sendText(p.telefono, p.texto, p.linea);
+  const convertida = await convertirEnWhatsapp(p.conversacionId, p.linea);
   await guardarMensaje({
     conversacionId: p.conversacionId,
     rol: "assistant",

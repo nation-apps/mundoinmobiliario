@@ -6,7 +6,7 @@ import { actualizarFuenteConversacion, getOrCreateConversacionAbierta, unirFormu
 import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
 import { paginaDeAnuncio } from "../meta/client.js";
 import { marcaDePagina } from "../meta/paginas.js";
-import { marcaDeLaLinea } from "../lib/lineas.js";
+import { LINEA_POR_DEFECTO, marcaDeLinea } from "../lib/lineas.js";
 import { guardarMensaje, marcarExternalId } from "../db/repositories/mensajes.js";
 import { sendTextIfWindowOpen } from "../whatsapp/window.js";
 import { descargarMedia } from "../whatsapp/client.js";
@@ -49,11 +49,11 @@ export function metadataAnuncio(referral: AdReferral | undefined): Record<string
  * El «origen» de quien llega por un anuncio de clic a WhatsApp: «Campaña WhatsApp Meta <marca>», con la marca de la
  * página que publicó el anuncio. Sin anuncio no hay campaña (la conversación queda «WhatsApp directo»).
  */
-export async function fuenteDeAnuncio(referral: AdReferral | undefined): Promise<string | null> {
+export async function fuenteDeAnuncio(referral: AdReferral | undefined, linea: string | null = null): Promise<string | null> {
   if (!referral) return null;
   const paginaId = referral.sourceId ? await paginaDeAnuncio(referral.sourceId) : null;
   // La marca la da el número al que escribió (el de TVS o el de Mundo de Motos); si no se conoce, la página del anuncio.
-  return fuenteCampana("WhatsApp", marcaDeLaLinea() ?? marcaDePagina(paginaId));
+  return fuenteCampana("WhatsApp", marcaDeLinea(linea) ?? marcaDePagina(paginaId));
 }
 
 function extractText(message: InboundMessage): string | null {
@@ -69,7 +69,8 @@ function extractText(message: InboundMessage): string | null {
   }
 }
 
-export async function handleInboundMessage(message: InboundMessage): Promise<void> {
+/** `linea`: la línea de WhatsApp (lib/lineas.ts) por la que escribió la persona. */
+export async function handleInboundMessage(message: InboundMessage, linea: string = LINEA_POR_DEFECTO): Promise<void> {
   if (isRateLimited(message.from, env.RATE_LIMIT_MAX_PER_MINUTE)) {
     // Se descarta sin responder: una respuesta (aunque sea de rechazo)
     // premia el abuso con engagement y gasta una llamada a la Graph API.
@@ -79,13 +80,14 @@ export async function handleInboundMessage(message: InboundMessage): Promise<voi
 
   const cliente = await findOrCreateByPhone(message.from, message.contactName);
   // Si ya llenó un formulario, su registro se convierte en este chat: no queda duplicado ni cambia su origen de campaña.
-  await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+  await unirFormularioConWhatsapp(cliente.id, linea).catch((err: unknown) =>
     logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
   );
-  const fuenteAnuncio = message.kind === "text" ? await fuenteDeAnuncio(message.referral) : null;
+  const fuenteAnuncio = message.kind === "text" ? await fuenteDeAnuncio(message.referral, linea) : null;
   const conversacion = await getOrCreateConversacionAbierta({
     clienteId: cliente.id,
     canal: "whatsapp",
+    linea,
     ...(fuenteAnuncio ? { fuente: fuenteAnuncio } : {}),
   });
   // Ya tenía la conversación abierta (escribía directo) y ahora llega por un anuncio: cuenta para esa campaña.
@@ -104,7 +106,7 @@ export async function handleInboundMessage(message: InboundMessage): Promise<voi
     }
     const texto = "Por ahora no puedo escuchar audios 🙏 ¿Me lo escribes en un mensaje de texto?";
     const guardado = await guardarMensaje({ conversacionId: conversacion.id, rol: "assistant", contenido: texto });
-    const waMessageId = await sendTextIfWindowOpen(message.from, texto);
+    const waMessageId = await sendTextIfWindowOpen(message.from, texto, linea);
     if (waMessageId) await marcarExternalId(guardado.id, waMessageId).catch(() => {});
     return;
   }

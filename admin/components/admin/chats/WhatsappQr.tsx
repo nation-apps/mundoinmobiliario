@@ -4,10 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { QrCode, TriangleAlert } from "lucide-react";
 import CanalIcono from "@/components/admin/chats/CanalIcono";
-import { BotApiError, conectarWhatsappQr, desconectarWhatsappQr, estadoWhatsappQr, type EstadoWhatsappQr } from "@/lib/admin/bot-api";
+import {
+  BotApiError,
+  conectarWhatsappQr,
+  desconectarWhatsappQr,
+  estadoWhatsappQr,
+  type EstadoLineaWhatsappQr,
+  type EstadoWhatsappQr,
+} from "@/lib/admin/bot-api";
 import { telefonoBonito } from "@/lib/admin/chats-tipos";
 
-const ETIQUETA: Record<EstadoWhatsappQr["estado"], { texto: string; tono: "bien" | "mal" | "neutro" | "aviso" }> = {
+const ETIQUETA: Record<EstadoLineaWhatsappQr["estado"], { texto: string; tono: "bien" | "mal" | "neutro" | "aviso" }> = {
   apagado: { texto: "Apagado", tono: "neutro" },
   sin_sesion: { texto: "Sin número vinculado", tono: "neutro" },
   esperando_qr: { texto: "Esperando el escaneo", tono: "aviso" },
@@ -24,13 +31,14 @@ const COLORES = {
 };
 
 /**
- * WhatsApp por QR (Baileys): vincula un número como un dispositivo más, sin pasar por la API de Meta. Solo para
- * administración. No es oficial: WhatsApp puede bloquear el número, por eso el bot solo contesta a quien escribe.
+ * WhatsApp por QR (Baileys): vincula números como un dispositivo más, sin pasar por la API de Meta. Una tarjeta por línea (TVS y
+ * Mundo de Motos), cada una con su QR. Solo para administración. No es oficial: WhatsApp puede bloquear el número, por eso el bot
+ * solo contesta a quien le escribe.
  */
 export default function WhatsappQr() {
   const [estado, setEstado] = useState<EstadoWhatsappQr | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ocupado, setOcupado] = useState(false);
+  const [ocupada, setOcupada] = useState<string | null>(null);
   const [sinPermiso, setSinPermiso] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -43,8 +51,8 @@ export default function WhatsappQr() {
     }
   }, []);
 
-  // Mientras se espera el escaneo o se conecta, se pregunta seguido; en reposo, de vez en cuando.
-  const rapido = estado?.estado === "esperando_qr" || estado?.estado === "conectando";
+  // Mientras alguna línea espera el escaneo o se conecta, se pregunta seguido; en reposo, de vez en cuando.
+  const rapido = estado?.lineas.some((l) => l.estado === "esperando_qr" || l.estado === "conectando") ?? false;
   useEffect(() => {
     if (sinPermiso) return;
     const primera = setTimeout(() => void cargar(), 0);
@@ -55,23 +63,19 @@ export default function WhatsappQr() {
     };
   }, [cargar, rapido, sinPermiso]);
 
-  async function accion(hacer: () => Promise<EstadoWhatsappQr>, mensajeError: string) {
-    setOcupado(true);
+  async function accion(linea: string, hacer: (linea: string) => Promise<EstadoWhatsappQr>, mensajeError: string) {
+    setOcupada(linea);
     try {
-      setEstado(await hacer());
+      setEstado(await hacer(linea));
       setError(null);
     } catch (err) {
       toast.error(err instanceof BotApiError ? err.message : mensajeError);
     } finally {
-      setOcupado(false);
+      setOcupada(null);
     }
   }
 
   if (sinPermiso) return null;
-
-  const etiqueta = estado ? ETIQUETA[estado.estado] : null;
-  const color = etiqueta ? COLORES[etiqueta.tono] : COLORES.neutro;
-  const puedeConectar = estado && estado.activo && (estado.estado === "sin_sesion" || estado.estado === "desconectado");
 
   return (
     <section className="admin-card flex flex-col gap-4 p-5 md:col-span-2">
@@ -81,22 +85,13 @@ export default function WhatsappQr() {
           WhatsApp por QR
           <span className="t-mono rounded-full bg-bg-soft px-2 py-0.5 text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">no oficial</span>
         </h2>
-        {etiqueta ? (
-          <span
-            className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-            style={{ background: color.fondo, color: color.texto }}
-          >
-            <span aria-hidden className="size-1.5 rounded-full bg-current" />
-            {etiqueta.texto}
-          </span>
-        ) : (
-          <span className="text-[11px] text-muted">Consultando…</span>
-        )}
+        {!estado && <span className="text-[11px] text-muted">Consultando…</span>}
       </header>
 
       <p className="text-[13px] leading-relaxed text-ink-soft">
-        Vincula un número de WhatsApp escaneando un QR, como WhatsApp Web, y el bot contesta desde ahí. Mientras esté activo, los
-        mensajes de WhatsApp del panel salen por este número y no por la API de Meta.
+        Vincula cada número de WhatsApp escaneando su QR, como WhatsApp Web, y el bot contesta desde ahí. Hay una línea por número: cada
+        chat se atiende por la línea que le toca, y quien escribe en el panel puede elegir desde cuál mandar. Mientras esté activo, los
+        mensajes de WhatsApp del panel salen por estos números y no por la API de Meta.
       </p>
 
       <div className="flex gap-2.5 rounded-xl border border-amber/50 bg-[rgba(242,165,22,0.10)] px-3.5 py-3 text-[12.5px] leading-snug text-amber-ink">
@@ -104,7 +99,7 @@ export default function WhatsappQr() {
         <p>
           <strong>No está autorizado por Meta.</strong> WhatsApp puede bloquear el número, sobre todo con envíos masivos o a gente que no
           ha escrito primero. Por eso el bot solo contesta a quien le escribe, no manda plantillas ni difusiones, y limita los mensajes
-          por minuto. Úsalo con un número de prueba.
+          por minuto en cada número.
         </p>
       </div>
 
@@ -116,57 +111,125 @@ export default function WhatsappQr() {
         </p>
       )}
 
-      {estado?.estado === "esperando_qr" && (
-        <div className="flex flex-col items-start gap-4 sm:flex-row">
-          {estado.qr ? (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {(estado?.lineas ?? []).map((l) => (
+          <TarjetaLinea
+            key={l.id}
+            linea={l}
+            activo={estado?.activo ?? false}
+            ocupada={ocupada === l.id}
+            onConectar={() => void accion(l.id, conectarWhatsappQr, "No se pudo generar el QR.")}
+            onDesvincular={() => void accion(l.id, desconectarWhatsappQr, "No se pudo desvincular.")}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TarjetaLinea({
+  linea,
+  activo,
+  ocupada,
+  onConectar,
+  onDesvincular,
+}: {
+  linea: EstadoLineaWhatsappQr;
+  activo: boolean;
+  ocupada: boolean;
+  onConectar: () => void;
+  onDesvincular: () => void;
+}) {
+  const etiqueta = ETIQUETA[linea.estado];
+  const color = COLORES[etiqueta.tono];
+  // Desvincular corta el número: se confirma con un segundo toque (en el panel no se usa window.confirm).
+  const [confirmando, setConfirmando] = useState(false);
+  const puedeConectar = activo && (linea.estado === "sin_sesion" || linea.estado === "desconectado");
+  const puedeDesvincular = activo && linea.estado !== "sin_sesion" && linea.estado !== "desconectado";
+
+  return (
+    <article className="flex flex-col gap-3 rounded-xl border border-line bg-porcelain p-4">
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="t-display text-[17px] leading-tight">{linea.etiqueta}</h3>
+          <p className="t-mono mt-0.5 text-[11px] text-muted">Número esperado: {telefonoBonito(linea.telefonoEsperado)}</p>
+        </div>
+        <span
+          className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+          style={{ background: color.fondo, color: color.texto }}
+        >
+          <span aria-hidden className="size-1.5 rounded-full bg-current" />
+          {etiqueta.texto}
+        </span>
+      </header>
+
+      {linea.estado === "esperando_qr" && (
+        <div className="flex flex-col items-start gap-3 sm:flex-row">
+          {linea.qr ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={estado.qr} alt="Código QR para vincular WhatsApp" width={240} height={240} className="rounded-xl border border-line bg-white p-2" />
+            <img src={linea.qr} alt={`Código QR para vincular ${linea.etiqueta}`} width={200} height={200} className="rounded-xl border border-line bg-white p-2" />
           ) : (
-            <div className="flex size-[256px] items-center justify-center rounded-xl border border-dashed border-line text-[13px] text-muted">
-              Generando el QR…
-            </div>
+            <div className="flex size-[216px] items-center justify-center rounded-xl border border-dashed border-line text-[13px] text-muted">Generando el QR…</div>
           )}
-          <ol className="list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-ink-soft">
-            <li>Abre WhatsApp en el celular del número que quieres conectar.</li>
+          <ol className="list-decimal space-y-1.5 pl-5 text-[12.5px] leading-relaxed text-ink-soft">
+            <li>Abre WhatsApp en el celular de {linea.etiqueta}.</li>
             <li>
               Entra a <strong>Ajustes → Dispositivos vinculados</strong> y toca <strong>Vincular un dispositivo</strong>.
             </li>
-            <li>Escanea este código. El QR se renueva solo cada unos segundos.</li>
+            <li>Escanea este código. Se renueva solo cada unos segundos.</li>
           </ol>
         </div>
       )}
 
-      {estado?.estado === "conectado" && (
+      {linea.estado === "conectado" && (
         <p className="text-[13px] text-ink-soft">
-          Número vinculado: <strong className="t-mono">{estado.telefono ? telefonoBonito(estado.telefono) : "—"}</strong>. Quien le escriba a
-          ese número aparecerá en Chats y el bot le contestará.
+          Número vinculado: <strong className="t-mono">{linea.telefono ? telefonoBonito(linea.telefono) : "—"}</strong>.
         </p>
       )}
 
-      {estado?.error && estado.estado !== "conectado" && <p className="text-[13px] text-redline">{estado.error}</p>}
+      {linea.advertencia && linea.estado === "conectado" && (
+        <p className="flex gap-2 rounded-lg bg-[rgba(242,165,22,0.14)] px-3 py-2 text-[12px] leading-snug text-amber-ink">
+          <TriangleAlert size={14} aria-hidden className="mt-0.5 shrink-0" />
+          {linea.advertencia} Si fue un error, desvincúlalo y escanea el número correcto.
+        </p>
+      )}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
+      {linea.error && linea.estado !== "conectado" && <p className="text-[12.5px] text-redline">{linea.error}</p>}
+
+      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-line pt-3">
         {puedeConectar && (
-          <button type="button" disabled={ocupado} onClick={() => void accion(conectarWhatsappQr, "No se pudo generar el QR.")} className="admin-btn inline-flex items-center gap-2">
+          <button type="button" disabled={ocupada} onClick={onConectar} className="admin-btn inline-flex items-center gap-2">
             <QrCode size={16} aria-hidden />
             Generar QR
           </button>
         )}
-        {estado && estado.activo && estado.estado !== "sin_sesion" && estado.estado !== "desconectado" && (
-          <button
-            type="button"
-            disabled={ocupado}
-            onClick={() => {
-              if (window.confirm("¿Desvincular este número? El bot dejará de recibir y contestar por WhatsApp hasta que lo vuelvas a vincular con un QR.")) {
-                void accion(desconectarWhatsappQr, "No se pudo desvincular.");
-              }
-            }}
-            className="admin-btn ghost"
-          >
-            Desvincular número
-          </button>
-        )}
+        {puedeDesvincular &&
+          (confirmando ? (
+            <>
+              <button
+                type="button"
+                disabled={ocupada}
+                onClick={() => {
+                  setConfirmando(false);
+                  onDesvincular();
+                }}
+                className="admin-btn ghost text-redline"
+              >
+                Sí, desvincular
+              </button>
+              <button type="button" onClick={() => setConfirmando(false)} className="text-[12.5px] text-muted hover:text-ink">
+                Cancelar
+              </button>
+              <p className="basis-full text-[11.5px] leading-snug text-muted">
+                El bot dejará de recibir y contestar por este número hasta que lo vuelvas a vincular con un QR.
+              </p>
+            </>
+          ) : (
+            <button type="button" disabled={ocupada} onClick={() => setConfirmando(true)} className="admin-btn ghost">
+              Desvincular número
+            </button>
+          ))}
       </div>
-    </section>
+    </article>
   );
 }

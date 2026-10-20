@@ -54,6 +54,7 @@ export const enviarMultimediaTool: AgentTool<z.infer<typeof inputSchema>> = {
       tipo: plantilla.tipo,
       link: url,
       caption: plantilla.caption,
+      linea: ctx.linea,
     });
 
     if (!waMessageId) {

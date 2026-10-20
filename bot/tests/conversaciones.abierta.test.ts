@@ -85,6 +85,39 @@ describe("getOrCreateConversacionAbierta", () => {
     }
   });
 
+  describe("líneas de WhatsApp", () => {
+    it("cada línea tiene su conversación: busca por la línea de Mundo de Motos", async () => {
+      falso.busqueda = [null];
+      falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-m" }, error: null };
+      await getOrCreateConversacionAbierta({ clienteId: "cli-1", canal: "whatsapp", linea: "mundo" });
+      expect(falso.filtro("eq", "linea")?.args[1]).toBe("mundo");
+    });
+
+    it("la línea de TVS también encuentra lo anterior a tener dos líneas (sin línea)", async () => {
+      falso.busqueda = [null];
+      falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-t" }, error: null };
+      await getOrCreateConversacionAbierta({ clienteId: "cli-1", canal: "whatsapp", linea: "tvs" });
+      expect(falso.filtro("or", "linea.eq.tvs,linea.is.null") ?? falso.filtros.find((f) => f.op === "or")).toBeTruthy();
+      expect(falso.filtros.find((f) => f.op === "or")?.args[0]).toBe("linea.eq.tvs,linea.is.null");
+    });
+
+    it("una conversación nueva guarda su línea y su origen lleva la marca de esa línea", async () => {
+      falso.busqueda = [null];
+      falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-n" }, error: null };
+      await getOrCreateConversacionAbierta({ clienteId: "cli-1", canal: "whatsapp", linea: "mundo" });
+      expect(falso.insertado).toMatchObject({ linea: "mundo", fuente: "WhatsApp Directo Mundo de Motos" });
+    });
+
+    it("fuera de WhatsApp la línea no filtra la búsqueda (un formulario no es de una línea hasta que se le escribe)", async () => {
+      falso.busqueda = [null];
+      falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-f" }, error: null };
+      await getOrCreateConversacionAbierta({ clienteId: "cli-1", canal: "web", origen: "formulario", hiloExterno: "facebook_lead_ads", linea: "tvs" });
+      expect(falso.filtro("eq", "linea")).toBeUndefined();
+      expect(falso.filtros.find((f) => f.op === "or")).toBeUndefined();
+      expect(falso.insertado).toMatchObject({ linea: "tvs" });
+    });
+  });
+
   it("separa el hilo de un comentario del de los DMs", async () => {
     falso.busqueda = [null];
     falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-3" }, error: null };

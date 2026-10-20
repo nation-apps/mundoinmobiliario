@@ -28,6 +28,9 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   y una etiqueta llamada **Anulado** (ya no viene creada; se crea a mano si hace falta) hace que el bot ignore a un contacto.
 - **WhatsApp por QR (no oficial, opcional):** el número se vincula escaneando un QR desde Canales (Baileys), sin pasar por la API de
   Meta. Solo contesta a quien escribe y puede bloquear el número: ver `docs/referencia/WHATSAPP-QR.md`.
+- **Dos líneas de WhatsApp (TVS y Mundo de Motos):** cada número se vincula con su propio QR (Canales). Cada chat pertenece a una línea
+  (de ahí el origen «WhatsApp Directo TVS»…), cada persona atiende las líneas que se le marcan en Reparto, y al escribir se elige desde
+  cuál mandar (`docs/referencia/LINEAS-WHATSAPP.md`).
 - **Calendario y alertas:** apartados, visitas y llamadas del equipo en un calendario mensual (`/admin/calendario`), con filtros por
   persona y tipo. El panel avisa 3 días antes, 1 día antes y el mismo día (y lo vencido): insignia en el menú y un aviso emergente
   una sola vez por punto; no hay tarea programada, se calcula al abrir el panel (`lib/admin/agenda.ts`). Se agenda desde el

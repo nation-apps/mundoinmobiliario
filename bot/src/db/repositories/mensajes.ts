@@ -217,6 +217,8 @@ export type RespuestaSinEntregar = {
   telefono: string;
   /** Último mensaje de la PERSONA: de él depende la ventana de 24 h de WhatsApp. */
   ultimoMensajeAt: string;
+  /** La línea de WhatsApp de la conversación: el reenvío sale por la misma. */
+  linea: string | null;
 };
 
 /**
@@ -226,7 +228,7 @@ export type RespuestaSinEntregar = {
 export async function listarRespuestasSinEntregar(desdeIso: string, limite = 50): Promise<RespuestaSinEntregar[]> {
   const { data, error } = await supabase
     .from("mensajes")
-    .select("id, conversacion_id, contenido, metadata, created_at, conversaciones!inner(canal, estado, ultimo_mensaje_at, clientes!inner(telefono))")
+    .select("id, conversacion_id, contenido, metadata, created_at, conversaciones!inner(canal, estado, ultimo_mensaje_at, linea, clientes!inner(telefono))")
     .eq("rol", "assistant")
     .eq("tipo", "mensaje")
     .not("error_entrega", "is", null)
@@ -246,8 +248,9 @@ export async function listarRespuestasSinEntregar(desdeIso: string, limite = 50)
     created_at: string;
     conversaciones: {
       ultimo_mensaje_at: string;
+      linea: string | null;
       clientes: { telefono: string | null } | { telefono: string | null }[];
-    } | { ultimo_mensaje_at: string; clientes: { telefono: string | null } | { telefono: string | null }[] }[];
+    } | { ultimo_mensaje_at: string; linea: string | null; clientes: { telefono: string | null } | { telefono: string | null }[] }[];
   };
   const salida: RespuestaSinEntregar[] = [];
   for (const fila of (data ?? []) as unknown as Fila[]) {
@@ -262,6 +265,7 @@ export async function listarRespuestasSinEntregar(desdeIso: string, limite = 50)
       metadata: fila.metadata ?? {},
       telefono: cliente.telefono,
       ultimoMensajeAt: conv.ultimo_mensaje_at,
+      linea: conv.linea ?? null,
     });
   }
   return salida;

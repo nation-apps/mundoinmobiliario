@@ -80,6 +80,8 @@ describe("handleLeadFormulario", () => {
       cuentaId: "PAGE_ID_TEST",
       // El «origen» que pidió el cliente, con la marca de la página.
       fuente: "Campaña Formulario Meta TVS",
+      // La línea de WhatsApp de su marca: por ahí se le escribe y de ella depende el reparto.
+      linea: "tvs",
     });
     expect(mensajes.guardarMensaje).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -122,6 +124,7 @@ describe("handleLeadFormulario", () => {
       conversacionId: "conv-1",
       clienteId: "cliente-1",
       telefono: "525512345678",
+      linea: "tvs",
       texto: "Hola 👋 texto armado",
       leadgenId: "444",
     });
@@ -157,5 +160,12 @@ describe("handleLeadFormulario", () => {
       await handleLeadFormulario(evento);
       expect(conversaciones.actualizarFuenteConversacion).not.toHaveBeenCalled();
     });
+  });
+
+  it("si no se sabe la marca de la página, no se sabe por qué línea escribirle: no se pone en la cola", async () => {
+    metaClient.obtenerLead.mockResolvedValue({ ...lead });
+    await handleLeadFormulario({ ...evento, cuentaId: "PAGINA_SIN_MARCA" });
+    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+    expect(conversaciones.getOrCreateConversacionAbierta).toHaveBeenCalledWith(expect.objectContaining({ linea: null }));
   });
 });

@@ -1,46 +1,86 @@
 import { normalizarTelefono } from "./telefono.js";
 
 /**
- * A qué marca pertenece cada línea de WhatsApp del negocio, para el «origen» de los chats que llegan por ella:
- * «WhatsApp Directo TVS», «WhatsApp Directo Mundo de Motos» y «Campaña WhatsApp Meta TVS». El bot atiende UN número a la vez
- * (el de la conexión por QR, o el de la API oficial): ese número decide la marca.
+ * Las líneas de WhatsApp del negocio: TVS Motor Cancún y Mundo de Motos, cada una con su número y su marca. Cada conversación de
+ * WhatsApp pertenece a una línea (`conversaciones.linea`): de ahí salen la marca del «origen» («WhatsApp Directo TVS»,
+ * «Campaña WhatsApp Meta TVS»…) y el número desde el que se le contesta.
  *
- * Los números son los del documento del cliente. `WHATSAPP_LINEAS` (JSON {"52…": "Marca"}) los cambia o suma, y
- * `WHATSAPP_MARCA` fija la marca sin mirar el número (útil para probar con un número secundario). Se leen de `process.env`
- * a propósito: este archivo es puro y no arrastra la validación de config/env.ts.
+ * Los números son los del documento del cliente; sirven para avisar si se escaneó el QR de otro número, no para decidir
+ * nada. `WHATSAPP_LINEAS` (JSON `[{ "id": "tvs", "marca": "TVS", "etiqueta": "WhatsApp TVS", "telefono": "52…" }]`) cambia o suma
+ * líneas. Se lee de `process.env` a propósito: este archivo es puro y no arrastra la validación de config/env.ts.
  */
-const LINEAS_POR_DEFECTO: Record<string, string> = {
-  "529987584160": "TVS",
-  "529988706920": "Mundo de Motos",
+
+export type Linea = {
+  /** Identificador estable: va en `conversaciones.linea` y en `staff.lineas`. */
+  id: string;
+  /** La que sale en el origen de los chats: «TVS», «Mundo de Motos». */
+  marca: string;
+  /** Lo que se ve en el panel: «WhatsApp TVS». */
+  etiqueta: string;
+  /** Número esperado (52 + 10 dígitos). */
+  telefono: string;
 };
 
-let lineaActual: string | null = null;
+const LINEAS_POR_DEFECTO: Linea[] = [
+  { id: "tvs", marca: "TVS", etiqueta: "WhatsApp TVS", telefono: "529987584160" },
+  { id: "mundo", marca: "Mundo de Motos", etiqueta: "WhatsApp Mundo de Motos", telefono: "529988706920" },
+];
 
-/** El número con el que está conectado el bot ahora (formato del bot: 52 + 10 dígitos). Null si no hay conexión. */
-export function fijarLineaActual(telefono: string | null): void {
-  lineaActual = telefono ? normalizarTelefono(telefono) : null;
-}
+/** La línea por la que se escribe cuando no se sabe otra (y la de todo lo que había antes de tener dos). */
+export const LINEA_POR_DEFECTO = "tvs";
 
-function lineasConocidas(): Record<string, string> {
-  const resultado = { ...LINEAS_POR_DEFECTO };
+export function lineasConfiguradas(): Linea[] {
   const crudo = process.env.WHATSAPP_LINEAS;
-  if (!crudo) return resultado;
+  if (!crudo) return LINEAS_POR_DEFECTO;
   try {
-    const propias = JSON.parse(crudo) as Record<string, unknown>;
-    for (const [numero, marca] of Object.entries(propias)) {
-      const normal = normalizarTelefono(numero);
-      if (normal && typeof marca === "string" && marca.trim()) resultado[normal] = marca.trim();
-    }
+    const propias = JSON.parse(crudo) as unknown;
+    if (!Array.isArray(propias)) return LINEAS_POR_DEFECTO;
+    const validas = propias.flatMap((l): Linea[] => {
+      const x = l as Partial<Linea>;
+      if (typeof x.id !== "string" || !/^[a-z][a-z0-9_-]{1,20}$/.test(x.id) || typeof x.marca !== "string" || !x.marca.trim()) return [];
+      const telefono = normalizarTelefono(typeof x.telefono === "string" ? x.telefono : "") ?? "";
+      return [{ id: x.id, marca: x.marca.trim(), etiqueta: typeof x.etiqueta === "string" && x.etiqueta.trim() ? x.etiqueta.trim() : x.marca.trim(), telefono }];
+    });
+    return validas.length > 0 ? validas : LINEAS_POR_DEFECTO;
   } catch {
-    // Un JSON mal escrito no debe tumbar nada: se usan los números de siempre.
+    // Un JSON mal escrito no debe tumbar nada: se usan las líneas de siempre.
+    return LINEAS_POR_DEFECTO;
   }
-  return resultado;
 }
 
-/** La marca de la línea por la que está atendiendo el bot; null si no se sabe (número desconocido o sin conexión). */
-export function marcaDeLaLinea(): string | null {
-  const fija = process.env.WHATSAPP_MARCA?.trim();
-  if (fija) return fija;
-  if (!lineaActual) return null;
-  return lineasConocidas()[lineaActual] ?? null;
+export function lineaPorId(id: string | null | undefined): Linea | null {
+  return id ? (lineasConfiguradas().find((l) => l.id === id) ?? null) : null;
+}
+
+export function esLineaValida(id: string | null | undefined): id is string {
+  return lineaPorId(id) !== null;
+}
+
+/** La marca de una línea («TVS»); null si la línea no existe o no se dijo. */
+export function marcaDeLinea(id: string | null | undefined): string | null {
+  return lineaPorId(id)?.marca ?? null;
+}
+
+/** La línea de una marca («TVS» → «tvs»). Null si ninguna línea tiene esa marca. */
+export function lineaPorMarca(marca: string | null | undefined): string | null {
+  const buscada = marca?.trim().toLowerCase();
+  if (!buscada) return null;
+  return lineasConfiguradas().find((l) => l.marca.toLowerCase() === buscada)?.id ?? null;
+}
+
+/**
+ * La línea que le toca a un lead según su origen: «Campaña Formulario Meta TVS», «Campaña WhatsApp Meta TVS» y
+ * «WhatsApp Directo TVS» son de la línea de TVS; lo mismo con Mundo de Motos. Null si el origen no dice la marca.
+ */
+export function lineaPorFuente(fuente: string | null | undefined): string | null {
+  const texto = fuente?.toLowerCase();
+  if (!texto) return null;
+  // La más larga primero: «Mundo de Motos» no debe tomarse por «TVS» ni al revés si una marca contiene a otra.
+  const lineas = [...lineasConfiguradas()].sort((a, b) => b.marca.length - a.marca.length);
+  return lineas.find((l) => texto.includes(l.marca.toLowerCase()))?.id ?? null;
+}
+
+/** Los id de las líneas, para validar lo que llega de fuera. */
+export function idsDeLineas(): string[] {
+  return lineasConfiguradas().map((l) => l.id);
 }

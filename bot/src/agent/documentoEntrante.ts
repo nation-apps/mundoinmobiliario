@@ -140,6 +140,7 @@ export async function procesarDocumentoEntrante(doc: DocumentoEntrante): Promise
       rol: "assistant",
       // El archivo que se está acusando ES el último mensaje entrante.
       ultimoMensajeAt: new Date().toISOString(),
+      linea: conversacion.linea,
     });
   } catch (err) {
     logger.error({ err, canal: doc.canal, conversacionId: conversacion.id }, "Falló el envío del acuse de documento");

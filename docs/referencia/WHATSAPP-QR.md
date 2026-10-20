@@ -77,9 +77,8 @@ el servicio del panel).
 | +52 998 758 4160 (TVS) | Campaña WhatsApp Meta TVS | WhatsApp Directo TVS |
 | +52 998 870 6920 (Mundo de Motos) | Campaña WhatsApp Meta Mundo de Motos | WhatsApp Directo Mundo de Motos |
 
-Con la conexión por QR el número sale de la propia sesión. `WHATSAPP_MARCA` fija la marca sin mirar el número (para probar con un
-número secundario) y `WHATSAPP_LINEAS` (JSON `{"52…": "Marca"}`) cambia o suma números. Si el número no se conoce, queda
-«WhatsApp directo» / «Campaña WhatsApp Meta» a secas.
+Desde el 21-oct-2026 cada número es una **línea** con su propia sesión (ver `LINEAS-WHATSAPP.md`): la marca sale de la línea por la que
+llegó el mensaje, no del número que se escaneó. `WHATSAPP_LINEAS` (JSON) cambia o suma líneas.
 
 **Un lead, un registro.** Quien llena un formulario y también le escribe a la línea no se duplica:
 - Formulario primero, WhatsApp después (lo normal): el registro del formulario se **convierte** en el chat de WhatsApp y conserva

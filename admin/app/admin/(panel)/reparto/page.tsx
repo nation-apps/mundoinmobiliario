@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Shuffle } from "lucide-react";
 import Reparto from "@/components/admin/reparto/Reparto";
+import LineasPorPersona from "@/components/admin/reparto/LineasPorPersona";
 import { PageHeader } from "@/components/admin/ui";
 import { desdeHaceDias, type ConteoReparto, type MiembroReparto, type RepartoConfig } from "@/lib/admin/reparto";
 import { createServerSupabase, getStaff } from "@/lib/supabase/server-auth";
@@ -21,6 +22,15 @@ export default async function RepartoPage() {
 
   const supabase = await createServerSupabase();
   const desde = desdeHaceDias(DIAS_ESTADISTICAS);
+  // Las líneas que atiende cada persona (0012). Sin la migración la columna no existe: se ignora y todas atienden las dos.
+  const lineasRes = await supabase.from("staff").select("user_id, lineas").eq("activo", true);
+  const lineasPorPersona: Record<string, string[]> = {};
+  if (!lineasRes.error) {
+    for (const f of (lineasRes.data ?? []) as { user_id: string; lineas: string[] | null }[]) {
+      if (f.lineas) lineasPorPersona[f.user_id] = f.lineas;
+    }
+  }
+
   const [configRes, equipoRes, registroRes] = await Promise.all([
     supabase
       .from("reparto_config")
@@ -57,6 +67,13 @@ export default async function RepartoPage() {
         diasEstadisticas={DIAS_ESTADISTICAS}
         usuarioId={staff.userId}
       />
+      {!lineasRes.error && (
+        <LineasPorPersona
+          equipo={(equipoRes.data ?? []) as { user_id: string; nombre: string; rol: string }[]}
+          inicial={lineasPorPersona}
+          puedeEditar={staff.rol === "admin"}
+        />
+      )}
     </>
   );
 }

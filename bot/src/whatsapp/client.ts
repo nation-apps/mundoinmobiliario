@@ -138,8 +138,9 @@ export async function marcarLeidoYEscribiendo(messageId: string): Promise<void> 
   await callGraphApi({ status: "read", message_id: messageId, typing_indicator: { type: "text" } });
 }
 
-export async function sendText(to: string, body: string): Promise<string> {
-  if (qrActivo()) return (await modoQr()).enviarTextoQr(to, body);
+/** `linea`: la línea de WhatsApp por la que se manda (solo con la conexión por QR; sin ella, la de por defecto). */
+export async function sendText(to: string, body: string, linea?: string | null | undefined): Promise<string> {
+  if (qrActivo()) return (await modoQr()).enviarTextoQr(to, body, linea);
   return callGraphApi({
     to,
     type: "text",
@@ -198,8 +199,11 @@ export async function sendMedia(params: {
   tipo: TipoMediaWhatsApp;
   link: string;
   caption?: string | null;
+  linea?: string | null | undefined;
 }): Promise<string> {
-  if (qrActivo()) return (await modoQr()).enviarMediaQr({ para: params.to, tipo: params.tipo, link: params.link, caption: params.caption ?? null });
+  if (qrActivo()) {
+    return (await modoQr()).enviarMediaQr({ para: params.to, tipo: params.tipo, link: params.link, caption: params.caption ?? null, linea: params.linea });
+  }
   const media: Record<string, unknown> = { link: params.link };
   if (params.caption && params.tipo !== "audio") media.caption = params.caption;
 
@@ -213,14 +217,14 @@ export async function sendMedia(params: {
 export type ButtonOption = { id: string; title: string };
 
 /** WhatsApp permite un máximo de 3 botones por mensaje interactivo. */
-export async function sendButtons(to: string, body: string, options: ButtonOption[]): Promise<string> {
+export async function sendButtons(to: string, body: string, options: ButtonOption[], linea?: string | null | undefined): Promise<string> {
   if (options.length === 0 || options.length > 3) {
     throw new AppError("sendButtons requiere entre 1 y 3 opciones", "invalid_buttons", 500);
   }
   if (qrActivo()) {
     // Los botones interactivos son de la API oficial: por QR se muestran como lista y la persona contesta con el texto.
     const lista = options.map((opt) => `• ${opt.title}`).join("\n");
-    return (await modoQr()).enviarTextoQr(to, `${body}\n\n${lista}\n(Responde con una de estas opciones)`);
+    return (await modoQr()).enviarTextoQr(to, `${body}\n\n${lista}\n(Responde con una de estas opciones)`, linea);
   }
   return callGraphApi({
     to,

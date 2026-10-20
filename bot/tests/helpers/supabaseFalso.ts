@@ -21,7 +21,7 @@ export type SupabaseFalso = {
   filtro: (op: string, campo: string) => Filtro | undefined;
 };
 
-const OPS_ENCADENABLES = ["select", "eq", "neq", "in", "is", "gte", "lte", "order", "limit", "insert", "update"];
+const OPS_ENCADENABLES = ["select", "eq", "neq", "in", "is", "gte", "lte", "order", "limit", "insert", "update", "or", "not", "like", "delete"];
 
 export function crearSupabaseFalso(): SupabaseFalso {
   const estado: SupabaseFalso = {

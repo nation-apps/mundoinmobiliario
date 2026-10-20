@@ -34,6 +34,25 @@ export const CANAL_LABEL: Record<Canal, string> = {
 };
 
 /** Proceso comercial, en orden. Las dos últimas cierran la conversación. */
+/**
+ * Las líneas de WhatsApp del negocio (las mismas que bot/src/lib/lineas.ts). Si el bot suma una línea, se suma aquí.
+ * `corta` es la etiqueta chica de la lista de chats.
+ */
+export const LINEAS_WHATSAPP: { id: string; etiqueta: string; corta: string }[] = [
+  { id: "tvs", etiqueta: "WhatsApp TVS", corta: "TVS" },
+  { id: "mundo", etiqueta: "WhatsApp Mundo de Motos", corta: "MM" },
+];
+export const LINEA_POR_DEFECTO = "tvs";
+
+/** La línea de una conversación; lo anterior a tener dos líneas (sin línea) era la de TVS. */
+export function lineaDeConversacion(c: Pick<ConversacionResumen, "canal" | "linea">): string | null {
+  return c.canal === "whatsapp" ? (c.linea ?? LINEA_POR_DEFECTO) : null;
+}
+
+export function etiquetaDeLinea(id: string | null | undefined): string {
+  return LINEAS_WHATSAPP.find((l) => l.id === id)?.etiqueta ?? "WhatsApp";
+}
+
 export const ETAPAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar", "vendido", "no_vendido"];
 export const ETAPAS_FINALES: Etapa[] = ["vendido", "no_vendido"];
 export const ETAPAS_ABIERTAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar"];
@@ -99,6 +118,8 @@ export type ConversacionResumen = {
   motivo_cierre: MotivoCierre | null;
   /** Solo en `no_vendido`. Opcional: antes de 0009 no existe. */
   motivo_perdida?: MotivoPerdida | null;
+  /** Línea de WhatsApp de la conversación (`tvs` | `mundo`). Opcional: antes de 0012 no existe. */
+  linea?: string | null;
   asignada_a: string | null;
   asignada_nombre: string | null;
   cliente_nombre: string | null;

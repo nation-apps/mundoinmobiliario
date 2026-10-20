@@ -52,13 +52,13 @@ export async function getLastInboundAt(telefono: string): Promise<Date | null> {
  * Devuelve el wa_message_id (para poder correlacionar un fallo de entrega
  * asíncrono después) o null si ni se intentó mandar.
  */
-export async function sendTextIfWindowOpen(telefono: string, body: string): Promise<string | null> {
+export async function sendTextIfWindowOpen(telefono: string, body: string, linea?: string | null | undefined): Promise<string | null> {
   const lastInboundAt = await getLastInboundAt(telefono);
   if (!isWithin24hWindow(lastInboundAt)) {
     logger.warn({ telefono, lastInboundAt }, "Ventana de 24h cerrada, requiere seguimiento manual");
     return null;
   }
-  return sendText(telefono, body);
+  return sendText(telefono, body, linea);
 }
 
 /** ¿Se le puede escribir texto libre a este número ahora mismo? */
@@ -78,11 +78,12 @@ export async function sendMediaIfWindowOpen(params: {
   tipo: TipoMediaWhatsApp;
   link: string;
   caption?: string | null;
+  linea?: string | null | undefined;
 }): Promise<string | null> {
   const lastInboundAt = await getLastInboundAt(params.telefono);
   if (!isWithin24hWindow(lastInboundAt)) {
     logger.warn({ telefono: params.telefono, lastInboundAt }, "Ventana de 24h cerrada, no se pudo mandar multimedia");
     return null;
   }
-  return sendMedia({ to: params.telefono, tipo: params.tipo, link: params.link, caption: params.caption ?? null });
+  return sendMedia({ to: params.telefono, tipo: params.tipo, link: params.link, caption: params.caption ?? null, linea: params.linea });
 }

@@ -151,6 +151,7 @@ async function responder(params: Parameters<typeof handleInbound>[0], recibidoAt
     clienteId: conversacion.cliente_id,
     telefono: params.telefono,
     contactName: params.contactName,
+    linea: conversacion.linea,
   };
   try {
     respuesta = respuestaFija ? RESPUESTA_MENSAJE_CORTADO : await runAgentWithTimeout(ctx, params.texto);
@@ -188,6 +189,8 @@ async function responder(params: Parameters<typeof handleInbound>[0], recibidoAt
     // El mensaje que se está respondiendo ES el último entrante: la ventana
     // está abierta por definición en este momento, no hace falta releerla.
     ultimoMensajeAt: new Date().toISOString(),
+    // WhatsApp: se contesta por la línea por la que escribió (otros canales la ignoran).
+    linea: conversacion.linea,
   };
   let resultado: { externalId: string | null; motivoCierre?: string };
   try {

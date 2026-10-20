@@ -1,4 +1,5 @@
 import { env } from "../../config/env.js";
+import { LINEA_POR_DEFECTO } from "../../lib/lineas.js";
 import { supabase } from "../client.js";
 import { fuentePorCanal } from "../../lib/fuente.js";
 
@@ -36,6 +37,8 @@ export type Conversacion = {
   /** Solo con etapa 'vendido' o 'no_vendido'. Cerrar como 'ganado' pasa al contacto a `clientes.tipo = 'cliente'` (trigger). */
   motivo_cierre: MotivoCierre | null;
   asignada_a: string | null;
+  /** Línea de WhatsApp de la conversación (lib/lineas.ts); null en canales que no son WhatsApp ni formulario. */
+  linea: string | null;
   /** De dónde vino («Campaña Formulario Meta TVS», «WhatsApp directo»…): lib/fuente.ts. */
   fuente: string | null;
   created_at: string;
@@ -74,6 +77,11 @@ export async function getOrCreateConversacionAbierta(params: {
   ultimoMensajeAt?: string;
   /** Solo al CREAR: el «origen» del lead. Sin él se deduce del canal (lib/fuente.ts → fuentePorCanal). */
   fuente?: string | null;
+  /**
+   * La línea de WhatsApp (lib/lineas.ts). En WhatsApp, una persona tiene una conversación por línea: se busca la de esa
+   * línea y se crea con ella. En un formulario es la línea de su marca (por ahí se le escribe primero).
+   */
+  linea?: string | null;
 }): Promise<Conversacion> {
   const canal = params.canal ?? "whatsapp";
   const origen = params.origen ?? "dm";
@@ -89,7 +97,10 @@ export async function getOrCreateConversacionAbierta(params: {
       .in("estado", ESTADOS_ABIERTOS)
       .order("ultimo_mensaje_at", { ascending: false })
       .limit(1);
-    return hiloExterno === null ? query.is("hilo_externo", null) : query.eq("hilo_externo", hiloExterno);
+    const conHilo = hiloExterno === null ? query.is("hilo_externo", null) : query.eq("hilo_externo", hiloExterno);
+    if (canal !== "whatsapp" || !params.linea) return conHilo;
+    // Lo anterior a tener dos líneas no tiene línea: era de la de por defecto.
+    return params.linea === LINEA_POR_DEFECTO ? conHilo.or(`linea.eq.${params.linea},linea.is.null`) : conHilo.eq("linea", params.linea);
   };
 
   const { data: existente, error: findError } = await buscar().maybeSingle();
@@ -105,7 +116,8 @@ export async function getOrCreateConversacionAbierta(params: {
       identidad_id: params.identidadId ?? null,
       hilo_externo: hiloExterno,
       cuenta_id: params.cuentaId ?? null,
-      fuente: params.fuente ?? fuentePorCanal(canal, origen, hiloExterno),
+      fuente: params.fuente ?? fuentePorCanal(canal, origen, hiloExterno, params.linea ?? null),
+      linea: params.linea ?? null,
       // Por defecto la atiende una persona; el bot solo entra si alguien mueve el interruptor Bot/Yo (o BOT_ACTIVO_POR_DEFECTO=true).
       estado: env.BOT_ACTIVO_POR_DEFECTO ? "activa" : "escalada",
       ...(params.ultimoMensajeAt ? { ultimo_mensaje_at: params.ultimoMensajeAt } : {}),
@@ -220,14 +232,15 @@ export async function leerConversacion(conversacionId: string): Promise<Conversa
 }
 
 /** ¿Este cliente ya tiene una conversación de WhatsApp abierta? (ya está hablando con nosotros por ahí) */
-export async function tieneConversacionWhatsappAbierta(clienteId: string): Promise<boolean> {
-  const { data, error } = await supabase
+export async function tieneConversacionWhatsappAbierta(clienteId: string, linea?: string | null): Promise<boolean> {
+  let consulta = supabase
     .from("conversaciones")
     .select("id")
     .eq("cliente_id", clienteId)
     .eq("canal", "whatsapp")
-    .in("estado", ESTADOS_ABIERTOS)
-    .limit(1);
+    .in("estado", ESTADOS_ABIERTOS);
+  if (linea) consulta = linea === LINEA_POR_DEFECTO ? consulta.or(`linea.eq.${linea},linea.is.null`) : consulta.eq("linea", linea);
+  const { data, error } = await consulta.limit(1);
   if (error) throw error;
   return (data ?? []).length > 0;
 }
@@ -238,10 +251,10 @@ export async function tieneConversacionWhatsappAbierta(clienteId: string): Promi
  * formulario y el primer mensaje juntos, y no hay dos tarjetas por lead. Conserva su origen («Campaña Formulario Meta …»).
  * Devuelve false si no se pudo (p. ej. si la persona ya tenía otra conversación de WhatsApp abierta).
  */
-export async function convertirEnWhatsapp(conversacionId: string): Promise<boolean> {
+export async function convertirEnWhatsapp(conversacionId: string, linea?: string | null): Promise<boolean> {
   const { data, error } = await supabase
     .from("conversaciones")
-    .update({ canal: "whatsapp", origen: "dm", hilo_externo: null, cuenta_id: null })
+    .update({ canal: "whatsapp", origen: "dm", hilo_externo: null, cuenta_id: null, ...(linea ? { linea } : {}) })
     .eq("id", conversacionId)
     .eq("canal", "web")
     .select("id");
@@ -271,7 +284,7 @@ export async function conversacionWhatsappAbierta(clienteId: string): Promise<Co
  * escribe primero— es UN lead, no dos: el registro del formulario se convierte en su conversación de WhatsApp y conserva
  * su origen de campaña. Solo si no tiene ya otra conversación de WhatsApp abierta. Devuelve el id de la convertida.
  */
-export async function unirFormularioConWhatsapp(clienteId: string): Promise<string | null> {
+export async function unirFormularioConWhatsapp(clienteId: string, linea?: string | null): Promise<string | null> {
   const { data, error } = await supabase
     .from("conversaciones")
     .select("id")
@@ -284,6 +297,12 @@ export async function unirFormularioConWhatsapp(clienteId: string): Promise<stri
   if (error) throw error;
   const formulario = (data ?? [])[0] as { id: string } | undefined;
   if (!formulario) return null;
-  if (await tieneConversacionWhatsappAbierta(clienteId)) return null;
-  return (await convertirEnWhatsapp(formulario.id)) ? formulario.id : null;
+  if (await tieneConversacionWhatsappAbierta(clienteId, linea)) return null;
+  return (await convertirEnWhatsapp(formulario.id, linea)) ? formulario.id : null;
+}
+
+/** Cambia la línea de WhatsApp de una conversación (cuando el equipo le escribe desde la otra línea, el chat se va con ella). */
+export async function cambiarLineaConversacion(conversacionId: string, linea: string): Promise<void> {
+  const { error } = await supabase.from("conversaciones").update({ linea }).eq("id", conversacionId);
+  if (error) throw error;
 }

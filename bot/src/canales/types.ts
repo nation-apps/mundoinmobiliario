@@ -35,6 +35,8 @@ export interface CanalAdapter {
     rol: RolEnvio;
     /** Último mensaje ENTRANTE de esa persona por este canal; null si nunca escribió. */
     ultimoMensajeAt: string | null;
+    /** Solo WhatsApp: la línea (número) por la que se manda. Sin ella, la de por defecto. */
+    linea?: string | null | undefined;
   }): Promise<ResultadoEnvioCanal>;
   /**
    * Mensaje con botones de respuesta rápida (hoy solo WhatsApp). Opcional: un
@@ -48,6 +50,7 @@ export interface CanalAdapter {
     opciones: readonly string[];
     rol: RolEnvio;
     ultimoMensajeAt: string | null;
+    linea?: string | null | undefined;
   }): Promise<ResultadoEnvioCanal>;
   /**
    * Avisa que el mensaje se leyó y se está escribiendo la respuesta (hoy solo WhatsApp). Opcional y solo
@@ -61,5 +64,6 @@ export interface CanalAdapter {
     caption?: string | null;
     rol: RolEnvio;
     ultimoMensajeAt: string | null;
+    linea?: string | null | undefined;
   }): Promise<ResultadoEnvioCanal>;
 }

@@ -40,6 +40,9 @@ const MENSAJES: Record<string, string> = {
   whatsapp_qr_apagado: "La conexión por QR está apagada en el servidor (WHATSAPP_QR_ACTIVO).",
   whatsapp_qr_desconectado: "WhatsApp por QR no está conectado.",
   anuncio_no_disponible: "Meta no dejó leer este anuncio.",
+  linea_invalida: "Esa línea de WhatsApp no existe.",
+  linea_desconocida: "Esa línea de WhatsApp no existe.",
+  persona_no_encontrada: "Esa persona ya no está en el equipo.",
 };
 
 async function llamar<T>(ruta: string, init?: RequestInit): Promise<T> {
@@ -63,12 +66,13 @@ async function llamar<T>(ruta: string, init?: RequestInit): Promise<T> {
   return json as T;
 }
 
-export function enviarMensajeHumano(conversacionId: string, texto: string): Promise<{ mensaje: Mensaje }> {
-  return llamar("mensajes", { method: "POST", body: JSON.stringify({ conversacionId, texto }) });
+/** `linea`: solo WhatsApp, la línea desde la que se manda (si no es la del chat, el chat se pasa a ella). */
+export function enviarMensajeHumano(conversacionId: string, texto: string, linea?: string): Promise<{ mensaje: Mensaje }> {
+  return llamar("mensajes", { method: "POST", body: JSON.stringify({ conversacionId, texto, ...(linea ? { linea } : {}) }) });
 }
 
-export function enviarPlantillaMensaje(conversacionId: string, plantillaId: string): Promise<{ mensaje: Mensaje }> {
-  return llamar("mensajes", { method: "POST", body: JSON.stringify({ conversacionId, plantillaId }) });
+export function enviarPlantillaMensaje(conversacionId: string, plantillaId: string, linea?: string): Promise<{ mensaje: Mensaje }> {
+  return llamar("mensajes", { method: "POST", body: JSON.stringify({ conversacionId, plantillaId, ...(linea ? { linea } : {}) }) });
 }
 
 export function responderComentario(
@@ -121,26 +125,37 @@ export function abrirPortalDePago(): Promise<{ url: string }> {
   return llamar("pagos/portal", { method: "POST", body: "{}" });
 }
 
-/** WhatsApp por QR (no oficial): lo que el bot dice de la sesión vinculada. */
-export type EstadoWhatsappQr = {
-  activo: boolean;
+/** WhatsApp por QR (no oficial): lo que el bot dice de cada línea (un número por línea). */
+export type EstadoLineaWhatsappQr = {
+  id: string;
+  etiqueta: string;
+  marca: string;
   estado: "apagado" | "sin_sesion" | "esperando_qr" | "conectando" | "conectado" | "desconectado";
   /** Imagen del QR (data URL) mientras se espera el escaneo. */
   qr: string | null;
   telefono: string | null;
+  telefonoEsperado: string;
+  /** Se conectó un número que no es el esperado para esta línea. */
+  advertencia: string | null;
   error: string | null;
 };
+export type EstadoWhatsappQr = { activo: boolean; lineas: EstadoLineaWhatsappQr[] };
 
 export function estadoWhatsappQr(): Promise<EstadoWhatsappQr> {
   return llamar("whatsapp-qr");
 }
 
-export function conectarWhatsappQr(): Promise<EstadoWhatsappQr> {
-  return llamar("whatsapp-qr/iniciar", { method: "POST", body: "{}" });
+export function conectarWhatsappQr(linea: string): Promise<EstadoWhatsappQr> {
+  return llamar("whatsapp-qr/iniciar", { method: "POST", body: JSON.stringify({ linea }) });
 }
 
-export function desconectarWhatsappQr(): Promise<EstadoWhatsappQr> {
-  return llamar("whatsapp-qr/desconectar", { method: "POST", body: "{}" });
+export function desconectarWhatsappQr(linea: string): Promise<EstadoWhatsappQr> {
+  return llamar("whatsapp-qr/desconectar", { method: "POST", body: JSON.stringify({ linea }) });
+}
+
+/** De qué líneas de WhatsApp recibe leads una persona del equipo (solo administración). */
+export function cambiarLineasPersona(personaId: string, lineas: string[]): Promise<{ lineas: string[] }> {
+  return llamar(`equipo/${personaId}/lineas`, { method: "POST", body: JSON.stringify({ lineas }) });
 }
 
 /** De qué anuncio vino un lead: nombre, campaña, video o imagen y un enlace para verlo. */

@@ -23,7 +23,7 @@ describe("escalar_a_humano con reparto", () => {
   it("el aviso dice a quién está asignada la conversación", async () => {
     conversaciones.escalarConversacion.mockResolvedValue({ asignadaNombre: "Ventas Cancún 2" });
     await escalarAHumanoTool.handler({ motivo: "Quiere cotizar una TVS" }, ctx);
-    expect(ventana.sendTextIfWindowOpen).toHaveBeenCalledWith("529987584160", expect.stringContaining("Asignada a: Ventas Cancún 2."));
+    expect(ventana.sendTextIfWindowOpen).toHaveBeenCalledWith("529987584160", expect.stringContaining("Asignada a: Ventas Cancún 2."), undefined);
   });
 
   it("sin asignación el aviso sale igual, sin esa parte", async () => {

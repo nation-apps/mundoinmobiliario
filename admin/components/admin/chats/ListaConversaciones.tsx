@@ -5,10 +5,13 @@ import { Inbox, Megaphone } from "lucide-react";
 import {
   ETAPA_LABEL,
   HILO_LEAD_ADS,
+  LINEAS_WHATSAPP,
   campanaCorta,
   describirIdentidad,
   esperaRespuesta,
+  etiquetaDeLinea,
   iniciales,
+  lineaDeConversacion,
   tiempoRelativo,
   type ConversacionResumen,
   type Etapa,
@@ -160,6 +163,14 @@ export default function ListaConversaciones({
                     <span aria-hidden className="size-1.5 rounded-full" style={{ background: tono.punto }} />
                     {ETAPA_LABEL[c.etapa]}
                   </span>
+                  {lineaDeConversacion(c) && (
+                    <span
+                      title={etiquetaDeLinea(lineaDeConversacion(c))}
+                      className="t-mono inline-flex items-center rounded-full border border-line bg-bg-soft px-1.5 py-px text-[9.5px] font-medium uppercase tracking-[0.08em] text-ink-soft"
+                    >
+                      {LINEAS_WHATSAPP.find((l) => l.id === lineaDeConversacion(c))?.corta ?? "WA"}
+                    </span>
+                  )}
                   {campana && (
                     <span
                       title={c.fuente ?? undefined}

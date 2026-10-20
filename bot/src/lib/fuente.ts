@@ -1,6 +1,6 @@
 import type { CanalConversacion, OrigenConversacion } from "../db/repositories/conversaciones.js";
 import { HILO_LEAD_ADS } from "../meta/leadAds.js";
-import { marcaDeLaLinea } from "./lineas.js";
+import { marcaDeLinea } from "./lineas.js";
 
 /**
  * El campo «origen» de cada lead (`conversaciones.fuente`, y `clientes.fuente` para el primer contacto), con las
@@ -33,12 +33,14 @@ export function fuentePorCanal(
   canal: CanalConversacion,
   origen: OrigenConversacion,
   hiloExterno: string | null = null,
+  /** La línea de WhatsApp por la que escribió (solo importa en WhatsApp). */
+  linea: string | null = null,
 ): string | null {
   if (origen === "formulario") return hiloExterno === HILO_LEAD_ADS ? fuenteCampana("Formulario", null) : "Formulario web";
   if (origen === "comentario") return `Comentario ${RED_DE_COMENTARIO[canal] ?? "Facebook"}`;
   switch (canal) {
     case "whatsapp":
-      return fuenteWhatsappDirecto(marcaDeLaLinea());
+      return fuenteWhatsappDirecto(marcaDeLinea(linea));
     case "instagram":
       return "Instagram";
     case "messenger":

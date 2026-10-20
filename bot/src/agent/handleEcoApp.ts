@@ -1,4 +1,5 @@
 import { logger } from "../lib/logger.js";
+import { LINEA_POR_DEFECTO } from "../lib/lineas.js";
 import { subirAdjunto } from "../lib/adjuntos.js";
 import { findOrCreateByPhone } from "../db/repositories/clientes.js";
 import { getOrCreateConversacionAbierta, pasarAPersona, unirFormularioConWhatsapp } from "../db/repositories/conversaciones.js";
@@ -29,16 +30,16 @@ const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)
  * usa la API). El panel tiene que ver lo que se dijo y el bot no debe hablarle encima: se guarda como mensaje del
  * equipo y el chat pasa a «Yo». Si la persona le escribió primero desde el celular, el chat se abre aquí también.
  */
-export async function handleEcoApp(eco: EcoApp, esperaMs = ESPERA_ENVIO_PANEL_MS): Promise<void> {
+export async function handleEcoApp(eco: EcoApp, esperaMs = ESPERA_ENVIO_PANEL_MS, linea: string = LINEA_POR_DEFECTO): Promise<void> {
   if (await existeExternalId(eco.id)) return;
   await esperar(esperaMs);
   if (await existeExternalId(eco.id)) return; // era un envío del propio panel o del bot
 
   const cliente = await findOrCreateByPhone(eco.to);
-  await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+  await unirFormularioConWhatsapp(cliente.id, linea).catch((err: unknown) =>
     logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
   );
-  const conversacion = await getOrCreateConversacionAbierta({ clienteId: cliente.id, canal: "whatsapp" });
+  const conversacion = await getOrCreateConversacionAbierta({ clienteId: cliente.id, canal: "whatsapp", linea });
 
   let mediaPath: string | undefined;
   let errorDescarga: string | undefined;

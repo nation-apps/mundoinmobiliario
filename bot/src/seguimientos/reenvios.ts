@@ -52,7 +52,7 @@ const depsReales: DepsReenvio = {
   listar: (desde) => listarRespuestasSinEntregar(desde),
   hayPosteriores: hayMensajesPosteriores,
   async enviar(r, botones) {
-    const base = { destinatarioId: r.telefono, texto: r.contenido, rol: "assistant" as const, ultimoMensajeAt: r.ultimoMensajeAt };
+    const base = { destinatarioId: r.telefono, texto: r.contenido, rol: "assistant" as const, ultimoMensajeAt: r.ultimoMensajeAt, linea: r.linea };
     return botones && whatsappAdapter.enviarBotones
       ? whatsappAdapter.enviarBotones({ ...base, opciones: botones })
       : whatsappAdapter.enviarTexto(base);
