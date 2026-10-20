@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Tag, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plus, Tag, X } from "lucide-react";
 import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
-import { BotApiError, guardarTelefonoContacto } from "@/lib/admin/bot-api";
+import { BotApiError, guardarTelefonoContacto, infoAnuncio } from "@/lib/admin/bot-api";
+import { anuncioDeMensajes, type AnuncioDeLead, type InfoAnuncio } from "@/lib/admin/anuncio";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { patchParaMover } from "@/lib/admin/embudo";
 import {
@@ -208,6 +209,37 @@ function textoEvento(evento: EventoConversacion, staff: StaffMiembro[]): string 
 
 /* ---------- Piezas ---------- */
 
+/** «Anuncio origen»: cuál fue el anuncio, si era video o imagen y un enlace para verlo. */
+function AnuncioOrigen({ lead, info }: { lead: AnuncioDeLead; info: InfoAnuncio | null }) {
+  const nombre = info?.nombre ?? lead.nombre ?? "Anuncio sin nombre";
+  const campana = info?.campana ?? lead.campana;
+  const enlace = info?.enlace ?? lead.enlaceDirecto ?? info?.enlaceAdministrador ?? null;
+  return (
+    <div className="mt-3 text-xs text-ink-soft">
+      <span className="admin-label">Anuncio origen</span>
+      <span className="text-ink">{nombre}</span>
+      {info?.tipo && (
+        <span className="ml-1.5 rounded-full bg-bg-soft px-2 py-px align-middle text-[10.5px] font-medium text-ink-soft">
+          {info.tipo === "video" ? "Video" : "Imagen"}
+        </span>
+      )}
+      {campana && <span className="mt-0.5 block text-muted">Campaña: {campana}</span>}
+      {lead.formulario && <span className="mt-0.5 block text-muted">Formulario: {lead.formulario}</span>}
+      {enlace && (
+        <a
+          href={enlace}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1.5 inline-flex items-center gap-1.5 font-medium text-accent-deep hover:underline"
+        >
+          Ver el anuncio
+          <ExternalLink size={12} aria-hidden />
+        </a>
+      )}
+    </div>
+  );
+}
+
 function Seccion({ titulo, accion, children }: { titulo: string; accion?: ReactNode; children: ReactNode }) {
   return (
     <section className="shrink-0 border-b border-line px-5 py-4">
@@ -294,6 +326,8 @@ function Ficha({
   const [form, setForm] = useState<Formulario | null>(null);
   const [identidades, setIdentidades] = useState<ClienteIdentidad[]>([]);
   const [eventos, setEventos] = useState<EventoConversacion[]>([]);
+  /** El anuncio del que vino este lead (de sus primeros mensajes) y lo que Meta cuenta de él. Va atado a la conversación. */
+  const [anuncioDeLead, setAnuncioDeLead] = useState<{ conversacionId: string; lead: AnuncioDeLead; info: InfoAnuncio | null } | null>(null);
 
   const [guardandoDatos, setGuardandoDatos] = useState(false);
 
@@ -313,6 +347,33 @@ function Ficha({
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
 
   /* ----- Carga y tiempo real ----- */
+
+  // De qué anuncio vino: se lee del primer mensaje con datos de anuncio y se completa con Meta (enlace, video o imagen).
+  useEffect(() => {
+    let activo = true;
+    async function cargarAnuncio() {
+      const { data } = await supabase
+        .from("mensajes")
+        .select("metadata")
+        .eq("conversacion_id", conversacionId)
+        .order("created_at", { ascending: true })
+        .limit(15);
+      if (!activo) return;
+      const lead = anuncioDeMensajes((data ?? []).map((m) => (m as { metadata: Record<string, unknown> | null }).metadata));
+      if (!lead) {
+        setAnuncioDeLead(null);
+        return;
+      }
+      setAnuncioDeLead({ conversacionId, lead, info: null });
+      if (!lead.id) return;
+      const info = await infoAnuncio(lead.id).catch(() => null);
+      if (activo && info) setAnuncioDeLead({ conversacionId, lead, info });
+    }
+    void cargarAnuncio();
+    return () => {
+      activo = false;
+    };
+  }, [supabase, conversacionId]);
 
   useEffect(() => {
     let activo = true;
@@ -748,6 +809,10 @@ function Ficha({
               <span className="mt-0.5 block text-muted">Primer contacto: {conversacion.cliente_fuente}</span>
             )}
           </div>
+        )}
+
+        {anuncioDeLead && anuncioDeLead.conversacionId === conversacionId && (
+          <AnuncioOrigen lead={anuncioDeLead.lead} info={anuncioDeLead.info} />
         )}
 
         <div className="mt-3">

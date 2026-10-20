@@ -26,7 +26,7 @@ import { getLastInboundAt } from "../whatsapp/window.js";
 import { getCanalAdapter } from "../canales/index.js";
 import { MOTIVO_CANAL_WEB } from "../canales/sinRespuesta.js";
 import { runAgent } from "../agent/runner.js";
-import { responderComentarioPublico, responderComentarioPrivado, estadoConexion, marcarVisto } from "../meta/client.js";
+import { responderComentarioPublico, responderComentarioPrivado, estadoConexion, marcarVisto, infoDeAnuncio } from "../meta/client.js";
 import { vincularIdentidadMensajeria } from "../meta/identidades.js";
 import type { CanalMeta } from "../meta/parser.js";
 import { AppError } from "../lib/errors.js";
@@ -573,6 +573,19 @@ export async function adminRoutes(app: FastifyInstance) {
     const sesion = await crearPortal({ clienteId: actual.stripe_customer_id, volverA: volverAlPanel() });
     logger.info({ staffId: staff.id }, "Sesión del portal de Stripe creada");
     return reply.send(sesion);
+  });
+
+  /**
+   * De qué anuncio vino un lead: nombre, campaña, si es video o imagen y un enlace para verlo. Lo consulta la ficha del chat.
+   * Cualquiera del equipo puede verlo (los vendedores también).
+   */
+  app.get("/admin/anuncios/:id", async (request: FastifyRequest, reply: FastifyReply) => {
+    await requireStaff(request.headers.authorization);
+    const { id } = request.params as { id: string };
+    if (!/^\d{5,25}$/.test(id)) return reply.status(400).send({ error: "anuncio_invalido" });
+    const info = await infoDeAnuncio(id);
+    if (!info) return reply.status(404).send({ error: "anuncio_no_disponible" });
+    return reply.send(info);
   });
 
   /* ---------- WhatsApp por QR (Baileys, no oficial): solo administración ---------- */

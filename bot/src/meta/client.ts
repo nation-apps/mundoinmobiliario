@@ -263,6 +263,77 @@ export async function paginaDeAnuncio(anuncioId: string): Promise<string | null>
   return null;
 }
 
+export type InfoAnuncio = {
+  id: string;
+  nombre: string | null;
+  campana: string | null;
+  estado: string | null;
+  /** Video o imagen, cuando Meta lo deja saber (si no, null: no se adivina). */
+  tipo: "video" | "imagen" | null;
+  /** Vista previa pública del anuncio (cualquiera con el enlace lo ve, sin entrar a Meta). */
+  enlace: string | null;
+  /** El anuncio dentro del Administrador de anuncios (hay que tener acceso a la cuenta publicitaria). */
+  enlaceAdministrador: string | null;
+};
+
+const infoPorAnuncio = new Map<string, { info: InfoAnuncio | null; hasta: number }>();
+const INFO_ANUNCIO_VIGENTE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Lo que hay que saber de un anuncio para ver «de cuál vino» un lead: su nombre, su campaña, si es video o imagen y un
+ * enlace para verlo. Necesita un token con acceso a la cuenta publicitaria (META_ADS_TOKEN). Nunca lanza: si no se puede
+ * leer devuelve null. Guarda el resultado unas horas (un fallo, solo unos minutos).
+ */
+export async function infoDeAnuncio(anuncioId: string): Promise<InfoAnuncio | null> {
+  const previo = infoPorAnuncio.get(anuncioId);
+  if (previo && previo.hasta > Date.now()) return previo.info;
+
+  for (const token of tokensParaAnuncios()) {
+    try {
+      const data = await leerGraphApi(
+        `/${anuncioId}`,
+        "name,effective_status,account_id,campaign{name},creative{object_type,video_id,image_url,thumbnail_url,effective_object_story_id},preview_shareable_link",
+        token,
+      );
+      const creativo = (data.creative ?? {}) as Record<string, unknown>;
+      const historia = textoOpcional(creativo.effective_object_story_id);
+      let tipo: InfoAnuncio["tipo"] =
+        creativo.video_id || creativo.object_type === "VIDEO" ? "video" : creativo.object_type === "PHOTO" || creativo.image_url ? "imagen" : null;
+      // Un anuncio hecho con una publicación: si la publicación es un video, el anuncio lo es.
+      const paginaId = historia?.split("_")[0];
+      const tokenPagina = tokenDePagina(paginaId ?? null);
+      if (historia && tipo !== "video" && tokenPagina) {
+        try {
+          const post = await leerGraphApi(`/${historia}`, "attachments{media_type}", tokenPagina);
+          const adjuntos = ((post.attachments as { data?: { media_type?: string }[] } | undefined)?.data ?? []).map((x) => x.media_type);
+          if (adjuntos.includes("video")) tipo = "video";
+        } catch {
+          // No crítico: sin permiso sobre la publicación se queda con lo que dice la creatividad.
+        }
+      }
+      const cuenta = textoOpcional(data.account_id);
+      const info: InfoAnuncio = {
+        id: anuncioId,
+        nombre: textoOpcional(data.name),
+        campana: textoOpcional((data.campaign as { name?: unknown } | undefined)?.name),
+        estado: textoOpcional(data.effective_status),
+        tipo,
+        enlace: textoOpcional(data.preview_shareable_link),
+        enlaceAdministrador: cuenta
+          ? `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${cuenta}&selected_ad_ids=${anuncioId}`
+          : null,
+      };
+      infoPorAnuncio.set(anuncioId, { info, hasta: Date.now() + INFO_ANUNCIO_VIGENTE_MS });
+      return info;
+    } catch {
+      // Este token no ve la cuenta publicitaria: se prueba con el siguiente.
+    }
+  }
+  logger.warn({ anuncioId }, "No se pudo leer el anuncio (falta un token con acceso a la cuenta publicitaria)");
+  infoPorAnuncio.set(anuncioId, { info: null, hasta: Date.now() + 10 * 60 * 1000 });
+  return null;
+}
+
 /** Las URLs de adjuntos entrantes de Meta caducan: hay que descargar al momento de recibirlas. */
 export async function descargarAdjunto(url: string): Promise<{ buffer: Buffer; mimeType: string }> {
   const res = await fetch(url);

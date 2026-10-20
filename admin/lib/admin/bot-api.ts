@@ -1,5 +1,6 @@
 "use client";
 
+import type { InfoAnuncio } from "./anuncio";
 import type { EstadoCanales, Mensaje } from "./chats-tipos";
 
 /**
@@ -38,6 +39,7 @@ const MENSAJES: Record<string, string> = {
   panel_url_no_configurada: "Falta configurar la dirección pública del panel en el servidor.",
   whatsapp_qr_apagado: "La conexión por QR está apagada en el servidor (WHATSAPP_QR_ACTIVO).",
   whatsapp_qr_desconectado: "WhatsApp por QR no está conectado.",
+  anuncio_no_disponible: "Meta no dejó leer este anuncio.",
 };
 
 async function llamar<T>(ruta: string, init?: RequestInit): Promise<T> {
@@ -139,4 +141,9 @@ export function conectarWhatsappQr(): Promise<EstadoWhatsappQr> {
 
 export function desconectarWhatsappQr(): Promise<EstadoWhatsappQr> {
   return llamar("whatsapp-qr/desconectar", { method: "POST", body: "{}" });
+}
+
+/** De qué anuncio vino un lead: nombre, campaña, video o imagen y un enlace para verlo. */
+export function infoAnuncio(id: string): Promise<InfoAnuncio> {
+  return llamar(`anuncios/${id}`);
 }
