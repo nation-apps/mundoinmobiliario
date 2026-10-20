@@ -6,6 +6,10 @@ vi.mock("../src/meta/paginas.js", () => ({
   tokenDePagina: (id: string) => (id === "PAGE_ID_TEST" ? "token-de-prueba" : null),
 }));
 
+vi.mock("../src/config/env.js", () => ({ env: { LEADS_PRIMER_MENSAJE_TEXTO: undefined } }));
+const primerMensaje = { encolarPrimerMensaje: vi.fn(), textoPrimerMensaje: vi.fn(() => "Hola 👋 texto armado") };
+vi.mock("../src/agent/primerMensajeLead.js", () => primerMensaje);
+
 const clientes = { registrarLeadWeb: vi.fn() };
 const conversaciones = { getOrCreateConversacionAbierta: vi.fn() };
 const mensajes = { guardarMensaje: vi.fn() };
@@ -97,5 +101,32 @@ describe("handleLeadFormulario", () => {
   it("un aviso repetido que choca con el external_id ya guardado no es un error", async () => {
     mensajes.guardarMensaje.mockRejectedValue({ code: "23505" });
     await expect(handleLeadFormulario(evento)).resolves.toBeUndefined();
+  });
+
+  it("un lead nuevo con teléfono se pone en la cola del primer mensaje, con sus respuestas", async () => {
+    await handleLeadFormulario(evento);
+
+    expect(primerMensaje.textoPrimerMensaje).toHaveBeenCalledWith(
+      expect.objectContaining({ nombre: "Ana López", marca: "TVS", campos: lead.campos }),
+    );
+    expect(primerMensaje.encolarPrimerMensaje).toHaveBeenCalledWith({
+      conversacionId: "conv-1",
+      clienteId: "cliente-1",
+      telefono: "525512345678",
+      texto: "Hola 👋 texto armado",
+      leadgenId: "444",
+    });
+  });
+
+  it("sin teléfono no hay a quién escribirle", async () => {
+    metaClient.obtenerLead.mockResolvedValue({ ...lead, campos: [{ name: "full_name", values: ["Ana López"] }] });
+    await handleLeadFormulario(evento);
+    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+  });
+
+  it("un lead repetido no recibe un segundo mensaje", async () => {
+    mensajes.guardarMensaje.mockRejectedValue({ code: "23505" });
+    await handleLeadFormulario(evento);
+    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
   });
 });

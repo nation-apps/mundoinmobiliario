@@ -1,6 +1,7 @@
 import { supabase } from "../db/client.js";
 import { sendText, sendMedia, type TipoMediaWhatsApp } from "./client.js";
 import { logger } from "../lib/logger.js";
+import { env } from "../config/env.js";
 
 const WINDOW_MS = 24 * 60 * 60_000;
 
@@ -10,6 +11,8 @@ const WINDOW_MS = 24 * 60 * 60_000;
  * un template pre-aprobado. `null` (nunca escribió) cuenta como cerrada.
  */
 export function isWithin24hWindow(lastInboundAt: Date | null, now = new Date()): boolean {
+  // Por QR (WhatsApp Web) no hay ventana de 24 h: es de la API oficial.
+  if (env.WHATSAPP_QR_ACTIVO) return true;
   if (!lastInboundAt) return false;
   return now.getTime() - lastInboundAt.getTime() < WINDOW_MS;
 }

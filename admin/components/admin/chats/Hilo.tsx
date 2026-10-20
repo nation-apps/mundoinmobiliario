@@ -262,6 +262,7 @@ export default function Hilo({
   onVolver,
   onAbrirContacto,
   onCambio,
+  whatsappSinVentana = false,
 }: {
   conversacion: ConversacionResumen | null;
   staff: StaffMiembro[];
@@ -280,6 +281,8 @@ export default function Hilo({
    * cambio sí se había guardado.
    */
   onCambio?: (id: string, parche: Partial<ConversacionResumen>) => void;
+  /** WhatsApp por QR: sin ventana de 24 h (ver BandejaProps). */
+  whatsappSinVentana?: boolean;
 }) {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -593,7 +596,7 @@ export default function Hilo({
     : esWeb
       ? { abierta: false }
       : conversacion.canal === "whatsapp"
-        ? { abierta: ventanaAbierta(conversacion) }
+        ? { abierta: whatsappSinVentana || ventanaAbierta(conversacion) }
         : conversacion.canal === "tiktok"
           ? { abierta: false, motivo: "TikTok todavía no está conectado para responder desde el panel." }
           : ventanaMeta(conversacion, humanAgentAprobado);
@@ -970,7 +973,7 @@ export default function Hilo({
           </div>
         )}
 
-        {modoCompositor === "responder" && !esComentario && ventana.abierta && conversacion.canal === "whatsapp" && (
+        {modoCompositor === "responder" && !esComentario && ventana.abierta && !whatsappSinVentana && conversacion.canal === "whatsapp" && (
           <p className="mt-1.5 text-[11px] text-muted">Quedan ~{horasRestantesVentana(conversacion)} h de ventana para escribir libremente.</p>
         )}
         {modoCompositor === "responder" && !esComentario && ventana.abierta && "modo" in ventana && ventana.modo === "HUMAN_AGENT" && (

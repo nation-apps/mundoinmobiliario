@@ -1,5 +1,5 @@
 import { normalizarTelefono } from "../lib/telefono.js";
-import type { EcoApp, InboundMessage } from "../whatsapp/parser.js";
+import type { AdReferral, EcoApp, InboundMessage } from "../whatsapp/parser.js";
 
 /**
  * Traduce los mensajes de Baileys (WhatsApp por QR) a las mismas formas que ya entiende el bot cuando llegan por la API
@@ -16,14 +16,24 @@ type ClaveMinima = {
   fromMe?: boolean | null;
 };
 
+/** Lo que WhatsApp adjunta cuando la persona escribe desde un anuncio de «clic a WhatsApp». */
+type AnuncioMinimo = {
+  title?: string | null;
+  body?: string | null;
+  sourceId?: string | null;
+  sourceUrl?: string | null;
+  sourceType?: string | null;
+};
+type ConContexto = { contextInfo?: { externalAdReply?: AnuncioMinimo | null } | null } | null;
+
 /** El contenido ya "desenvuelto" (sin efímeros ni vista única): lo que devuelve `normalizeMessageContent`. */
 export type ContenidoMinimo = {
   conversation?: string | null;
-  extendedTextMessage?: { text?: string | null } | null;
-  imageMessage?: { caption?: string | null; mimetype?: string | null } | null;
-  videoMessage?: { caption?: string | null; mimetype?: string | null } | null;
-  documentMessage?: { caption?: string | null; mimetype?: string | null; fileName?: string | null } | null;
-  audioMessage?: { mimetype?: string | null } | null;
+  extendedTextMessage?: { text?: string | null } & NonNullable<ConContexto> | null;
+  imageMessage?: { caption?: string | null; mimetype?: string | null } & NonNullable<ConContexto> | null;
+  videoMessage?: { caption?: string | null; mimetype?: string | null } & NonNullable<ConContexto> | null;
+  documentMessage?: { caption?: string | null; mimetype?: string | null; fileName?: string | null } & NonNullable<ConContexto> | null;
+  audioMessage?: { mimetype?: string | null } & NonNullable<ConContexto> | null;
   stickerMessage?: unknown;
   buttonsResponseMessage?: { selectedButtonId?: string | null; selectedDisplayText?: string | null } | null;
   listResponseMessage?: { title?: string | null; singleSelectReply?: { selectedRowId?: string | null } | null } | null;
@@ -36,6 +46,33 @@ export type MensajeMinimo = {
   /** Segundos desde 1970 (Baileys lo entrega como número o como Long). */
   messageTimestamp?: number | { toNumber(): number } | null;
 };
+
+/**
+ * El anuncio desde el que escribió la persona (clic a WhatsApp), con la misma forma que le llega al bot por la API de
+ * Meta (`AdReferral`): de ahí sale la campaña y el nombre del anuncio. Undefined si no escribió desde un anuncio.
+ */
+export function anuncioDe(contenido: ContenidoMinimo | null | undefined): AdReferral | undefined {
+  if (!contenido) return undefined;
+  const partes: ConContexto[] = [
+    contenido.extendedTextMessage ?? null,
+    contenido.imageMessage ?? null,
+    contenido.videoMessage ?? null,
+    contenido.documentMessage ?? null,
+    contenido.audioMessage ?? null,
+  ];
+  for (const parte of partes) {
+    const anuncio = parte?.contextInfo?.externalAdReply;
+    if (!anuncio) continue;
+    const resultado: AdReferral = {
+      ...(anuncio.sourceId ? { sourceId: anuncio.sourceId } : {}),
+      ...(anuncio.title ? { headline: anuncio.title } : {}),
+      ...(anuncio.body ? { body: anuncio.body } : {}),
+      ...(anuncio.sourceUrl ? { sourceUrl: anuncio.sourceUrl } : {}),
+    };
+    if (Object.keys(resultado).length > 0) return resultado;
+  }
+  return undefined;
+}
 
 const SUFIJO_TELEFONO = "@s.whatsapp.net";
 
@@ -136,7 +173,10 @@ export function aMensajeEntrante(
   }
 
   const texto = textoDe(contenido);
-  if (texto) return { kind: "text", ...base, text: texto };
+  if (texto) {
+    const referral = anuncioDe(contenido);
+    return { kind: "text", ...base, text: texto, ...(referral ? { referral } : {}) };
+  }
 
   const tipo = contenido.videoMessage ? "video" : contenido.stickerMessage ? "sticker" : "otro";
   return { kind: "unsupported", ...base, messageType: tipo };

@@ -466,6 +466,11 @@ export type BandejaProps = {
   inicial: DatosBandeja;
   /** Filtro de estado la primera vez (sin filtros guardados): un vendedor entra viendo sus chats («Mías»). */
   estadoPorDefecto?: FiltroEstadoBandeja;
+  /**
+   * WhatsApp va por QR (no oficial): no hay ventana de 24 h, así que se puede escribir texto libre aunque la persona no haya
+   * escrito nunca (p. ej. un lead de formulario al que se le mandó el primer mensaje).
+   */
+  whatsappSinVentana?: boolean;
 };
 
 export type FiltroCanalBandeja = "todas" | Canal | "comentarios";

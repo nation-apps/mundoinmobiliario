@@ -42,3 +42,28 @@ puede dar de alta un número con un proveedor autorizado.
 Desde el 20-oct-2026 toda conversación nueva nace en **«Yo»** (atiende una persona): el bot guarda el mensaje pero no contesta.
 Quien quiera que conteste el bot mueve el interruptor Bot/Yo del chat. Para que el bot conteste desde el primer mensaje,
 poner `BOT_ACTIVO_POR_DEFECTO=true` en el servicio del bot.
+
+## Campañas de clic a WhatsApp
+
+Cuando alguien escribe desde un anuncio, WhatsApp adjunta los datos del anuncio al mensaje (`externalAdReply`). El bot los lee y
+la conversación queda con su origen «Campaña WhatsApp Meta <marca>», igual que los formularios («Campaña Formulario Meta
+<marca>»); el id y el título del anuncio se guardan en el mensaje. La marca sale de la página que publicó el anuncio
+(`META_PAGINAS`, y `META_ADS_TOKEN` para saber de qué página es el anuncio). En el registro del bot aparece «Mensaje que llegó
+desde un anuncio de clic a WhatsApp» con el id del anuncio: sirve para comprobar que llega.
+
+## Primer mensaje a quien llena un formulario (opcional, apagado)
+
+Hay formularios de anuncios cuyo botón final lleva a WhatsApp y otros que no: quien solo los llena llega al panel como un dato y
+nadie puede escribirle. Con `LEADS_PRIMER_MENSAJE_ACTIVO=true` (y la conexión por QR conectada) el bot le manda un saludo armado
+con sus respuestas («te interesa la TVS RTR 310», «buscas balatas para tu Italika FT150»…) y la conversación pasa a ser de
+WhatsApp, con las respuestas del formulario y el saludo juntos, para que el asesor siga desde ahí. Conserva su origen de campaña.
+
+**Es escribirle primero a gente que no ha escrito: lo que más bloquea números.** Protecciones: solo leads nuevos con teléfono, uno
+por persona, nunca a quien ya tiene una conversación de WhatsApp abierta, en cola con 45–120 s entre mensajes, horario
+(`LEADS_PRIMER_MENSAJE_DESDE_HORA` 8 a `LEADS_PRIMER_MENSAJE_HASTA_HORA` 21, hora de Cancún), tope por hora
+(`LEADS_PRIMER_MENSAJE_MAX_POR_HORA`, 12) y una línea para pedir que no le escriban. Texto propio:
+`LEADS_PRIMER_MENSAJE_TEXTO` con `{{nombre}}`, `{{marca}}` e `{{interes}}`. Si el número no tiene WhatsApp o la conexión está caída, el
+lead queda como formulario, como hasta ahora. Código: `bot/src/agent/primerMensajeLead.ts`.
+
+Con el QR no hay ventana de 24 h: el panel deja escribir texto libre a cualquier chat de WhatsApp (`WHATSAPP_QR_ACTIVO=true` también en
+el servicio del panel).

@@ -30,6 +30,7 @@ export default async function ChatsPage() {
         modo="panel"
         inicial={inicial}
         estadoPorDefecto={staff.rol === "vendedor" ? "mias" : "todas"}
+        whatsappSinVentana={process.env.WHATSAPP_QR_ACTIVO === "true"}
       />
     </Suspense>
   );

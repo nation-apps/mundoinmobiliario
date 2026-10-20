@@ -7,6 +7,8 @@ import { obtenerLead } from "../meta/client.js";
 import { contenidoDelLead, datosDelLead, HILO_LEAD_ADS } from "../meta/leadAds.js";
 import { marcaDePagina, tokenDePagina } from "../meta/paginas.js";
 import type { EventoMeta } from "../meta/parser.js";
+import { encolarPrimerMensaje, textoPrimerMensaje } from "./primerMensajeLead.js";
+import { env } from "../config/env.js";
 
 type EventoLead = Extract<EventoMeta, { kind: "lead_formulario" }>;
 
@@ -15,8 +17,9 @@ type EventoLead = Extract<EventoMeta, { kind: "lead_formulario" }>;
  * Instagram. Entra a la bandeja igual que el formulario del sitio (canal
  * `web`, origen `formulario`, sin respuesta por ese canal: el asesor le
  * escribe por WhatsApp), pero en su propio hilo (`HILO_LEAD_ADS`) para que el
- * panel lo rotule como anuncio. El bot no le escribe solo: un primer mensaje
- * por WhatsApp a quien no ha escrito exige una plantilla aprobada.
+ * panel lo rotule como anuncio. Por la API oficial el bot no le escribe solo (un primer mensaje a quien no ha escrito
+ * exige una plantilla aprobada); con la conexión por QR y LEADS_PRIMER_MENSAJE_ACTIVO sí le manda un saludo armado con sus
+ * respuestas y la conversación pasa a ser de WhatsApp (agent/primerMensajeLead.ts).
  */
 export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
   if (!tokenDePagina(evento.cuentaId)) {
@@ -85,4 +88,20 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
     { clienteId: cliente.id, conversacionId: conversacion.id, leadgenId: evento.leadgenId, conTelefono: datos.telefono !== null },
     "Lead de formulario de Meta recibido",
   );
+
+  // Solo el lead NUEVO llega hasta aquí (uno repetido salió arriba por el índice único): un mensaje por persona.
+  if (datos.telefono) {
+    encolarPrimerMensaje({
+      conversacionId: conversacion.id,
+      clienteId: cliente.id,
+      telefono: datos.telefono,
+      texto: textoPrimerMensaje({
+        nombre: datos.nombre,
+        campos: lead.campos,
+        marca,
+        ...(env.LEADS_PRIMER_MENSAJE_TEXTO ? { plantilla: env.LEADS_PRIMER_MENSAJE_TEXTO } : {}),
+      }),
+      leadgenId: lead.id,
+    });
+  }
 }

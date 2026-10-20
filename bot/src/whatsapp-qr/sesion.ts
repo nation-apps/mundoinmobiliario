@@ -141,6 +141,9 @@ async function procesarMensaje(s: WASocket, m: WAMessage, tipo: string): Promise
     log.info({ tipo: entrante.messageType }, "Tipo de mensaje no soportado por la conexión QR, se ignora");
     return;
   }
+  if (entrante.kind === "text" && entrante.referral) {
+    log.info({ anuncioId: entrante.referral.sourceId, titulo: entrante.referral.headline }, "Mensaje que llegó desde un anuncio de clic a WhatsApp");
+  }
   await handleInboundMessage(entrante);
 }
 

@@ -83,7 +83,7 @@ export function datosDelLead(campos: CampoLead[]): DatosLead {
 }
 
 /** "¿cuál_es_tu_presupuesto?" → "¿Cuál es tu presupuesto?" */
-function legible(texto: string): string {
+export function legible(texto: string): string {
   const limpio = texto.replace(/_/g, " ").replace(/\s+/g, " ").trim();
   const i = limpio.search(/\p{L}/u);
   return i < 0 ? limpio : limpio.slice(0, i) + limpio.charAt(i).toUpperCase() + limpio.slice(i + 1);

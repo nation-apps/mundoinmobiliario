@@ -365,7 +365,7 @@ const CAPA_COMPLETA = "fixed inset-x-0 top-0 flex h-dvh flex-col overflow-hidden
  * (lista | hilo | ficha) y apilado por debajo. Modo "app" (/app/chats):
  * siempre apilado, lista → hilo → ficha a pantalla completa.
  */
-export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "todas" }: BandejaProps) {
+export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "todas", whatsappSinVentana = false }: BandejaProps) {
   const supabase = useMemo(() => createBrowserSupabase(), []);
   const router = useRouter();
   const pathname = usePathname();
@@ -933,6 +933,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
               // En xl la ficha ya está a la derecha: el nombre deja de ser botón.
               onAbrirContacto={esXl ? undefined : verFicha}
               onCambio={aplicarCambio}
+              whatsappSinVentana={whatsappSinVentana}
             />
             {esXl && seleccionada && (
               <ClientPanel
@@ -985,6 +986,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
               onVolver={verLista}
               onAbrirContacto={verFicha}
               onCambio={aplicarCambio}
+              whatsappSinVentana={whatsappSinVentana}
             />
           </div>
         </div>

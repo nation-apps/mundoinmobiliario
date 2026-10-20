@@ -84,6 +84,16 @@ const envSchema = z.object({
   // Conexión de WhatsApp por QR (Baileys, NO oficial de Meta; puede bloquear el número). Con WHATSAPP_QR_ACTIVO=true los envíos
   // y recepciones de WhatsApp van por ese número vinculado y no por la API de Meta. Ver src/whatsapp-qr/.
   WHATSAPP_QR_ACTIVO: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  // Primer mensaje automático a quien llena un formulario de anuncios y dejó su teléfono (src/agent/primerMensajeLead.ts). Solo
+  // con WHATSAPP_QR_ACTIVO y el número conectado: por la API oficial exige una plantilla aprobada. APAGADO por defecto: es
+  // escribirle primero a gente que no ha escrito, lo que más bloquea números.
+  LEADS_PRIMER_MENSAJE_ACTIVO: z.enum(["true", "false"]).default("false").transform((v) => v === "true"),
+  /** Texto propio con {{nombre}}, {{marca}} e {{interes}}; sin él se arma uno según las respuestas del formulario. */
+  LEADS_PRIMER_MENSAJE_TEXTO: vacioComoAusente(z.string().min(5).max(900).optional()),
+  LEADS_PRIMER_MENSAJE_MAX_POR_HORA: z.coerce.number().int().min(1).max(60).default(12),
+  /** Horas (de BUSINESS_TIMEZONE) entre las que se escribe; fuera de ellas el mensaje espera a que abra el horario. */
+  LEADS_PRIMER_MENSAJE_DESDE_HORA: z.coerce.number().int().min(0).max(23).default(8),
+  LEADS_PRIMER_MENSAJE_HASTA_HORA: z.coerce.number().int().min(1).max(24).default(21),
   /** Tope de mensajes que salen por minuto por el número del QR (protege el número de un bloqueo por ráfagas). */
   WHATSAPP_QR_MAX_POR_MINUTO: z.coerce.number().int().min(1).max(120).default(15),
   LEADS_RECONCILIAR_ACTIVO: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),

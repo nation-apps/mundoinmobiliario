@@ -183,8 +183,11 @@ export const SERIES: { id: SerieEntrada; label: string; color: string }[] = [
 /** Mismo valor que HILO_LEAD_ADS (chats-tipos): se repite para que este archivo no dependa de nada más. */
 const HILO_LEAD_ADS = "facebook_lead_ads";
 
-export function serieDe(f: Pick<FilaMetrica, "canal" | "origen" | "hilo_externo">): SerieEntrada {
+export function serieDe(f: Pick<FilaMetrica, "canal" | "origen" | "hilo_externo"> & { fuente?: string | null }): SerieEntrada {
   if (f.canal === "web" && f.hilo_externo === HILO_LEAD_ADS) return "anuncio";
+  // Un lead de formulario al que se le escribió por WhatsApp pasa a ser un chat de WhatsApp (bot: agent/primerMensajeLead.ts)
+  // pero sigue siendo un lead de anuncio: conserva su origen «Campaña Formulario Meta …».
+  if (f.canal === "whatsapp" && f.fuente?.startsWith("Campaña Formulario")) return "anuncio";
   if (f.origen === "dm" && (f.canal === "whatsapp" || f.canal === "messenger" || f.canal === "instagram")) return f.canal;
   return "otros";
 }

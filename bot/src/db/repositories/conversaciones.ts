@@ -211,3 +211,43 @@ export async function getConversacionConDestino(conversacionId: string): Promise
     clienteTelefono: clientes.telefono,
   };
 }
+
+/** Una conversación por su id, sin juntar nada más. Null si ya no existe. */
+export async function leerConversacion(conversacionId: string): Promise<Conversacion | null> {
+  const { data, error } = await supabase.from("conversaciones").select("*").eq("id", conversacionId).maybeSingle();
+  if (error) throw error;
+  return (data as Conversacion | null) ?? null;
+}
+
+/** ¿Este cliente ya tiene una conversación de WhatsApp abierta? (ya está hablando con nosotros por ahí) */
+export async function tieneConversacionWhatsappAbierta(clienteId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .eq("canal", "whatsapp")
+    .in("estado", ESTADOS_ABIERTOS)
+    .limit(1);
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Un lead de formulario al que se le acaba de escribir por WhatsApp deja de ser una conversación «web» y pasa a ser la
+ * conversación de WhatsApp de esa persona: así sus respuestas caen en el mismo hilo, el asesor ve las respuestas del
+ * formulario y el primer mensaje juntos, y no hay dos tarjetas por lead. Conserva su origen («Campaña Formulario Meta …»).
+ * Devuelve false si no se pudo (p. ej. si la persona ya tenía otra conversación de WhatsApp abierta).
+ */
+export async function convertirEnWhatsapp(conversacionId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .update({ canal: "whatsapp", origen: "dm", hilo_externo: null, cuenta_id: null })
+    .eq("id", conversacionId)
+    .eq("canal", "web")
+    .select("id");
+  if (error) {
+    if (error.code === "23505") return false;
+    throw error;
+  }
+  return (data ?? []).length > 0;
+}

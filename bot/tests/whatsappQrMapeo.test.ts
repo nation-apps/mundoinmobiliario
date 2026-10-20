@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aEco, aMensajeEntrante, esChatIndividual, telefonoDeClave, telefonoDeJid, telefonoDelBot, textoDe } from "../src/whatsapp-qr/mapeo.js";
+import { aEco, aMensajeEntrante, anuncioDe, esChatIndividual, telefonoDeClave, telefonoDeJid, telefonoDelBot, textoDe } from "../src/whatsapp-qr/mapeo.js";
 
 const clave = (extra: Record<string, unknown> = {}) => ({ id: "ABC123", remoteJid: "5219981234567@s.whatsapp.net", fromMe: false, ...extra });
 
@@ -92,5 +92,27 @@ describe("mensajes del equipo desde el celular (eco)", () => {
     const e = aEco({ key: clave({ fromMe: true }) }, { videoMessage: { caption: "recorrido" } }, "529981234567");
     expect(e).toMatchObject({ texto: "recorrido", tipoOriginal: "video" });
     expect(e?.media).toBeUndefined();
+  });
+});
+
+describe("mensajes que llegan de un anuncio de clic a WhatsApp", () => {
+  const anuncio = { title: "Encuentra tu próxima TVS", body: "Financiamiento", sourceId: "12012345", sourceUrl: "https://fb.me/x", sourceType: "ad" };
+
+  it("el texto trae el anuncio con la forma que usa el bot", () => {
+    const m = aMensajeEntrante(
+      { key: clave() },
+      { extendedTextMessage: { text: "Hola, quiero más información", contextInfo: { externalAdReply: anuncio } } },
+      "529981234567",
+    );
+    expect(m).toMatchObject({
+      kind: "text",
+      referral: { sourceId: "12012345", headline: "Encuentra tu próxima TVS", body: "Financiamiento", sourceUrl: "https://fb.me/x" },
+    });
+  });
+
+  it("un texto normal no trae anuncio", () => {
+    const m = aMensajeEntrante({ key: clave() }, { extendedTextMessage: { text: "Hola" } }, "529981234567");
+    expect(m).toMatchObject({ kind: "text" });
+    expect(m).not.toHaveProperty("referral");
   });
 });
