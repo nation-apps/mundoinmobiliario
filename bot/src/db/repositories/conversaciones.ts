@@ -1,3 +1,4 @@
+import { env } from "../../config/env.js";
 import { supabase } from "../client.js";
 import { fuentePorCanal } from "../../lib/fuente.js";
 
@@ -105,6 +106,8 @@ export async function getOrCreateConversacionAbierta(params: {
       hilo_externo: hiloExterno,
       cuenta_id: params.cuentaId ?? null,
       fuente: params.fuente ?? fuentePorCanal(canal, origen, hiloExterno),
+      // Por defecto la atiende una persona; el bot solo entra si alguien mueve el interruptor Bot/Yo (o BOT_ACTIVO_POR_DEFECTO=true).
+      estado: env.BOT_ACTIVO_POR_DEFECTO ? "activa" : "escalada",
       ...(params.ultimoMensajeAt ? { ultimo_mensaje_at: params.ultimoMensajeAt } : {}),
     })
     .select("*")

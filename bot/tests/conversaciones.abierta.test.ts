@@ -61,6 +61,30 @@ describe("getOrCreateConversacionAbierta", () => {
     expect(falso.insertado).toMatchObject({ cliente_id: "cli-1", canal: "whatsapp", origen: "dm" });
   });
 
+  it("una conversación nueva nace atendida por una persona («Yo»): el bot solo entra si alguien mueve el interruptor", async () => {
+    falso.busqueda = [null];
+    falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-4" }, error: null };
+
+    await getOrCreateConversacionAbierta({ clienteId: "cli-1" });
+
+    expect(falso.insertado).toMatchObject({ estado: "escalada" });
+  });
+
+  it("con BOT_ACTIVO_POR_DEFECTO=true nace atendida por el bot", async () => {
+    const { env } = await import("../src/config/env.js");
+    (env as { BOT_ACTIVO_POR_DEFECTO?: boolean }).BOT_ACTIVO_POR_DEFECTO = true;
+    try {
+      falso.busqueda = [null];
+      falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-5", estado: "activa" }, error: null };
+
+      await getOrCreateConversacionAbierta({ clienteId: "cli-1" });
+
+      expect(falso.insertado).toMatchObject({ estado: "activa" });
+    } finally {
+      delete (env as { BOT_ACTIVO_POR_DEFECTO?: boolean }).BOT_ACTIVO_POR_DEFECTO;
+    }
+  });
+
   it("separa el hilo de un comentario del de los DMs", async () => {
     falso.busqueda = [null];
     falso.insercion = { data: { ...CONVERSACION_ESCALADA, id: "conv-3" }, error: null };

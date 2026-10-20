@@ -36,3 +36,9 @@ puede dar de alta un número con un proveedor autorizado.
 - Si desvinculan el dispositivo desde el celular, el bot borra la sesión y hay que escanear otro QR.
 - Los avisos de «cliente pide asesor» (`ESCALATION_PHONE`) también salen por este número.
 - Código: `bot/src/whatsapp-qr/` (`sesion.ts`, `authSupabase.ts`, `mapeo.ts`). Pruebas: `bot/tests/whatsappQrMapeo.test.ts`.
+
+## Quién atiende las conversaciones nuevas
+
+Desde el 20-oct-2026 toda conversación nueva nace en **«Yo»** (atiende una persona): el bot guarda el mensaje pero no contesta.
+Quien quiera que conteste el bot mueve el interruptor Bot/Yo del chat. Para que el bot conteste desde el primer mensaje,
+poner `BOT_ACTIVO_POR_DEFECTO=true` en el servicio del bot.
