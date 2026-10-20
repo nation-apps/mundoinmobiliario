@@ -286,7 +286,7 @@ export type FilaAnuncio = {
   entradas: number;
   /** Alguien del equipo ya les respondió. */
   atendidas: number;
-  /** Hoy en «Oportunidad de venta» o «Por Apartar Moto». */
+  /** Hoy en «Oportunidad de venta» o «Agenda Apartado». */
   oportunidad: number;
   vendidas: number;
   noVendidas: number;

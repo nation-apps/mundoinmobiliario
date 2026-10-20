@@ -31,10 +31,13 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 - **Dos líneas de WhatsApp (TVS y Mundo de Motos):** cada número se vincula con su propio QR (Canales). Cada chat pertenece a una línea
   (de ahí el origen «WhatsApp Directo TVS»…), cada persona atiende las líneas que se le marcan en Reparto, y al escribir se elige desde
   cuál mandar (`docs/referencia/LINEAS-WHATSAPP.md`).
+- **Bienvenida por línea y documentos:** en **Ajustes → Bienvenida** el administrador escribe y enciende, por línea de WhatsApp, el saludo a quien se registra por un
+  formulario y la bienvenida a quien escribe por primera vez (`docs/referencia/WHATSAPP-QR.md`). En la ficha de cada chat, **Documentos** guarda los
+  enlaces del cliente (fichajes, separaciones, contratos…).
 - **Calendario y alertas:** apartados, visitas y llamadas del equipo en un calendario mensual (`/admin/calendario`), con filtros por
   persona y tipo. El panel avisa 3 días antes, 1 día antes y el mismo día (y lo vencido): insignia en el menú y un aviso emergente
   una sola vez por punto; no hay tarea programada, se calcula al abrir el panel (`lib/admin/agenda.ts`). Se agenda desde el
-  calendario o desde la ficha del chat; al pasar una conversación a **«Por Apartar Moto»** se pide la fecha del apartado.
+  calendario o desde la ficha del chat; agendar un **Apartado** pasa la conversación a la etapa **«Agenda Apartado»** (y al revés, al pasarla a esa etapa se pide la fecha).
 - **Anuncio origen:** la ficha del chat muestra de qué anuncio vino el lead (nombre, campaña, video o imagen) con un enlace para
   verlo. Sale de los datos del formulario o del anuncio de clic a WhatsApp y de Meta (`GET /admin/anuncios/:id`). En Métricas, la tabla
   «Por anuncio» cuenta leads, atendidos, oportunidades y ventas de cada anuncio (y video contra imagen) para saber cuál rinde más.
@@ -49,7 +52,7 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   del menú lateral lista los chats que esperan respuesta.
 - **Coexistencia de WhatsApp:** el teléfono de ventas puede seguir en la app WhatsApp Business y a la vez en el CRM; lo que el
   equipo escribe desde el celular se refleja en el chat y lo pasa a «Yo» (`docs/referencia/COEXISTENCIA-WHATSAPP.md`).
-- **Embudo comercial:** tablero con el proceso comercial (Prospección, No contesta, Seguimiento, Oportunidad de venta, Por Apartar Moto,
+- **Embudo comercial:** tablero con el proceso comercial (Prospección, No contesta, Seguimiento, Oportunidad de venta, Agenda Apartado,
   Vendido, No vendido) con una tarjeta por conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; «No vendido» pide
   por qué se perdió la venta (buró, otra marca, enganche o cuota, competencia, no respondió +7 días). Vendido y No vendido
   cierran la conversación. Filtros por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.

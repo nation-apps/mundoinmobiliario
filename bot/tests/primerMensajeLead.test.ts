@@ -10,8 +10,9 @@ vi.mock("../src/db/repositories/conversaciones.js", () => ({
 }));
 vi.mock("../src/db/repositories/mensajes.js", () => ({ guardarMensaje: vi.fn() }));
 vi.mock("../src/whatsapp/client.js", () => ({ sendText: vi.fn() }));
+vi.mock("../src/db/repositories/bienvenida.js", () => ({ leerBienvenida: vi.fn() }));
 
-const { esperaParaEnviar, horaLocal, interesDelLead, nombreDelAsesor, nombreParaSaludo, rellenarPlantilla, textoPrimerMensaje } = await import(
+const { armarSaludo, esperaParaEnviar, horaLocal, interesDelLead, nombreDelAsesor, nombreParaSaludo, rellenarPlantilla, textoPrimerMensaje } = await import(
   "../src/agent/primerMensajeLead.js"
 );
 
@@ -148,5 +149,28 @@ describe("cuándo se puede mandar", () => {
   it("los envíos de hace más de una hora ya no cuentan", () => {
     const enviados = [AHORA - 90 * 60_000, AHORA - 80 * 60_000, AHORA - 70 * 60_000];
     expect(esperaParaEnviar({ ...base, ahora: AHORA, enviados, hora: 13 })).toBe(0);
+  });
+});
+
+describe("saludo a leads de formulario según la configuración del administrador", () => {
+  const datos = { nombre: "Marcos", campos: FORMULARIO_TVS, marca: "TVS", asesor: "Ventas Cancún 1 - Giovanny" };
+
+  it("apagado: no hay saludo", () => {
+    expect(armarSaludo({ formulario_activo: false, formulario_texto: "Hola {{nombre}}" }, datos)).toBeNull();
+  });
+
+  it("encendido sin texto: el que el bot arma con las respuestas del formulario", () => {
+    const texto = armarSaludo({ formulario_activo: true, formulario_texto: null }, datos);
+    expect(texto).toContain("Sabemos que estás interesado en la moto TVS RTR 310.");
+    expect(texto).toContain("Mi nombre es Giovanny");
+    expect(armarSaludo({ formulario_activo: true, formulario_texto: "   " }, datos)).toBe(texto);
+  });
+
+  it("encendido con el texto del administrador: ese texto, con sus datos puestos", () => {
+    const texto = armarSaludo(
+      { formulario_activo: true, formulario_texto: "¡Hola {{nombre}}! Soy {{asesor}} de {{marca}}. ¿Sigues interesado en {{interes}}?" },
+      datos,
+    );
+    expect(texto).toBe("¡Hola Marcos! Soy Giovanny de TVS Motor Cancún. ¿Sigues interesado en la moto TVS RTR 310?");
   });
 });

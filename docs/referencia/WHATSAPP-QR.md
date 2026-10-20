@@ -51,22 +51,26 @@ la conversación queda con su origen «Campaña WhatsApp Meta <marca>», igual q
 (`META_PAGINAS`, y `META_ADS_TOKEN` para saber de qué página es el anuncio). En el registro del bot aparece «Mensaje que llegó
 desde un anuncio de clic a WhatsApp» con el id del anuncio: sirve para comprobar que llega.
 
-## Primer mensaje a quien llena un formulario (opcional, apagado)
+## Mensajes de bienvenida (21-oct-2026)
 
-Hay formularios de anuncios cuyo botón final lleva a WhatsApp y otros que no: quien solo los llena llega al panel como un dato y
-nadie puede escribirle. Con `LEADS_PRIMER_MENSAJE_ACTIVO=true` (y la conexión por QR conectada) el bot le manda un saludo armado
-con sus respuestas («te interesa la TVS RTR 310», «buscas balatas para tu Italika FT150»…) y la conversación pasa a ser de
-WhatsApp, con las respuestas del formulario y el saludo juntos, para que el asesor siga desde ahí. Conserva su origen de campaña.
+El administrador escribe, **por línea**, la bienvenida de cada WhatsApp en el panel (**Ajustes → Bienvenida**; también la ven y cambian las
+asistentes). Hay dos, cada una con su interruptor, **apagadas por defecto**:
 
-**Es escribirle primero a gente que no ha escrito: lo que más bloquea números.** Protecciones: solo leads nuevos con teléfono, uno
-por persona, nunca a quien ya tiene una conversación de WhatsApp abierta, en cola con 45–120 s entre mensajes, horario
-(`LEADS_PRIMER_MENSAJE_DESDE_HORA` 8 a `LEADS_PRIMER_MENSAJE_HASTA_HORA` 21, hora de Cancún), tope por hora
-(`LEADS_PRIMER_MENSAJE_MAX_POR_HORA`, 12) y una línea para pedir que no le escriban. Texto propio:
-`LEADS_PRIMER_MENSAJE_TEXTO` con `{{nombre}}`, `{{marca}}` e `{{interes}}`. Si el número no tiene WhatsApp o la conexión está caída, el
-lead queda como formulario, como hasta ahora. Código: `bot/src/agent/primerMensajeLead.ts`.
+- **Registro por formulario de campaña:** a quien llena un formulario de anuncios y dejó su teléfono, desde la línea de su marca. Su conversación
+  pasa a ser de WhatsApp con las respuestas del formulario y el saludo juntos. Si el texto se deja vacío, el bot arma el saludo con las respuestas
+  («Felicidades por registrarte… Mi nombre es <asesor>…»).
+- **Mensaje directo:** a quien escribe por primera vez a la línea (campaña de clic a WhatsApp o mensaje directo), unos segundos después, una sola vez
+  por chat, solo si el chat empieza atendido por una persona (si contesta el bot, el bot ya saluda) y si el equipo no le contestó antes.
 
-Con el QR no hay ventana de 24 h: el panel deja escribir texto libre a cualquier chat de WhatsApp (`WHATSAPP_QR_ACTIVO=true` también en
-el servicio del panel).
+El texto admite `{{nombre}}`, `{{asesor}}` (el vendedor que le tocó por el reparto), `{{marca}}` y, en el de formulario, `{{interes}}`.
+
+**Es escribirle primero a gente que no ha escrito (el de formulario): lo que más bloquea números.** Protecciones: solo leads nuevos con teléfono, uno por
+persona, nunca a quien ya tiene un chat de WhatsApp abierto, en cola con 45–120 s entre mensajes, horario (`LEADS_PRIMER_MENSAJE_DESDE_HORA` 8 a
+`LEADS_PRIMER_MENSAJE_HASTA_HORA` 21, hora de Cancún), tope por hora (`LEADS_PRIMER_MENSAJE_MAX_POR_HORA`, 12) y una línea para pedir que no le escriban
+(en el texto armado por el bot; si el administrador escribe el suyo, la pone él). Si el número no tiene WhatsApp o la línea está caída, el lead queda
+como formulario. Código: `bot/src/agent/primerMensajeLead.ts` y `bienvenidaDirecta.ts`; tabla `mensajes_bienvenida` (0013).
+
+Con el QR no hay ventana de 24 h: el panel deja escribir texto libre a cualquier chat de WhatsApp (`WHATSAPP_QR_ACTIVO=true` también en el servicio del panel).
 
 ## Origen según la línea y sin registros duplicados (20-oct-2026)
 

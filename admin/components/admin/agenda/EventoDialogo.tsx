@@ -55,7 +55,7 @@ function fechaInicial(tipo: TipoAgenda): string {
 }
 
 function tituloSugerido(tipo: TipoAgenda, cliente: string | null | undefined): string {
-  const base = tipo === "apartado" ? "Apartar moto" : tipo === "visita" ? "Visita a la sucursal" : tipo === "llamada" ? "Llamar" : "";
+  const base = tipo === "apartado" ? "Apartar moto" : tipo === "visita" ? "Visita a la sucursal" : tipo === "llamada" ? "Llamada" : "";
   return base && cliente ? `${base} · ${cliente}` : base;
 }
 
@@ -128,6 +128,7 @@ function Formulario({ onCerrar, evento, inicial, staff, usuarioId, onGuardado, o
         toast.error("No se pudo guardar el cambio.");
         return;
       }
+      await pasarAApartado(data[0] as EventoAgenda);
       onGuardado(data[0] as EventoAgenda);
     } else {
       const { data, error } = await supabase
@@ -146,9 +147,25 @@ function Formulario({ onCerrar, evento, inicial, staff, usuarioId, onGuardado, o
         return;
       }
       toast.success("Agendado");
+      await pasarAApartado(data as EventoAgenda);
       onGuardado(data as EventoAgenda);
     }
     onCerrar();
+  }
+
+  /**
+   * «Agenda Apartado» lleva la conversación a la etapa «Agenda Apartado»: la crea quien agenda y no hay que moverla a mano. Solo si
+   * está en una etapa de trabajo (no toca una vendida o perdida).
+   */
+  async function pasarAApartado(guardado: EventoAgenda) {
+    if (guardado.tipo !== "apartado" || guardado.estado !== "pendiente" || !guardado.conversacion_id) return;
+    const { data } = await supabase
+      .from("conversaciones")
+      .update({ etapa: "por_apartar" })
+      .eq("id", guardado.conversacion_id)
+      .in("etapa", ["prospeccion", "no_contesta", "seguimiento", "oportunidad"])
+      .select("id");
+    if (data?.length) toast.success("La conversación pasó a «Agenda Apartado».");
   }
 
   async function borrar() {

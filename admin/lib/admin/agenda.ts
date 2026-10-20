@@ -11,11 +11,12 @@ import { ZONA_NEGOCIO } from "./rango";
 export type TipoAgenda = "apartado" | "visita" | "llamada" | "otro";
 export type EstadoAgenda = "pendiente" | "hecho" | "cancelado";
 
-export const TIPOS_AGENDA: TipoAgenda[] = ["apartado", "visita", "llamada", "otro"];
+/** Las actividades que se pueden crear (el documento del cliente pide estas tres). «Otro» queda solo para lo que ya existía. */
+export const TIPOS_AGENDA: TipoAgenda[] = ["llamada", "visita", "apartado"];
 
 export const TIPO_AGENDA_LABEL: Record<TipoAgenda, string> = {
-  apartado: "Apartar moto",
-  visita: "Visita a la sucursal",
+  apartado: "Agenda Apartado",
+  visita: "Agenda Visita",
   llamada: "Llamada",
   otro: "Otro",
 };

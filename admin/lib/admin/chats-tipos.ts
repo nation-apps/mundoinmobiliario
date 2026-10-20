@@ -66,7 +66,7 @@ export const ETAPA_LABEL: Record<Etapa, string> = {
   no_contesta: "No contesta",
   seguimiento: "Seguimiento",
   oportunidad: "Oportunidad de venta",
-  por_apartar: "Por Apartar Moto",
+  por_apartar: "Agenda Apartado",
   vendido: "Vendido",
   no_vendido: "No vendido",
 };

@@ -68,7 +68,7 @@ el negocio:**
 
 Migraciones en `supabase/migrations/`, en orden: `0001_nucleo.sql`, `0002_ajuste_rubro.sql`, `0003_mundo_motos.sql`,
 `0004_reparto_leads.sql`, `0005_datos_negocio.sql`, `0006_fuente_lead.sql`, `0007_horario_crm.sql`, `0008_suscripcion.sql`,
-`0009_proceso_comercial.sql`, `0010_whatsapp_qr.sql`, `0011_agenda_y_apartado.sql`, `0012_lineas_whatsapp.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
+`0009_proceso_comercial.sql`, `0010_whatsapp_qr.sql`, `0011_agenda_y_apartado.sql`, `0012_lineas_whatsapp.sql`, `0013_documentos_y_bienvenida.sql`. Se corren a mano en el SQL Editor de Supabase; todas son idempotentes. **No desplegar el bot antes de correr la última
 migración**: los intereses del código tienen que existir en el check de `clientes.interes`.
 
 Primer asesor: Authentication → Users → *Add user*, y en el SQL Editor:

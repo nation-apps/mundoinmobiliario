@@ -7,7 +7,8 @@ import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
 import { paginaDeAnuncio } from "../meta/client.js";
 import { marcaDePagina } from "../meta/paginas.js";
 import { LINEA_POR_DEFECTO, marcaDeLinea } from "../lib/lineas.js";
-import { guardarMensaje, marcarExternalId } from "../db/repositories/mensajes.js";
+import { guardarMensaje, marcarExternalId, tieneMensajes } from "../db/repositories/mensajes.js";
+import { programarBienvenidaDirecta } from "./bienvenidaDirecta.js";
 import { sendTextIfWindowOpen } from "../whatsapp/window.js";
 import { descargarMedia } from "../whatsapp/client.js";
 import { handleInbound } from "./handleInbound.js";
@@ -90,6 +91,11 @@ export async function handleInboundMessage(message: InboundMessage, linea: strin
     linea,
     ...(fuenteAnuncio ? { fuente: fuenteAnuncio } : {}),
   });
+  // Primer contacto: la conversación todavía no tiene mensajes (se mira ANTES de guardar este). La bienvenida que escribió el
+  // administrador para esta línea se manda unos segundos después, si está encendida.
+  const primerContacto = !(await tieneMensajes(conversacion.id).catch(() => true));
+  programarBienvenidaDirecta({ conversacion, telefono: message.from, nombreContacto: message.contactName, linea, primerContacto });
+
   // Ya tenía la conversación abierta (escribía directo) y ahora llega por un anuncio: cuenta para esa campaña.
   if (fuenteAnuncio && !esFuenteDeCampana(conversacion.fuente)) {
     await actualizarFuenteConversacion(conversacion.id, fuenteAnuncio).catch((err: unknown) =>

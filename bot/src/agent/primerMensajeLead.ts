@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { leerBienvenida, type Bienvenida } from "../db/repositories/bienvenida.js";
 import { logger } from "../lib/logger.js";
 import { clienteAnulado } from "../db/repositories/etiquetas.js";
 import { convertirEnWhatsapp, leerConversacion, tieneConversacionWhatsappAbierta } from "../db/repositories/conversaciones.js";
@@ -252,9 +253,47 @@ async function procesar(): Promise<void> {
   }
 }
 
-/** Pone en la cola el primer mensaje de un lead nuevo. No hace nada si la función está apagada o no hay conexión por QR. */
+/** El saludo que toca, o null si el administrador no lo encendió para esa línea. Pura, para poder probarla. */
+export function armarSaludo(
+  config: Pick<Bienvenida, "formulario_activo" | "formulario_texto">,
+  datos: { nombre: string | null; campos: CampoLead[]; marca: string | null; asesor: string | null },
+): string | null {
+  if (!config.formulario_activo) return null;
+  const propio = config.formulario_texto?.trim();
+  return textoPrimerMensaje({ ...datos, ...(propio ? { plantilla: propio } : {}) });
+}
+
+/**
+ * El saludo de un lead de formulario: solo si el administrador lo encendió para esa línea (Bienvenida, en el panel) y con el texto
+ * que escribió; si lo dejó vacío, el que el bot arma con las respuestas del formulario. Solo con la conexión por QR.
+ */
+export async function programarPrimerMensaje(p: {
+  conversacionId: string;
+  clienteId: string;
+  telefono: string;
+  linea: string;
+  nombre: string | null;
+  campos: CampoLead[];
+  marca: string | null;
+  asesor: string | null;
+  leadgenId?: string;
+}): Promise<void> {
+  if (!env.WHATSAPP_QR_ACTIVO) return;
+  const texto = armarSaludo(await leerBienvenida(p.linea), p);
+  if (!texto) return;
+  encolarPrimerMensaje({
+    conversacionId: p.conversacionId,
+    clienteId: p.clienteId,
+    telefono: p.telefono,
+    linea: p.linea,
+    texto,
+    ...(p.leadgenId ? { leadgenId: p.leadgenId } : {}),
+  });
+}
+
+/** Pone en la cola el primer mensaje de un lead nuevo. No hace nada si no hay conexión por QR. */
 export function encolarPrimerMensaje(p: PrimerMensaje): void {
-  if (!env.LEADS_PRIMER_MENSAJE_ACTIVO || !env.WHATSAPP_QR_ACTIVO) return;
+  if (!env.WHATSAPP_QR_ACTIVO) return;
   if (cola.length >= TOPE_EN_COLA) {
     log.warn("Cola de primeros mensajes llena: este lead queda solo como formulario");
     return;

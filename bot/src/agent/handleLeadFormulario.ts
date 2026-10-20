@@ -13,8 +13,7 @@ import { obtenerLead } from "../meta/client.js";
 import { contenidoDelLead, datosDelLead, HILO_LEAD_ADS } from "../meta/leadAds.js";
 import { marcaDePagina, tokenDePagina } from "../meta/paginas.js";
 import type { EventoMeta } from "../meta/parser.js";
-import { encolarPrimerMensaje, textoPrimerMensaje } from "./primerMensajeLead.js";
-import { env } from "../config/env.js";
+import { programarPrimerMensaje } from "./primerMensajeLead.js";
 
 type EventoLead = Extract<EventoMeta, { kind: "lead_formulario" }>;
 
@@ -116,21 +115,19 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
 
   // Solo el lead NUEVO llega hasta aquí (uno repetido salió arriba por el índice único): un mensaje por persona.
   // Sin saber la marca del anuncio no se sabe por qué línea escribirle: queda como formulario y lo atiende el equipo.
+  // El saludo solo sale si el administrador lo encendió para esa línea (Bienvenida, en el panel).
   if (datos.telefono && linea) {
     const asesor = conversacion.asignada_a ? await nombreDeStaff(conversacion.asignada_a).catch(() => null) : null;
-    encolarPrimerMensaje({
+    await programarPrimerMensaje({
       conversacionId: conversacion.id,
       clienteId: cliente.id,
       telefono: datos.telefono,
       linea,
-      texto: textoPrimerMensaje({
-        nombre: datos.nombre,
-        campos: lead.campos,
-        marca,
-        asesor,
-        ...(env.LEADS_PRIMER_MENSAJE_TEXTO ? { plantilla: env.LEADS_PRIMER_MENSAJE_TEXTO } : {}),
-      }),
+      nombre: datos.nombre,
+      campos: lead.campos,
+      marca,
+      asesor,
       leadgenId: lead.id,
-    });
+    }).catch((err: unknown) => logger.warn({ err }, "No se pudo preparar el primer mensaje del lead"));
   }
 }

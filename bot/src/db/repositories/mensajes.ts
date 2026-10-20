@@ -312,3 +312,28 @@ export async function yaSeEnvioMedia(conversacionId: string, mediaUrl: string, h
   if (error) throw error;
   return (count ?? 0) > 0;
 }
+
+/** ¿La conversación ya tiene algún mensaje (sin contar notas internas)? Sirve para saber si es el primer contacto. */
+export async function tieneMensajes(conversacionId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("mensajes")
+    .select("id")
+    .eq("conversacion_id", conversacionId)
+    .neq("tipo", "nota")
+    .limit(1);
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
+/** ¿Ya le contestó alguien (el bot o una persona del equipo)? */
+export async function tieneRespuestaDelEquipo(conversacionId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("mensajes")
+    .select("id")
+    .eq("conversacion_id", conversacionId)
+    .in("rol", ["assistant", "humano"])
+    .neq("tipo", "nota")
+    .limit(1);
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}

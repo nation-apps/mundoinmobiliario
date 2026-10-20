@@ -6,8 +6,7 @@ vi.mock("../src/meta/paginas.js", () => ({
   tokenDePagina: (id: string) => (id === "PAGE_ID_TEST" ? "token-de-prueba" : null),
 }));
 
-vi.mock("../src/config/env.js", () => ({ env: { LEADS_PRIMER_MENSAJE_TEXTO: undefined } }));
-const primerMensaje = { encolarPrimerMensaje: vi.fn(), textoPrimerMensaje: vi.fn(() => "Hola 👋 texto armado") };
+const primerMensaje = { programarPrimerMensaje: vi.fn(async () => undefined) };
 vi.mock("../src/agent/primerMensajeLead.js", () => primerMensaje);
 
 const clientes = { registrarLeadWeb: vi.fn() };
@@ -114,18 +113,18 @@ describe("handleLeadFormulario", () => {
     await expect(handleLeadFormulario(evento)).resolves.toBeUndefined();
   });
 
-  it("un lead nuevo con teléfono se pone en la cola del primer mensaje, con sus respuestas", async () => {
+  it("un lead nuevo con teléfono se pasa al saludo, con sus respuestas, su asesor y la línea de su marca", async () => {
     await handleLeadFormulario(evento);
 
-    expect(primerMensaje.textoPrimerMensaje).toHaveBeenCalledWith(
-      expect.objectContaining({ nombre: "Ana López", marca: "TVS", campos: lead.campos, asesor: "Ventas Cancún 1 - Giovanny" }),
-    );
-    expect(primerMensaje.encolarPrimerMensaje).toHaveBeenCalledWith({
+    expect(primerMensaje.programarPrimerMensaje).toHaveBeenCalledWith({
       conversacionId: "conv-1",
       clienteId: "cliente-1",
       telefono: "525512345678",
       linea: "tvs",
-      texto: "Hola 👋 texto armado",
+      nombre: "Ana López",
+      campos: lead.campos,
+      marca: "TVS",
+      asesor: "Ventas Cancún 1 - Giovanny",
       leadgenId: "444",
     });
   });
@@ -133,13 +132,13 @@ describe("handleLeadFormulario", () => {
   it("sin teléfono no hay a quién escribirle", async () => {
     metaClient.obtenerLead.mockResolvedValue({ ...lead, campos: [{ name: "full_name", values: ["Ana López"] }] });
     await handleLeadFormulario(evento);
-    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+    expect(primerMensaje.programarPrimerMensaje).not.toHaveBeenCalled();
   });
 
   it("un lead repetido no recibe un segundo mensaje", async () => {
     mensajes.guardarMensaje.mockRejectedValue({ code: "23505" });
     await handleLeadFormulario(evento);
-    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+    expect(primerMensaje.programarPrimerMensaje).not.toHaveBeenCalled();
   });
 
   describe("si ya está hablando por WhatsApp", () => {
@@ -152,7 +151,7 @@ describe("handleLeadFormulario", () => {
       expect(conversaciones.getOrCreateConversacionAbierta).not.toHaveBeenCalled();
       expect(mensajes.guardarMensaje).toHaveBeenCalledWith(expect.objectContaining({ conversacionId: "wa-1", rol: "user" }));
       expect(conversaciones.actualizarFuenteConversacion).toHaveBeenCalledWith("wa-1", "Campaña Formulario Meta TVS");
-      expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+      expect(primerMensaje.programarPrimerMensaje).not.toHaveBeenCalled();
     });
 
     it("si ya venía de una campaña de WhatsApp, esa se respeta", async () => {
@@ -165,7 +164,7 @@ describe("handleLeadFormulario", () => {
   it("si no se sabe la marca de la página, no se sabe por qué línea escribirle: no se pone en la cola", async () => {
     metaClient.obtenerLead.mockResolvedValue({ ...lead });
     await handleLeadFormulario({ ...evento, cuentaId: "PAGINA_SIN_MARCA" });
-    expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+    expect(primerMensaje.programarPrimerMensaje).not.toHaveBeenCalled();
     expect(conversaciones.getOrCreateConversacionAbierta).toHaveBeenCalledWith(expect.objectContaining({ linea: null }));
   });
 });

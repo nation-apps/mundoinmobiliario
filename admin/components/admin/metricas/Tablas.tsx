@@ -60,7 +60,7 @@ export function TablaOrigen({ metricas }: { metricas: Metricas }) {
   return (
     <Tarjeta
       titulo="Por origen"
-      nota="De qué campaña o canal vino cada conversación del periodo. «Sin atender»: siguen en «Prospección» y nadie del equipo les respondió. «Oportunidad»: hoy en «Oportunidad de venta» o «Por Apartar Moto»."
+      nota="De qué campaña o canal vino cada conversación del periodo. «Sin atender»: siguen en «Prospección» y nadie del equipo les respondió. «Oportunidad»: hoy en «Oportunidad de venta» o «Agenda Apartado»."
     >
       {porOrigen.length === 0 ? (
         <SinDatos alto={120}>Sin conversaciones en este periodo.</SinDatos>

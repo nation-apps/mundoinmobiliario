@@ -227,7 +227,7 @@ export default function Embudo({
   const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
   const [columnaSobre, setColumnaSobre] = useState<Etapa | null>(null);
   const [perdida, setPerdida] = useState<{ id: string; motivo: MotivoPerdida | null } | null>(null);
-  /** La conversación que acaba de pasar a «Por Apartar Moto»: se le pide la fecha del apartado. */
+  /** La conversación que acaba de pasar a «Agenda Apartado»: se le pide la fecha del apartado. */
   const [apartando, setApartando] = useState<ConversacionResumen | null>(null);
   const [guardando, setGuardando] = useState(false);
 

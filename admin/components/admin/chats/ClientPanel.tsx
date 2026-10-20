@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarPlus, ExternalLink, Plus, Tag, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, FileText, Plus, Tag, Trash2, X } from "lucide-react";
 import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
 import { BotApiError, guardarTelefonoContacto, infoAnuncio } from "@/lib/admin/bot-api";
@@ -17,6 +17,15 @@ import {
   type EventoAgenda,
   type TipoAgenda,
 } from "@/lib/admin/agenda";
+import {
+  COLUMNAS_DOCUMENTO,
+  TIPOS_DOCUMENTO,
+  TIPO_DOCUMENTO_LABEL,
+  nombreDeDocumento,
+  normalizarEnlace,
+  type DocumentoCliente,
+  type TipoDocumento,
+} from "@/lib/admin/documentos";
 import { anuncioDeMensajes, type AnuncioDeLead, type InfoAnuncio } from "@/lib/admin/anuncio";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { patchParaMover } from "@/lib/admin/embudo";
@@ -347,6 +356,12 @@ function Ficha({
   const [form, setForm] = useState<Formulario | null>(null);
   const [identidades, setIdentidades] = useState<ClienteIdentidad[]>([]);
   const [eventos, setEventos] = useState<EventoConversacion[]>([]);
+  /** Los documentos (enlaces) de este cliente y el formulario para agregar uno. */
+  const [documentos, setDocumentos] = useState<DocumentoCliente[]>([]);
+  const [docTipo, setDocTipo] = useState<TipoDocumento>("fichaje");
+  const [docTitulo, setDocTitulo] = useState("");
+  const [docUrl, setDocUrl] = useState("");
+  const [guardandoDoc, setGuardandoDoc] = useState(false);
   /** Lo agendado para este chat (apartados, visitas, llamadas) y el diálogo para agendar o editar. */
   const [agendaChat, setAgendaChat] = useState<EventoAgenda[]>([]);
   const [dialogoAgenda, setDialogoAgenda] = useState<{ evento: EventoAgenda | null; tipo: TipoAgenda } | null>(null);
@@ -371,6 +386,26 @@ function Ficha({
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
 
   /* ----- Carga y tiempo real ----- */
+
+  // Los documentos del cliente: se leen al abrir su ficha.
+  useEffect(() => {
+    let activo = true;
+    async function cargarDocumentos() {
+      const { data, error } = await supabase
+        .from("documentos_cliente")
+        .select(COLUMNAS_DOCUMENTO)
+        .eq("cliente_id", clienteId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (!activo || error) return; // sin la tabla (migración 0013 sin correr) la sección queda vacía
+      setDocumentos((data ?? []) as DocumentoCliente[]);
+    }
+    const primera = setTimeout(() => void cargarDocumentos(), 0);
+    return () => {
+      activo = false;
+      clearTimeout(primera);
+    };
+  }, [supabase, clienteId]);
 
   // Lo agendado para esta conversación; se pone al día cuando alguien agenda algo.
   useEffect(() => {
@@ -657,6 +692,38 @@ function Ficha({
     else toast.success(`Origen: ${nuevo}`);
   }
 
+  async function agregarDocumento() {
+    const url = normalizarEnlace(docUrl);
+    if (!url) {
+      toast.error("Pega un enlace válido (por ejemplo, de Drive).");
+      return;
+    }
+    setGuardandoDoc(true);
+    const { data, error } = await supabase
+      .from("documentos_cliente")
+      .insert({ cliente_id: clienteId, conversacion_id: conversacionId, tipo: docTipo, titulo: docTitulo.trim() || null, url, creado_por: usuarioId })
+      .select(COLUMNAS_DOCUMENTO)
+      .single();
+    setGuardandoDoc(false);
+    if (error || !data) {
+      toast.error("No se pudo guardar el documento. ¿Ya corriste la migración 0013 en Supabase?");
+      return;
+    }
+    setDocumentos((previos) => [data as DocumentoCliente, ...previos]);
+    setDocTitulo("");
+    setDocUrl("");
+    toast.success("Documento guardado");
+  }
+
+  async function quitarDocumento(id: string) {
+    const { data, error } = await supabase.from("documentos_cliente").delete().eq("id", id).select("id");
+    if (error || !data?.length) {
+      toast.error("No se pudo quitar el documento.");
+      return;
+    }
+    setDocumentos((previos) => previos.filter((d) => d.id !== id));
+  }
+
   function asignar(agenteId: string | null) {
     void actualizarConversacion({ asignada_a: agenteId }, { asignada_a: agenteId }, "No se pudo asignar la conversación.");
   }
@@ -667,7 +734,7 @@ function Ficha({
     if (!patch) return;
     void (async () => {
       const ok = await actualizarConversacion(patch, patch, "No se pudo cambiar la etapa.");
-      // «Por Apartar Moto» pide la fecha: de ella salen las alertas (3 días antes, 1 día antes y el mismo día).
+      // «Agenda Apartado» pide la fecha: de ella salen las alertas (3 días antes, 1 día antes y el mismo día).
       if (ok && nueva === "por_apartar") setDialogoAgenda({ evento: null, tipo: "apartado" });
     })();
   }
@@ -1108,6 +1175,57 @@ function Ficha({
             })}
           </ul>
         )}
+      </Seccion>
+
+      {/* 3a'. Documentos: enlaces a fichajes, separaciones, contratos… */}
+      <Seccion titulo="Documentos">
+        {documentos.length === 0 ? (
+          <p className="text-xs text-muted">Sin documentos. Guarda aquí el enlace del fichaje, la separación o el contrato.</p>
+        ) : (
+          <ul className="mb-3 flex flex-col gap-1.5">
+            {documentos.map((d) => (
+              <li key={d.id} className="flex items-center gap-2 rounded-lg border border-line bg-porcelain px-2.5 py-1.5">
+                <FileText size={14} aria-hidden className="shrink-0 text-muted" />
+                <a href={d.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate text-[13px] text-accent-deep hover:underline">
+                  {nombreDeDocumento(d)}
+                </a>
+                <span className="shrink-0 rounded-full bg-bg-soft px-2 py-px text-[10.5px] font-medium text-ink-soft">{TIPO_DOCUMENTO_LABEL[d.tipo]}</span>
+                <button
+                  type="button"
+                  onClick={() => void quitarDocumento(d.id)}
+                  aria-label={`Quitar ${nombreDeDocumento(d)}`}
+                  className="shrink-0 rounded p-1 text-muted hover:text-redline"
+                >
+                  <Trash2 size={13} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          className="flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void agregarDocumento();
+          }}
+        >
+          <div className="flex gap-2">
+            <select value={docTipo} onChange={(e) => setDocTipo(e.target.value as TipoDocumento)} aria-label="Tipo de documento" className={`${campo} !w-auto shrink-0`}>
+              {TIPOS_DOCUMENTO.map((t) => (
+                <option key={t} value={t}>
+                  {TIPO_DOCUMENTO_LABEL[t]}
+                </option>
+              ))}
+            </select>
+            <input value={docTitulo} onChange={(e) => setDocTitulo(e.target.value)} maxLength={80} placeholder="Título (opcional)" aria-label="Título del documento" className={campo} />
+          </div>
+          <div className="flex gap-2">
+            <input value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="Enlace (https://…)" aria-label="Enlace del documento" inputMode="url" className={campo} />
+            <button type="submit" disabled={guardandoDoc || !docUrl.trim()} className={`admin-btn ghost shrink-0 ${tactil ? "min-h-11" : ""}`}>
+              Agregar
+            </button>
+          </div>
+        </form>
       </Seccion>
 
       <EventoDialogo
