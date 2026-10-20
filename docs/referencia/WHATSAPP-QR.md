@@ -67,3 +67,27 @@ lead queda como formulario, como hasta ahora. Código: `bot/src/agent/primerMens
 
 Con el QR no hay ventana de 24 h: el panel deja escribir texto libre a cualquier chat de WhatsApp (`WHATSAPP_QR_ACTIVO=true` también en
 el servicio del panel).
+
+## Origen según la línea y sin registros duplicados (20-oct-2026)
+
+**Origen por número.** El bot atiende una línea a la vez y la marca sale de ese número (`bot/src/lib/lineas.ts`):
+
+| Número | Llega por campaña de WhatsApp | Escribe directo |
+|---|---|---|
+| +52 998 758 4160 (TVS) | Campaña WhatsApp Meta TVS | WhatsApp Directo TVS |
+| +52 998 870 6920 (Mundo de Motos) | Campaña WhatsApp Meta Mundo de Motos | WhatsApp Directo Mundo de Motos |
+
+Con la conexión por QR el número sale de la propia sesión. `WHATSAPP_MARCA` fija la marca sin mirar el número (para probar con un
+número secundario) y `WHATSAPP_LINEAS` (JSON `{"52…": "Marca"}`) cambia o suma números. Si el número no se conoce, queda
+«WhatsApp directo» / «Campaña WhatsApp Meta» a secas.
+
+**Un lead, un registro.** Quien llena un formulario y también le escribe a la línea no se duplica:
+- Formulario primero, WhatsApp después (lo normal): el registro del formulario se **convierte** en el chat de WhatsApp y conserva
+  «Campaña Formulario Meta …». Pasa igual cuando el equipo le escribe primero desde la ficha o desde el celular.
+- WhatsApp primero, formulario después: el formulario se suma a ese chat, que pasa a «Campaña Formulario Meta …» (salvo que ya
+  viniera de una campaña de WhatsApp: esa se respeta).
+- Si la persona ya tiene un chat de WhatsApp abierto y además un formulario abierto (de antes de este cambio), quedan separados:
+  hay que juntarlos a mano.
+
+El saludo automático (apagado por defecto) usa las palabras del cliente: «¡Felicidades por registrarte! Sabemos que estás
+interesado en la moto …. Mi nombre es <asesor> y te atenderé con mucho gusto», con el nombre del vendedor que le tocó por el reparto.

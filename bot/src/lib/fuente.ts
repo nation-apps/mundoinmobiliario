@@ -1,5 +1,6 @@
 import type { CanalConversacion, OrigenConversacion } from "../db/repositories/conversaciones.js";
 import { HILO_LEAD_ADS } from "../meta/leadAds.js";
+import { marcaDeLaLinea } from "./lineas.js";
 
 /**
  * El campo «origen» de cada lead (`conversaciones.fuente`, y `clientes.fuente` para el primer contacto), con las
@@ -14,6 +15,11 @@ export function fuenteCampana(tipo: "Formulario" | "WhatsApp", marca: string | n
 
 export function esFuenteDeCampana(fuente: string | null | undefined): boolean {
   return Boolean(fuente?.startsWith("Campaña "));
+}
+
+/** «WhatsApp Directo TVS»: alguien que escribe a la línea sin venir de una campaña. Sin saber la marca, «WhatsApp directo». */
+export function fuenteWhatsappDirecto(marca: string | null): string {
+  return marca ? `WhatsApp Directo ${marca}` : "WhatsApp directo";
 }
 
 const RED_DE_COMENTARIO: Partial<Record<CanalConversacion, string>> = {
@@ -32,7 +38,7 @@ export function fuentePorCanal(
   if (origen === "comentario") return `Comentario ${RED_DE_COMENTARIO[canal] ?? "Facebook"}`;
   switch (canal) {
     case "whatsapp":
-      return "WhatsApp directo";
+      return fuenteWhatsappDirecto(marcaDeLaLinea());
     case "instagram":
       return "Instagram";
     case "messenger":

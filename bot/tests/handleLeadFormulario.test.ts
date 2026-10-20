@@ -11,7 +11,13 @@ const primerMensaje = { encolarPrimerMensaje: vi.fn(), textoPrimerMensaje: vi.fn
 vi.mock("../src/agent/primerMensajeLead.js", () => primerMensaje);
 
 const clientes = { registrarLeadWeb: vi.fn() };
-const conversaciones = { getOrCreateConversacionAbierta: vi.fn() };
+const conversaciones = {
+  getOrCreateConversacionAbierta: vi.fn(),
+  conversacionWhatsappAbierta: vi.fn(),
+  actualizarFuenteConversacion: vi.fn(),
+};
+const staff = { nombreDeStaff: vi.fn() };
+vi.mock("../src/db/repositories/staff.js", () => staff);
 const mensajes = { guardarMensaje: vi.fn() };
 const metaClient = { obtenerLead: vi.fn() };
 vi.mock("../src/db/repositories/clientes.js", () => clientes);
@@ -52,7 +58,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   metaClient.obtenerLead.mockResolvedValue(lead);
   clientes.registrarLeadWeb.mockResolvedValue({ id: "cliente-1" });
-  conversaciones.getOrCreateConversacionAbierta.mockResolvedValue({ id: "conv-1" });
+  conversaciones.getOrCreateConversacionAbierta.mockResolvedValue({ id: "conv-1", asignada_a: "staff-1" });
+  conversaciones.conversacionWhatsappAbierta.mockResolvedValue(null);
+  conversaciones.actualizarFuenteConversacion.mockResolvedValue(undefined);
+  staff.nombreDeStaff.mockResolvedValue("Ventas Cancún 1 - Giovanny");
   mensajes.guardarMensaje.mockResolvedValue({ id: "msg-1" });
 });
 
@@ -107,7 +116,7 @@ describe("handleLeadFormulario", () => {
     await handleLeadFormulario(evento);
 
     expect(primerMensaje.textoPrimerMensaje).toHaveBeenCalledWith(
-      expect.objectContaining({ nombre: "Ana López", marca: "TVS", campos: lead.campos }),
+      expect.objectContaining({ nombre: "Ana López", marca: "TVS", campos: lead.campos, asesor: "Ventas Cancún 1 - Giovanny" }),
     );
     expect(primerMensaje.encolarPrimerMensaje).toHaveBeenCalledWith({
       conversacionId: "conv-1",
@@ -128,5 +137,25 @@ describe("handleLeadFormulario", () => {
     mensajes.guardarMensaje.mockRejectedValue({ code: "23505" });
     await handleLeadFormulario(evento);
     expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+  });
+
+  describe("si ya está hablando por WhatsApp", () => {
+    const chat = { id: "wa-1", canal: "whatsapp", fuente: "WhatsApp Directo TVS" };
+
+    it("el formulario se suma a ese chat y su origen pasa a ser el del formulario", async () => {
+      conversaciones.conversacionWhatsappAbierta.mockResolvedValue(chat);
+      await handleLeadFormulario(evento);
+
+      expect(conversaciones.getOrCreateConversacionAbierta).not.toHaveBeenCalled();
+      expect(mensajes.guardarMensaje).toHaveBeenCalledWith(expect.objectContaining({ conversacionId: "wa-1", rol: "user" }));
+      expect(conversaciones.actualizarFuenteConversacion).toHaveBeenCalledWith("wa-1", "Campaña Formulario Meta TVS");
+      expect(primerMensaje.encolarPrimerMensaje).not.toHaveBeenCalled();
+    });
+
+    it("si ya venía de una campaña de WhatsApp, esa se respeta", async () => {
+      conversaciones.conversacionWhatsappAbierta.mockResolvedValue({ ...chat, fuente: "Campaña WhatsApp Meta TVS" });
+      await handleLeadFormulario(evento);
+      expect(conversaciones.actualizarFuenteConversacion).not.toHaveBeenCalled();
+    });
   });
 });

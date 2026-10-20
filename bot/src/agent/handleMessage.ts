@@ -2,10 +2,11 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { isRateLimited } from "../lib/rateLimit.js";
 import { findOrCreateByPhone } from "../db/repositories/clientes.js";
-import { actualizarFuenteConversacion, getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
+import { actualizarFuenteConversacion, getOrCreateConversacionAbierta, unirFormularioConWhatsapp } from "../db/repositories/conversaciones.js";
 import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
 import { paginaDeAnuncio } from "../meta/client.js";
 import { marcaDePagina } from "../meta/paginas.js";
+import { marcaDeLaLinea } from "../lib/lineas.js";
 import { guardarMensaje, marcarExternalId } from "../db/repositories/mensajes.js";
 import { sendTextIfWindowOpen } from "../whatsapp/window.js";
 import { descargarMedia } from "../whatsapp/client.js";
@@ -51,7 +52,8 @@ export function metadataAnuncio(referral: AdReferral | undefined): Record<string
 export async function fuenteDeAnuncio(referral: AdReferral | undefined): Promise<string | null> {
   if (!referral) return null;
   const paginaId = referral.sourceId ? await paginaDeAnuncio(referral.sourceId) : null;
-  return fuenteCampana("WhatsApp", marcaDePagina(paginaId));
+  // La marca la da el número al que escribió (el de TVS o el de Mundo de Motos); si no se conoce, la página del anuncio.
+  return fuenteCampana("WhatsApp", marcaDeLaLinea() ?? marcaDePagina(paginaId));
 }
 
 function extractText(message: InboundMessage): string | null {
@@ -76,6 +78,10 @@ export async function handleInboundMessage(message: InboundMessage): Promise<voi
   }
 
   const cliente = await findOrCreateByPhone(message.from, message.contactName);
+  // Si ya llenó un formulario, su registro se convierte en este chat: no queda duplicado ni cambia su origen de campaña.
+  await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+    logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
+  );
   const fuenteAnuncio = message.kind === "text" ? await fuenteDeAnuncio(message.referral) : null;
   const conversacion = await getOrCreateConversacionAbierta({
     clienteId: cliente.id,

@@ -251,3 +251,39 @@ export async function convertirEnWhatsapp(conversacionId: string): Promise<boole
   }
   return (data ?? []).length > 0;
 }
+
+/** La conversación de WhatsApp abierta de este cliente, si la hay (la más reciente). */
+export async function conversacionWhatsappAbierta(clienteId: string): Promise<Conversacion | null> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .select("*")
+    .eq("cliente_id", clienteId)
+    .eq("canal", "whatsapp")
+    .in("estado", ESTADOS_ABIERTOS)
+    .order("ultimo_mensaje_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return ((data ?? [])[0] as Conversacion | undefined) ?? null;
+}
+
+/**
+ * Quien llenó un formulario (de anuncios o del sitio) y luego le escribe a la línea de WhatsApp —o a quien el equipo le
+ * escribe primero— es UN lead, no dos: el registro del formulario se convierte en su conversación de WhatsApp y conserva
+ * su origen de campaña. Solo si no tiene ya otra conversación de WhatsApp abierta. Devuelve el id de la convertida.
+ */
+export async function unirFormularioConWhatsapp(clienteId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .select("id")
+    .eq("cliente_id", clienteId)
+    .eq("canal", "web")
+    .eq("origen", "formulario")
+    .in("estado", ESTADOS_ABIERTOS)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const formulario = (data ?? [])[0] as { id: string } | undefined;
+  if (!formulario) return null;
+  if (await tieneConversacionWhatsappAbierta(clienteId)) return null;
+  return (await convertirEnWhatsapp(formulario.id)) ? formulario.id : null;
+}

@@ -15,6 +15,7 @@ import {
   getConversacionConDestino,
   getOrCreateConversacionAbierta,
   pasarAPersona,
+  unirFormularioConWhatsapp,
 } from "../db/repositories/conversaciones.js";
 import { guardarMensaje, getMensajeById, actualizarMetadataPorExternalId } from "../db/repositories/mensajes.js";
 import { getClienteById, getClienteByTelefono, guardarTelefonoCliente, fusionarClientes } from "../db/repositories/clientes.js";
@@ -481,6 +482,10 @@ export async function adminRoutes(app: FastifyInstance) {
     // "nunca", ventana cerrada — y el panel la ordena igual por actividad
     // (conversaciones_resumen.actividad_at incluye la respuesta del equipo).
     const ultimoEntrante = await getLastInboundAt(cliente.telefono);
+    // Si es un lead de formulario, su registro se vuelve el chat de WhatsApp (no se abre un segundo).
+    await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+      logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
+    );
     const conversacion = await getOrCreateConversacionAbierta({
       clienteId: cliente.id,
       canal: "whatsapp",

@@ -1,7 +1,12 @@
 import { logger } from "../lib/logger.js";
-import { fuenteCampana } from "../lib/fuente.js";
+import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
 import { registrarLeadWeb } from "../db/repositories/clientes.js";
-import { getOrCreateConversacionAbierta } from "../db/repositories/conversaciones.js";
+import {
+  actualizarFuenteConversacion,
+  conversacionWhatsappAbierta,
+  getOrCreateConversacionAbierta,
+} from "../db/repositories/conversaciones.js";
+import { nombreDeStaff } from "../db/repositories/staff.js";
 import { guardarMensaje } from "../db/repositories/mensajes.js";
 import { obtenerLead } from "../meta/client.js";
 import { contenidoDelLead, datosDelLead, HILO_LEAD_ADS } from "../meta/leadAds.js";
@@ -44,15 +49,20 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
   const datos = datosDelLead(lead.campos);
   const cliente = await registrarLeadWeb({ telefono: datos.telefono, nombre: datos.nombre, email: datos.email ?? undefined });
 
+  // Si ya está hablando con nosotros por WhatsApp, el formulario se suma a ESE chat (no se abre un registro aparte).
+  const chatDeWhatsapp = await conversacionWhatsappAbierta(cliente.id);
+
   // Dos formularios de la misma persona son un mismo hilo, como en el sitio.
-  const conversacion = await getOrCreateConversacionAbierta({
-    clienteId: cliente.id,
-    canal: "web",
-    origen: "formulario",
-    hiloExterno: HILO_LEAD_ADS,
-    cuentaId: evento.cuentaId,
-    fuente: fuenteCampana("Formulario", marca),
-  });
+  const conversacion =
+    chatDeWhatsapp ??
+    (await getOrCreateConversacionAbierta({
+      clienteId: cliente.id,
+      canal: "web",
+      origen: "formulario",
+      hiloExterno: HILO_LEAD_ADS,
+      cuentaId: evento.cuentaId,
+      fuente: fuenteCampana("Formulario", marca),
+    }));
 
   try {
     await guardarMensaje({
@@ -89,8 +99,19 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
     "Lead de formulario de Meta recibido",
   );
 
+  if (chatDeWhatsapp) {
+    // Su origen pasa a ser el del formulario, salvo que ya viniera de una campaña (esa se respeta).
+    if (!esFuenteDeCampana(chatDeWhatsapp.fuente)) {
+      await actualizarFuenteConversacion(chatDeWhatsapp.id, fuenteCampana("Formulario", marca)).catch((err: unknown) =>
+        logger.warn({ err, conversacionId: chatDeWhatsapp.id }, "No se pudo anotar el origen del formulario en el chat de WhatsApp"),
+      );
+    }
+    return; // ya está hablando con nosotros: no se le manda el primer mensaje
+  }
+
   // Solo el lead NUEVO llega hasta aquí (uno repetido salió arriba por el índice único): un mensaje por persona.
   if (datos.telefono) {
+    const asesor = conversacion.asignada_a ? await nombreDeStaff(conversacion.asignada_a).catch(() => null) : null;
     encolarPrimerMensaje({
       conversacionId: conversacion.id,
       clienteId: cliente.id,
@@ -99,6 +120,7 @@ export async function handleLeadFormulario(evento: EventoLead): Promise<void> {
         nombre: datos.nombre,
         campos: lead.campos,
         marca,
+        asesor,
         ...(env.LEADS_PRIMER_MENSAJE_TEXTO ? { plantilla: env.LEADS_PRIMER_MENSAJE_TEXTO } : {}),
       }),
       leadgenId: lead.id,

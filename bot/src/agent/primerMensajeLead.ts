@@ -59,7 +59,7 @@ function marcaVisible(marca: string | null): string {
 /** Qué le interesa, en una frase que cabe después de «te interesa…» (null si el formulario no lo dice). */
 export function interesDelLead(campos: CampoLead[]): { frase: string | null; tipo: "tvs" | "refacciones" | "general" } {
   const modeloTvs = valorDe(campos, /modelo.*tvs|tvs.*modelo/i);
-  if (modeloTvs) return { frase: `la ${modeloTvs}`, tipo: "tvs" };
+  if (modeloTvs) return { frase: `la moto ${modeloTvs}`, tipo: "tvs" };
 
   const hayPreguntaTvs = campos.some((c) => /modelo.*tvs|tvs.*modelo/i.test(c.name));
   if (hayPreguntaTvs) return { frase: null, tipo: "tvs" };
@@ -78,34 +78,59 @@ export function interesDelLead(campos: CampoLead[]): { frase: string | null; tip
 
 const DESPEDIDA = "Si prefieres que no te escribamos, responde NO.";
 
-/** Rellena {{nombre}}, {{marca}} e {{interes}} de un texto propio (LEADS_PRIMER_MENSAJE_TEXTO). */
-export function rellenarPlantilla(texto: string, datos: { nombre: string; marca: string; interes: string | null }): string {
+/** «Ventas Cancún 1 - Giovanny» → «Giovanny»; sin guion, el primer nombre. Sin nombre legible, null. */
+export function nombreDelAsesor(nombre: string | null | undefined): string | null {
+  const limpio = nombre?.trim() ?? "";
+  const guion = limpio.lastIndexOf(" - ");
+  const crudo = guion >= 0 ? limpio.slice(guion + 3).trim() : (limpio.split(/\s+/)[0] ?? "");
+  const nombreAsesor = crudo.split(/\s+/)[0] ?? "";
+  if (!/^\p{L}{2,}$/u.test(nombreAsesor)) return null;
+  return nombreAsesor.charAt(0).toUpperCase() + nombreAsesor.slice(1).toLowerCase();
+}
+
+/** Rellena {{nombre}}, {{marca}}, {{interes}} y {{asesor}} de un texto propio (LEADS_PRIMER_MENSAJE_TEXTO). */
+export function rellenarPlantilla(
+  texto: string,
+  datos: { nombre: string; marca: string; interes: string | null; asesor?: string | null },
+): string {
   return texto
     .replaceAll("{{nombre}}", datos.nombre || "")
     .replaceAll("{{marca}}", datos.marca)
     .replaceAll("{{interes}}", datos.interes ?? "nuestras motos")
+    .replaceAll("{{asesor}}", datos.asesor ?? "tu asesor")
     .replace(/ +([,.!?])/g, "$1")
     .replace(/ {2,}/g, " ")
     .trim();
 }
 
-/** El saludo según las respuestas del formulario. Sin precios ni promesas: solo ofrece ayuda. */
-export function textoPrimerMensaje(params: { nombre: string | null; campos: CampoLead[]; marca: string | null; plantilla?: string }): string {
+/**
+ * El saludo según las respuestas del formulario, con las palabras que pidió el cliente («Felicidades por registrarte, sabemos
+ * que estás interesado en la moto…, mi nombre es … y te atenderé con mucho gusto»). `asesor` es quien tiene asignado el lead.
+ * Sin precios ni promesas: solo ofrece ayuda.
+ */
+export function textoPrimerMensaje(params: {
+  nombre: string | null;
+  campos: CampoLead[];
+  marca: string | null;
+  asesor?: string | null;
+  plantilla?: string;
+}): string {
   const nombre = nombreParaSaludo(params.nombre);
+  const asesor = nombreDelAsesor(params.asesor);
   const { frase, tipo } = interesDelLead(params.campos);
   const marca = tipo === "tvs" ? "TVS Motor Cancún" : marcaVisible(params.marca);
-  if (params.plantilla) return rellenarPlantilla(params.plantilla, { nombre, marca, interes: frase });
+  if (params.plantilla) return rellenarPlantilla(params.plantilla, { nombre, marca, interes: frase, asesor });
 
   const saludo = nombre ? `Hola ${nombre} 👋` : "Hola 👋";
-  if (tipo === "tvs") {
-    const interes = frase ? ` y te interesa ${frase}` : " y te interesan nuestras motos TVS";
-    return `${saludo} Te escribimos de ${marca}. Vimos que dejaste tus datos en nuestro anuncio${interes}. ¿Te ayudamos con precio, financiamiento y disponibilidad?\n\n${DESPEDIDA}`;
-  }
-  if (tipo === "refacciones") {
-    const interes = frase ? ` y buscas ${frase}` : "";
-    return `${saludo} Te escribimos de ${marca}. Vimos que dejaste tus datos en nuestro anuncio de refacciones${interes}. ¿Me confirmas la pieza, el modelo y el año de tu moto para revisar disponibilidad y precio?\n\n${DESPEDIDA}`;
-  }
-  return `${saludo} Te escribimos de ${marca}. Vimos que dejaste tus datos en nuestro anuncio. ¿En qué te podemos ayudar?\n\n${DESPEDIDA}`;
+  const presentacion = asesor ? `Mi nombre es ${asesor} y te atenderé con mucho gusto.` : "Un asesor te atenderá con mucho gusto.";
+  const interes =
+    tipo === "tvs"
+      ? `estás interesado en ${frase ?? "nuestras motos TVS"}`
+      : tipo === "refacciones"
+        ? `estás buscando ${frase ?? "refacciones"}`
+        : "dejaste tus datos en nuestro anuncio";
+  const pregunta = tipo === "refacciones" ? " ¿Me confirmas la pieza, el modelo y el año de tu moto para revisar disponibilidad?" : "";
+  return `${saludo} ¡Felicidades por registrarte en ${marca}! Sabemos que ${interes}. ${presentacion}${pregunta}\n\n${DESPEDIDA}`;
 }
 
 /* ---------- Cuándo se puede mandar ---------- */

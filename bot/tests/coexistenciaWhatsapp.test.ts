@@ -9,6 +9,7 @@ vi.mock("../src/db/repositories/clientes.js", () => clientes);
 const conversaciones = {
   getOrCreateConversacionAbierta: vi.fn(async () => ({ id: "conv-1" })),
   pasarAPersona: vi.fn(async () => true),
+  unirFormularioConWhatsapp: vi.fn(async () => null),
 };
 vi.mock("../src/db/repositories/conversaciones.js", () => conversaciones);
 const whatsapp = { descargarMedia: vi.fn(async () => ({ buffer: Buffer.from("x"), mimeType: "image/jpeg" })) };

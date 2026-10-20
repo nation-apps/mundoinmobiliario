@@ -12,6 +12,7 @@ import QRCode from "qrcode";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { AppError } from "../lib/errors.js";
+import { fijarLineaActual } from "../lib/lineas.js";
 import { handleInboundMessage } from "../agent/handleMessage.js";
 import { handleEcoApp } from "../agent/handleEcoApp.js";
 import { borrarSesionGuardada, haySesionGuardada, usarSesionSupabase } from "./authSupabase.js";
@@ -173,6 +174,7 @@ async function alCerrarse(error: unknown): Promise<void> {
     deseaConexion = false;
     estado = "desconectado";
     telefonoVinculado = null;
+    fijarLineaActual(null);
     await borrarSesionGuardada().catch((err: unknown) => log.error({ err }, "No se pudo borrar la sesión guardada"));
     return;
   }
@@ -254,6 +256,8 @@ async function conectar(): Promise<void> {
       qrSinEscanear = 0;
       ultimoError = null;
       telefonoVinculado = telefonoDeJid(s.user?.id ? `${s.user.id.split(":")[0]}@s.whatsapp.net` : null);
+      // Con el número se sabe a qué marca pertenece la línea (origen «WhatsApp Directo TVS», etc.).
+      fijarLineaActual(telefonoVinculado);
       log.info("WhatsApp por QR conectado");
     }
     if (u.connection === "close") {
@@ -301,6 +305,7 @@ export async function cerrarSesionQr(): Promise<void> {
   estado = "sin_sesion";
   qrDataUrl = null;
   telefonoVinculado = null;
+  fijarLineaActual(null);
 }
 
 /** Al arrancar el bot: si ya hay un número vinculado, reconecta solo (sin pedir un QR nuevo). */

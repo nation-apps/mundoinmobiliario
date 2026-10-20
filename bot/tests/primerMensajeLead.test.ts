@@ -11,7 +11,7 @@ vi.mock("../src/db/repositories/conversaciones.js", () => ({
 vi.mock("../src/db/repositories/mensajes.js", () => ({ guardarMensaje: vi.fn() }));
 vi.mock("../src/whatsapp/client.js", () => ({ sendText: vi.fn() }));
 
-const { esperaParaEnviar, horaLocal, interesDelLead, nombreParaSaludo, rellenarPlantilla, textoPrimerMensaje } = await import(
+const { esperaParaEnviar, horaLocal, interesDelLead, nombreDelAsesor, nombreParaSaludo, rellenarPlantilla, textoPrimerMensaje } = await import(
   "../src/agent/primerMensajeLead.js"
 );
 
@@ -47,7 +47,7 @@ describe("nombre para el saludo", () => {
 
 describe("lo que le interesa al lead", () => {
   it("el modelo TVS elegido, con siglas en mayúsculas", () => {
-    expect(interesDelLead(FORMULARIO_TVS)).toEqual({ frase: "la TVS RTR 310", tipo: "tvs" });
+    expect(interesDelLead(FORMULARIO_TVS)).toEqual({ frase: "la moto TVS RTR 310", tipo: "tvs" });
   });
   it("si no está seguro del modelo TVS, no inventa uno", () => {
     const campos = [campo("¿qué_modelo_tvs_te_interesa?", "aún_no_estoy_seguro")];
@@ -65,35 +65,58 @@ describe("lo que le interesa al lead", () => {
   });
 });
 
+describe("nombre del asesor", () => {
+  it("sale de lo que va después del guion en «Ventas Cancún 1 - Giovanny»", () => {
+    expect(nombreDelAsesor("Ventas Cancún 1 - Giovanny")).toBe("Giovanny");
+    expect(nombreDelAsesor("Ventas Cancún 3 - YAEL")).toBe("Yael");
+    expect(nombreDelAsesor("Alonso")).toBe("Alonso");
+  });
+  it("sin un nombre que se pueda leer, null", () => {
+    expect(nombreDelAsesor("Ventas Cancún 4")).toBe("Ventas");
+    expect(nombreDelAsesor(null)).toBeNull();
+    expect(nombreDelAsesor("")).toBeNull();
+  });
+});
+
 describe("texto del primer mensaje", () => {
-  it("TVS: saluda por nombre, menciona el modelo y deja salir con «NO»", () => {
-    const texto = textoPrimerMensaje({ nombre: "MARCOS GONZALEZ", campos: FORMULARIO_TVS, marca: "TVS" });
+  it("TVS: con las palabras del cliente, firmado por el asesor asignado y con salida «NO»", () => {
+    const texto = textoPrimerMensaje({ nombre: "MARCOS GONZALEZ", campos: FORMULARIO_TVS, marca: "TVS", asesor: "Ventas Cancún 1 - Giovanny" });
     expect(texto).toContain("Hola Marcos");
-    expect(texto).toContain("TVS Motor Cancún");
-    expect(texto).toContain("te interesa la TVS RTR 310");
+    expect(texto).toContain("¡Felicidades por registrarte en TVS Motor Cancún!");
+    expect(texto).toContain("Sabemos que estás interesado en la moto TVS RTR 310.");
+    expect(texto).toContain("Mi nombre es Giovanny y te atenderé con mucho gusto.");
     expect(texto).toContain("responde NO");
   });
 
+  it("sin asesor asignado no inventa un nombre", () => {
+    const texto = textoPrimerMensaje({ nombre: "Marcos", campos: FORMULARIO_TVS, marca: "TVS", asesor: null });
+    expect(texto).toContain("Un asesor te atenderá con mucho gusto.");
+    expect(texto).not.toContain("Mi nombre es");
+  });
+
   it("refacciones: pide pieza, modelo y año sin prometer precio", () => {
-    const texto = textoPrimerMensaje({ nombre: "Ana", campos: FORMULARIO_REFACCIONES, marca: "Mundo de Motos" });
-    expect(texto).toContain("Mundo de Motos");
-    expect(texto).toContain("buscas balatas / pastillas de freno para tu Italika FT150");
-    expect(texto).toContain("disponibilidad y precio");
+    const texto = textoPrimerMensaje({ nombre: "Ana", campos: FORMULARIO_REFACCIONES, marca: "Mundo de Motos", asesor: "Hanna" });
+    expect(texto).toContain("en Mundo de Motos");
+    expect(texto).toContain("Sabemos que estás buscando balatas / pastillas de freno para tu Italika FT150.");
+    expect(texto).toContain("Mi nombre es Hanna");
+    expect(texto).toContain("revisar disponibilidad?");
+    expect(texto).not.toMatch(/precio/);
   });
 
   it("sin nombre ni respuestas, un saludo general", () => {
     const texto = textoPrimerMensaje({ nombre: null, campos: [], marca: null });
-    expect(texto.startsWith("Hola 👋 Te escribimos de Mundo de Motos")).toBe(true);
+    expect(texto.startsWith("Hola 👋 ¡Felicidades por registrarte en Mundo de Motos!")).toBe(true);
+    expect(texto).toContain("dejaste tus datos en nuestro anuncio");
   });
 
-  it("un texto propio se rellena con nombre, marca e interés", () => {
+  it("un texto propio se rellena con nombre, marca, interés y asesor", () => {
     const texto = textoPrimerMensaje({
       nombre: "Marcos",
       campos: FORMULARIO_TVS,
       marca: "TVS",
-      plantilla: "Hola {{nombre}}, de {{marca}}: vimos tu interés en {{interes}}.",
+      plantilla: "Hola {{nombre}}, de {{marca}}: vimos tu interés en {{interes}}. Te atiende {{asesor}}.",
     });
-    expect(texto).toBe("Hola Marcos, de TVS Motor Cancún: vimos tu interés en la TVS RTR 310.");
+    expect(texto).toBe("Hola Marcos, de TVS Motor Cancún: vimos tu interés en la moto TVS RTR 310. Te atiende tu asesor.");
     expect(rellenarPlantilla("Hola {{nombre}} ¿{{interes}}?", { nombre: "", marca: "X", interes: null })).toBe("Hola ¿nuestras motos?");
   });
 });

@@ -1,7 +1,7 @@
 import { logger } from "../lib/logger.js";
 import { subirAdjunto } from "../lib/adjuntos.js";
 import { findOrCreateByPhone } from "../db/repositories/clientes.js";
-import { getOrCreateConversacionAbierta, pasarAPersona } from "../db/repositories/conversaciones.js";
+import { getOrCreateConversacionAbierta, pasarAPersona, unirFormularioConWhatsapp } from "../db/repositories/conversaciones.js";
 import { existeExternalId, guardarMensaje } from "../db/repositories/mensajes.js";
 import { descargarMedia } from "../whatsapp/client.js";
 import type { EcoApp } from "../whatsapp/parser.js";
@@ -35,6 +35,9 @@ export async function handleEcoApp(eco: EcoApp, esperaMs = ESPERA_ENVIO_PANEL_MS
   if (await existeExternalId(eco.id)) return; // era un envío del propio panel o del bot
 
   const cliente = await findOrCreateByPhone(eco.to);
+  await unirFormularioConWhatsapp(cliente.id).catch((err: unknown) =>
+    logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
+  );
   const conversacion = await getOrCreateConversacionAbierta({ clienteId: cliente.id, canal: "whatsapp" });
 
   let mediaPath: string | undefined;
