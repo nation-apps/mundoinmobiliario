@@ -20,6 +20,7 @@ import {
   aEco,
   aMensajeEntrante,
   esChatIndividual,
+  resumenContexto,
   telefonoDeClave,
   telefonoDeJid,
   telefonoDelBot,
@@ -143,7 +144,13 @@ async function procesarMensaje(s: WASocket, m: WAMessage, tipo: string): Promise
     return;
   }
   if (entrante.kind === "text" && entrante.referral) {
-    log.info({ anuncioId: entrante.referral.sourceId, titulo: entrante.referral.headline }, "Mensaje que llegó desde un anuncio de clic a WhatsApp");
+    log.info(
+      { anuncioId: entrante.referral.sourceId, titulo: entrante.referral.headline },
+      entrante.referral.sourceId ? "Mensaje que llegó desde un anuncio de clic a WhatsApp" : "Mensaje de un anuncio de clic a WhatsApp (WhatsApp no dijo cuál)",
+    );
+  } else if (entrante.kind === "text") {
+    // Sin datos de anuncio: se anota qué señales trajo, para entender los chats de campaña que no se reconocen.
+    log.info(resumenContexto(contenido), "Mensaje sin datos de anuncio");
   }
   await handleInboundMessage(entrante);
 }

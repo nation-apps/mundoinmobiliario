@@ -23,8 +23,18 @@ type AnuncioMinimo = {
   sourceId?: string | null;
   sourceUrl?: string | null;
   sourceType?: string | null;
+  ctwaClid?: string | null;
 };
-type ConContexto = { contextInfo?: { externalAdReply?: AnuncioMinimo | null } | null } | null;
+type ContextoMinimo = {
+  externalAdReply?: AnuncioMinimo | null;
+  /** Cómo llegó la persona a este chat: «ctwa_ad» (anuncio de clic a WhatsApp) u otros valores de WhatsApp. */
+  entryPointConversionSource?: string | null;
+  entryPointConversionApp?: string | null;
+  conversionSource?: string | null;
+  ctwaSignals?: string | null;
+  ctwaPayload?: unknown;
+};
+type ConContexto = { contextInfo?: ContextoMinimo | null } | null;
 
 /** El contenido ya "desenvuelto" (sin efímeros ni vista única): lo que devuelve `normalizeMessageContent`. */
 export type ContenidoMinimo = {
@@ -53,15 +63,11 @@ export type MensajeMinimo = {
  */
 export function anuncioDe(contenido: ContenidoMinimo | null | undefined): AdReferral | undefined {
   if (!contenido) return undefined;
-  const partes: ConContexto[] = [
-    contenido.extendedTextMessage ?? null,
-    contenido.imageMessage ?? null,
-    contenido.videoMessage ?? null,
-    contenido.documentMessage ?? null,
-    contenido.audioMessage ?? null,
-  ];
-  for (const parte of partes) {
-    const anuncio = parte?.contextInfo?.externalAdReply;
+  let senalDeAnuncio = false;
+  for (const parte of partesConContexto(contenido)) {
+    const ctx = parte?.contextInfo;
+    if (ctx && vieneDeAnuncio(ctx)) senalDeAnuncio = true;
+    const anuncio = ctx?.externalAdReply;
     if (!anuncio) continue;
     const resultado: AdReferral = {
       ...(anuncio.sourceId ? { sourceId: anuncio.sourceId } : {}),
@@ -70,8 +76,51 @@ export function anuncioDe(contenido: ContenidoMinimo | null | undefined): AdRefe
       ...(anuncio.sourceUrl ? { sourceUrl: anuncio.sourceUrl } : {}),
     };
     if (Object.keys(resultado).length > 0) return resultado;
+    senalDeAnuncio = true;
   }
-  return undefined;
+  // WhatsApp avisó que viene de un anuncio pero no dijo cuál: igual cuenta como campaña (sin nombre ni enlace del anuncio).
+  return senalDeAnuncio ? {} : undefined;
+}
+
+function partesConContexto(contenido: ContenidoMinimo): ConContexto[] {
+  return [
+    contenido.extendedTextMessage ?? null,
+    contenido.imageMessage ?? null,
+    contenido.videoMessage ?? null,
+    contenido.documentMessage ?? null,
+    contenido.audioMessage ?? null,
+  ];
+}
+
+/** ¿El contexto del mensaje dice que la persona llegó desde un anuncio (aunque no traiga los datos del anuncio)? */
+export function vieneDeAnuncio(ctx: ContextoMinimo): boolean {
+  if (/ctwa|\bads?\b|_ads?\b/i.test(ctx.entryPointConversionSource ?? "")) return true;
+  if (/ctwa|\bads?\b|_ads?\b/i.test(ctx.conversionSource ?? "")) return true;
+  if (ctx.externalAdReply?.ctwaClid || ctx.externalAdReply?.sourceType === "ad") return true;
+  return Boolean(ctx.ctwaSignals || ctx.ctwaPayload);
+}
+
+/**
+ * Qué señales de origen trae un mensaje, sin datos personales (solo nombres de campos y palabras cortas de WhatsApp): para
+ * entender por qué un chat que debería ser de campaña no lo parece. Se anota en el registro del bot.
+ */
+export function resumenContexto(contenido: ContenidoMinimo | null | undefined): Record<string, unknown> {
+  if (!contenido) return {};
+  const tipo = Object.keys(contenido).find((k) => (contenido as Record<string, unknown>)[k]) ?? null;
+  for (const parte of partesConContexto(contenido)) {
+    const ctx = parte?.contextInfo;
+    if (!ctx) continue;
+    const corto = (v: unknown) => (typeof v === "string" ? v.slice(0, 40) : undefined);
+    return {
+      tipo,
+      camposContexto: Object.keys(ctx).filter((k) => (ctx as Record<string, unknown>)[k] != null),
+      entrada: corto(ctx.entryPointConversionSource),
+      app: corto(ctx.entryPointConversionApp),
+      conversion: corto(ctx.conversionSource),
+      anuncioSourceType: corto(ctx.externalAdReply?.sourceType),
+    };
+  }
+  return { tipo, camposContexto: [] };
 }
 
 const SUFIJO_TELEFONO = "@s.whatsapp.net";

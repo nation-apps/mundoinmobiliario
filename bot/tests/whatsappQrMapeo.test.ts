@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aEco, aMensajeEntrante, anuncioDe, esChatIndividual, telefonoDeClave, telefonoDeJid, telefonoDelBot, textoDe } from "../src/whatsapp-qr/mapeo.js";
+import { aEco, aMensajeEntrante, anuncioDe, esChatIndividual, resumenContexto, telefonoDeClave, telefonoDeJid, telefonoDelBot, textoDe } from "../src/whatsapp-qr/mapeo.js";
 
 const clave = (extra: Record<string, unknown> = {}) => ({ id: "ABC123", remoteJid: "5219981234567@s.whatsapp.net", fromMe: false, ...extra });
 
@@ -114,5 +114,36 @@ describe("mensajes que llegan de un anuncio de clic a WhatsApp", () => {
     const m = aMensajeEntrante({ key: clave() }, { extendedTextMessage: { text: "Hola" } }, "529981234567");
     expect(m).toMatchObject({ kind: "text" });
     expect(m).not.toHaveProperty("referral");
+  });
+});
+
+describe("anuncio sin detalle (WhatsApp solo dice que viene de un anuncio)", () => {
+  it("las señales de anuncio cuentan como campaña aunque no digan cuál", () => {
+    const m = aMensajeEntrante(
+      { key: clave() },
+      { extendedTextMessage: { text: "Hola de Cancún, quiero el precio", contextInfo: { entryPointConversionSource: "ctwa_ad", entryPointConversionApp: "facebook" } } },
+      "529981234567",
+    );
+    expect(m).toMatchObject({ kind: "text", referral: {} });
+  });
+
+  it("un ctwaClid también lo delata", () => {
+    const m = aMensajeEntrante({ key: clave() }, { extendedTextMessage: { text: "Hola", contextInfo: { externalAdReply: { ctwaClid: "abc" } } } }, "529981234567");
+    expect(m).toHaveProperty("referral");
+  });
+
+  it("un mensaje con otro origen (p. ej. una respuesta a un estado) no se toma por anuncio", () => {
+    const m = aMensajeEntrante(
+      { key: clave() },
+      { extendedTextMessage: { text: "Hola", contextInfo: { entryPointConversionSource: "contact_card" } } },
+      "529981234567",
+    );
+    expect(m).not.toHaveProperty("referral");
+  });
+
+  it("el resumen de señales no trae datos personales", () => {
+    const r = resumenContexto({ extendedTextMessage: { text: "mi número es 998 123 4567", contextInfo: { entryPointConversionSource: "ctwa_ad" } } });
+    expect(JSON.stringify(r)).not.toContain("998");
+    expect(r).toMatchObject({ tipo: "extendedTextMessage", entrada: "ctwa_ad", camposContexto: ["entryPointConversionSource"] });
   });
 });

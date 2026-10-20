@@ -91,3 +91,10 @@ número secundario) y `WHATSAPP_LINEAS` (JSON `{"52…": "Marca"}`) cambia o sum
 
 El saludo automático (apagado por defecto) usa las palabras del cliente: «¡Felicidades por registrarte! Sabemos que estás
 interesado en la moto …. Mi nombre es <asesor> y te atenderé con mucho gusto», con el nombre del vendedor que le tocó por el reparto.
+
+## Chats de campaña que WhatsApp no avisa (21-oct-2026)
+
+Algunos mensajes que vienen de un anuncio (por ejemplo, anuncios en Estados) llegan con la señal de «anuncio» pero sin decir cuál,
+o sin ninguna señal. El bot cuenta como campaña todo mensaje con señal de anuncio (aunque no sepa cuál) y, para los demás, anota en el
+registro «Mensaje sin datos de anuncio» con los campos que trajo (sin datos personales), para entender qué falta. Si un lead de campaña
+quedó como «WhatsApp Directo …», la ficha tiene un botón **Cambiar** junto al «Origen» para corregirlo a mano.

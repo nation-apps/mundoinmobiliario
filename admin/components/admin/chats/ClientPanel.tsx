@@ -7,6 +7,7 @@ import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
 import { BotApiError, guardarTelefonoContacto, infoAnuncio } from "@/lib/admin/bot-api";
 import EventoDialogo from "@/components/admin/agenda/EventoDialogo";
+import { Menu, MenuOpcion, MenuTitulo } from "@/components/admin/Menu";
 import {
   COLUMNAS_AGENDA,
   TIPO_AGENDA_LABEL,
@@ -72,6 +73,16 @@ type DatosEditables = {
   interes: Interes | null;
   notas: string;
 };
+
+/** Los orígenes entre los que se puede corregir un lead a mano (los mismos que pone el bot). */
+const ORIGENES_ELEGIBLES = [
+  "Campaña WhatsApp Meta TVS",
+  "Campaña WhatsApp Meta Mundo de Motos",
+  "Campaña Formulario Meta TVS",
+  "Campaña Formulario Meta Mundo de Motos",
+  "WhatsApp Directo TVS",
+  "WhatsApp Directo Mundo de Motos",
+];
 
 /** `actual` es lo que se ve en los campos; `guardado`, lo último que hay en la base. */
 type Formulario = { actual: DatosEditables; guardado: DatosEditables };
@@ -637,6 +648,15 @@ function Ficha({
     return true;
   }
 
+  /** Corregir el origen a mano (p. ej. un lead de campaña que WhatsApp no avisó que venía de un anuncio). */
+  async function cambiarOrigen(nuevo: string) {
+    if (nuevo === conversacion.fuente) return;
+    // RLS no lanza error al negar un cambio: si no devuelve filas, no se guardó.
+    const { data, error } = await supabase.from("conversaciones").update({ fuente: nuevo }).eq("id", conversacionId).select("id");
+    if (error || !data?.length) toast.error("No se pudo cambiar el origen.");
+    else toast.success(`Origen: ${nuevo}`);
+  }
+
   function asignar(agenteId: string | null) {
     void actualizarConversacion({ asignada_a: agenteId }, { asignada_a: agenteId }, "No se pudo asignar la conversación.");
   }
@@ -848,6 +868,20 @@ function Ficha({
           <div className="mt-3 text-xs text-ink-soft">
             <span className="admin-label">Origen</span>
             <span className="text-ink">{conversacion.fuente}</span>
+            <Menu
+              etiqueta="Cambiar el origen"
+              ancho={290}
+              alinear="inicio"
+              claseBoton="ml-2 inline-flex items-center rounded px-1.5 text-[11px] font-medium text-accent-deep hover:underline"
+              boton={<>Cambiar</>}
+            >
+              <MenuTitulo>Origen del lead</MenuTitulo>
+              {ORIGENES_ELEGIBLES.map((o) => (
+                <MenuOpcion key={o} elegida={o === conversacion.fuente} onElegir={() => void cambiarOrigen(o)}>
+                  {o}
+                </MenuOpcion>
+              ))}
+            </Menu>
             {conversacion.cliente_fuente && conversacion.cliente_fuente !== conversacion.fuente && (
               <span className="mt-0.5 block text-muted">Primer contacto: {conversacion.cliente_fuente}</span>
             )}
