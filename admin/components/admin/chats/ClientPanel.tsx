@@ -2,10 +2,20 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Plus, Tag, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, ExternalLink, Plus, Tag, X } from "lucide-react";
 import DialogShell from "@/components/admin/DialogShell";
 import { fechaLima } from "@/components/admin/clientes/formato";
 import { BotApiError, guardarTelefonoContacto, infoAnuncio } from "@/lib/admin/bot-api";
+import EventoDialogo from "@/components/admin/agenda/EventoDialogo";
+import {
+  COLUMNAS_AGENDA,
+  TIPO_AGENDA_LABEL,
+  alertaDe,
+  fechaLargaCancun,
+  horaCancun,
+  type EventoAgenda,
+  type TipoAgenda,
+} from "@/lib/admin/agenda";
 import { anuncioDeMensajes, type AnuncioDeLead, type InfoAnuncio } from "@/lib/admin/anuncio";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { patchParaMover } from "@/lib/admin/embudo";
@@ -326,6 +336,9 @@ function Ficha({
   const [form, setForm] = useState<Formulario | null>(null);
   const [identidades, setIdentidades] = useState<ClienteIdentidad[]>([]);
   const [eventos, setEventos] = useState<EventoConversacion[]>([]);
+  /** Lo agendado para este chat (apartados, visitas, llamadas) y el diálogo para agendar o editar. */
+  const [agendaChat, setAgendaChat] = useState<EventoAgenda[]>([]);
+  const [dialogoAgenda, setDialogoAgenda] = useState<{ evento: EventoAgenda | null; tipo: TipoAgenda } | null>(null);
   /** El anuncio del que vino este lead (de sus primeros mensajes) y lo que Meta cuenta de él. Va atado a la conversación. */
   const [anuncioDeLead, setAnuncioDeLead] = useState<{ conversacionId: string; lead: AnuncioDeLead; info: InfoAnuncio | null } | null>(null);
 
@@ -347,6 +360,32 @@ function Ficha({
   const [creandoEtiqueta, setCreandoEtiqueta] = useState(false);
 
   /* ----- Carga y tiempo real ----- */
+
+  // Lo agendado para esta conversación; se pone al día cuando alguien agenda algo.
+  useEffect(() => {
+    let activo = true;
+    async function cargarAgenda() {
+      const { data, error } = await supabase
+        .from("agenda")
+        .select(COLUMNAS_AGENDA)
+        .eq("conversacion_id", conversacionId)
+        .order("fecha_hora", { ascending: false })
+        .limit(8);
+      if (!activo || error) return; // sin la tabla (migración 0011 sin correr) la sección simplemente queda vacía
+      setAgendaChat((data ?? []) as EventoAgenda[]);
+    }
+    const primera = setTimeout(() => void cargarAgenda(), 0);
+    const sufijo = Math.random().toString(36).slice(2, 8);
+    const canal = supabase
+      .channel(`agenda-chat-${conversacionId}-${sufijo}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "agenda", filter: `conversacion_id=eq.${conversacionId}` }, () => void cargarAgenda())
+      .subscribe();
+    return () => {
+      activo = false;
+      clearTimeout(primera);
+      void supabase.removeChannel(canal);
+    };
+  }, [supabase, conversacionId]);
 
   // De qué anuncio vino: se lee del primer mensaje con datos de anuncio y se completa con Meta (enlace, video o imagen).
   useEffect(() => {
@@ -606,7 +645,11 @@ function Ficha({
   function cambiarEtapa(nueva: Etapa) {
     const patch = patchParaMover({ etapa, estado, motivo_perdida: motivoPerdida }, nueva);
     if (!patch) return;
-    void actualizarConversacion(patch, patch, "No se pudo cambiar la etapa.");
+    void (async () => {
+      const ok = await actualizarConversacion(patch, patch, "No se pudo cambiar la etapa.");
+      // «Por Apartar Moto» pide la fecha: de ella salen las alertas (3 días antes, 1 día antes y el mismo día).
+      if (ok && nueva === "por_apartar") setDialogoAgenda({ evento: null, tipo: "apartado" });
+    })();
   }
 
   async function elegirMotivoPerdida(motivo: MotivoPerdida) {
@@ -992,6 +1035,65 @@ function Ficha({
 
         </div>
       </Seccion>
+
+      {/* 3a. Agenda: apartados, visitas y llamadas de este chat. */}
+      <Seccion
+        titulo="Agenda"
+        accion={
+          <button
+            type="button"
+            onClick={() => setDialogoAgenda({ evento: null, tipo: etapa === "por_apartar" ? "apartado" : "visita" })}
+            className="inline-flex items-center gap-1 text-[11.5px] font-medium text-accent-deep hover:underline"
+          >
+            <CalendarPlus size={13} aria-hidden />
+            Agendar
+          </button>
+        }
+      >
+        {agendaChat.length === 0 ? (
+          <p className="text-xs text-muted">Nada agendado. Agenda la visita o la fecha del apartado para que el equipo reciba el aviso.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {agendaChat.map((e) => {
+              const alerta = alertaDe(e);
+              return (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    onClick={() => setDialogoAgenda({ evento: e, tipo: e.tipo })}
+                    className="w-full rounded-lg border border-line bg-porcelain px-3 py-2 text-left transition-colors hover:border-line-strong"
+                  >
+                    <span className={`block text-[13px] font-medium ${e.estado === "pendiente" ? "text-ink" : "text-muted line-through"}`}>{e.titulo}</span>
+                    <span className="t-mono mt-0.5 block text-[11px] capitalize text-muted">
+                      {fechaLargaCancun(e.fecha_hora)} · {horaCancun(e.fecha_hora)} · {TIPO_AGENDA_LABEL[e.tipo]}
+                    </span>
+                    {alerta.nivel !== "ninguna" && <span className="mt-1 inline-block text-[11px] font-semibold text-amber-ink">{alerta.texto}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Seccion>
+
+      <EventoDialogo
+        abierto={dialogoAgenda !== null}
+        onCerrar={() => setDialogoAgenda(null)}
+        evento={dialogoAgenda?.evento ?? null}
+        inicial={{
+          tipo: dialogoAgenda?.tipo ?? "visita",
+          cliente_id: conversacion.cliente_id,
+          conversacion_id: conversacionId,
+          asignada_a: asignadaA ?? usuarioId,
+          clienteNombre: conversacion.cliente_nombre ?? conversacion.identidad_nombre,
+        }}
+        staff={staff}
+        usuarioId={usuarioId}
+        onGuardado={(guardado) =>
+          setAgendaChat((previos) => [guardado, ...previos.filter((x) => x.id !== guardado.id)].sort((a, b) => Date.parse(b.fecha_hora) - Date.parse(a.fecha_hora)))
+        }
+        onEliminado={(id) => setAgendaChat((previos) => previos.filter((x) => x.id !== id))}
+      />
 
       {/* 3b. Venta perdida: elegir un motivo pasa la conversación a «No vendido» (alimenta el pareto de Métricas). */}
       {etapa !== "vendido" && (

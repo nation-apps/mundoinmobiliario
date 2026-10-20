@@ -487,6 +487,7 @@ export default function Hilo({
     else {
       onCambio?.(conversacion.id, patch);
       if (etapa === "no_vendido") toast("Elige en la ficha por qué se perdió la venta.");
+      if (etapa === "por_apartar") toast("Agenda la fecha del apartado en la ficha del contacto: de ahí salen las alertas.");
     }
   }
 

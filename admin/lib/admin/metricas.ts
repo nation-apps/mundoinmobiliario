@@ -286,7 +286,7 @@ export type FilaAnuncio = {
   entradas: number;
   /** Alguien del equipo ya les respondió. */
   atendidas: number;
-  /** Hoy en «Oportunidad de venta». */
+  /** Hoy en «Oportunidad de venta» o «Por Apartar Moto». */
   oportunidad: number;
   vendidas: number;
   noVendidas: number;
@@ -318,7 +318,7 @@ export type Metricas = {
   calor: number[][];
 };
 
-const ETAPAS_ABIERTAS: EtapaAbierta[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad"];
+const ETAPAS_ABIERTAS: EtapaAbierta[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar"];
 const MOTIVOS_PERDIDA: MotivoPerdida[] = ["buro", "otra_marca", "enganche", "competencia", "sin_respuesta_7d"];
 
 /**
@@ -377,7 +377,7 @@ export function porAnuncioDe(filas: FilaMetrica[]): FilaAnuncio[] {
     if (!g.campana && f.anuncio_campana) g.campana = f.anuncio_campana;
     g.entradas++;
     if (f.primera_respuesta_humana_at) g.atendidas++;
-    if (f.etapa === "oportunidad") g.oportunidad++;
+    if (f.etapa === "oportunidad" || f.etapa === "por_apartar") g.oportunidad++;
     if (f.etapa === "vendido") g.vendidas++;
     if (f.etapa === "no_vendido") g.noVendidas++;
   }
@@ -522,7 +522,7 @@ export function calcularMetricas({
       campana: esCampana(origen),
       entradas: lista.length,
       sinAtender: lista.filter(sinAtender).length,
-      oportunidad: lista.filter((f) => f.etapa === "oportunidad").length,
+      oportunidad: lista.filter((f) => f.etapa === "oportunidad" || f.etapa === "por_apartar").length,
       ganadas: lista.filter((f) => f.etapa === "vendido").length,
       respuestaHumanaMin: mediana(minutosHumanos(lista)),
     }))

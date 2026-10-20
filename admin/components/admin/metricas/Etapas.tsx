@@ -4,7 +4,7 @@ import type { Metricas } from "@/lib/admin/metricas";
 import { SinDatos, Tarjeta } from "./Tarjeta";
 
 /** Rampa ordinal (un tono, de claro a oscuro según avanza la etapa), validada con el validador de dataviz. */
-const RAMPA_ETAPAS = ["#86b6ef", "#5598e7", "#2a78d6", "#104281"];
+const RAMPA_ETAPAS = ["#9cc3f1", "#6ba3e9", "#3f86dd", "#1c5cab", "#104281"];
 
 /** Dónde están hoy las conversaciones que entraron en el periodo, y cuántas terminaron en Vendido o No vendido. */
 export default function Etapas({ metricas }: { metricas: Metricas }) {

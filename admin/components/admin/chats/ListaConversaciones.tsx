@@ -22,6 +22,7 @@ export const ETAPA_TONO: Record<Etapa, { fondo: string; texto: string; punto: st
   no_contesta: { fondo: "rgba(242,165,22,0.18)", texto: "#8a5a00", punto: "#f2a516" },
   seguimiento: { fondo: "rgba(43,80,236,0.10)", texto: "#1b37b3", punto: "#2b50ec" },
   oportunidad: { fondo: "rgba(124,58,237,0.10)", texto: "#5b21b6", punto: "#7c3aed" },
+  por_apartar: { fondo: "rgba(8,145,178,0.12)", texto: "#0e5f75", punto: "#0891b2" },
   vendido: { fondo: "rgba(14,159,90,0.12)", texto: "#0a6b3d", punto: "#0e9f5a" },
   no_vendido: { fondo: "rgba(225,29,72,0.09)", texto: "#9f1239", punto: "#e11d48" },
 };

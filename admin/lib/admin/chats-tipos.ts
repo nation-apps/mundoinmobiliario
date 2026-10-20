@@ -9,7 +9,7 @@ import { ZONA_NEGOCIO } from "@/lib/admin/rango";
 export type Canal = "whatsapp" | "messenger" | "instagram" | "tiktok" | "web";
 export type OrigenConversacion = "dm" | "comentario" | "formulario";
 export type EstadoConversacion = "activa" | "escalada" | "cerrada";
-export type Etapa = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "vendido" | "no_vendido";
+export type Etapa = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "por_apartar" | "vendido" | "no_vendido";
 /** ¿Por qué se perdió la venta? Solo en etapa `no_vendido` (0009_proceso_comercial.sql). */
 export type MotivoPerdida = "buro" | "otra_marca" | "enganche" | "competencia" | "sin_respuesta_7d";
 export type MotivoCierre = "ganado" | "perdido" | "spam" | "sin_respuesta" | "otro";
@@ -34,9 +34,9 @@ export const CANAL_LABEL: Record<Canal, string> = {
 };
 
 /** Proceso comercial, en orden. Las dos últimas cierran la conversación. */
-export const ETAPAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "vendido", "no_vendido"];
+export const ETAPAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar", "vendido", "no_vendido"];
 export const ETAPAS_FINALES: Etapa[] = ["vendido", "no_vendido"];
-export const ETAPAS_ABIERTAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad"];
+export const ETAPAS_ABIERTAS: Etapa[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar"];
 
 export function esEtapaFinal(etapa: Etapa): boolean {
   return etapa === "vendido" || etapa === "no_vendido";
@@ -47,6 +47,7 @@ export const ETAPA_LABEL: Record<Etapa, string> = {
   no_contesta: "No contesta",
   seguimiento: "Seguimiento",
   oportunidad: "Oportunidad de venta",
+  por_apartar: "Por Apartar Moto",
   vendido: "Vendido",
   no_vendido: "No vendido",
 };

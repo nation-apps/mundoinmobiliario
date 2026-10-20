@@ -8,6 +8,7 @@ import { useAvisos } from "@/components/admin/chats/Avisos";
 import CanalIcono from "@/components/admin/chats/CanalIcono";
 import { ETAPA_TONO, ETIQUETA_TONO } from "@/components/admin/chats/ListaConversaciones";
 import DialogShell from "@/components/admin/DialogShell";
+import EventoDialogo from "@/components/admin/agenda/EventoDialogo";
 import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
 import { Menu, MenuAccion, MenuOpcion, MenuSeparador, MenuTitulo } from "@/components/admin/Menu";
 import {
@@ -226,6 +227,8 @@ export default function Embudo({
   const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
   const [columnaSobre, setColumnaSobre] = useState<Etapa | null>(null);
   const [perdida, setPerdida] = useState<{ id: string; motivo: MotivoPerdida | null } | null>(null);
+  /** La conversación que acaba de pasar a «Por Apartar Moto»: se le pide la fecha del apartado. */
+  const [apartando, setApartando] = useState<ConversacionResumen | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   /* --- Tiempo real: cualquier cambio vuelve a leer el tablero, con 400 ms de espera --- */
@@ -327,6 +330,7 @@ export default function Embudo({
         toast.error("No se pudo mover la conversación.");
         return;
       }
+      if (destino === "por_apartar") setApartando(actual);
       toast.success(
         destino === "no_vendido" && motivo
           ? `No vendido · ${MOTIVO_PERDIDA_LABEL[motivo]}`
@@ -503,6 +507,21 @@ export default function Embudo({
           );
         })}
       </div>
+
+      <EventoDialogo
+        abierto={apartando !== null}
+        onCerrar={() => setApartando(null)}
+        inicial={{
+          tipo: "apartado",
+          cliente_id: apartando?.cliente_id ?? null,
+          conversacion_id: apartando?.id ?? null,
+          asignada_a: apartando?.asignada_a ?? usuarioId,
+          clienteNombre: apartando ? describirIdentidad(apartando) : null,
+        }}
+        staff={datos.staff}
+        usuarioId={usuarioId}
+        onGuardado={() => undefined}
+      />
 
       <PerdidaDialogo
         perdida={perdida}

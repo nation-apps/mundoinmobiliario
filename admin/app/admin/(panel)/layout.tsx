@@ -48,7 +48,7 @@ export default async function PanelLayout({
       {/* Un solo provider para todo el panel: el badge del menú y los avisos
           de chats siguen vivos aunque el staff esté en otra sección. */}
       <AvisosProvider usuarioId={staff.userId} destino="panel">
-        <AdminSidebar nombre={staff.nombre} rol={staff.rol} contraidoInicial={contraido} />
+        <AdminSidebar nombre={staff.nombre} rol={staff.rol} usuarioId={staff.userId} contraidoInicial={contraido} />
         <div className="flex-1 overflow-x-hidden transition-[padding] duration-300 lg:pl-[248px] lg:group-data-[menu=contraido]/marco:pl-[76px]">
           <div className="mx-auto max-w-[1440px] px-4 pb-16 pt-[4.5rem] sm:px-5 lg:px-8 lg:pt-7">
             {aviso && (

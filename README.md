@@ -28,6 +28,10 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   y una etiqueta llamada **Anulado** (ya no viene creada; se crea a mano si hace falta) hace que el bot ignore a un contacto.
 - **WhatsApp por QR (no oficial, opcional):** el número se vincula escaneando un QR desde Canales (Baileys), sin pasar por la API de
   Meta. Solo contesta a quien escribe y puede bloquear el número: ver `docs/referencia/WHATSAPP-QR.md`.
+- **Calendario y alertas:** apartados, visitas y llamadas del equipo en un calendario mensual (`/admin/calendario`), con filtros por
+  persona y tipo. El panel avisa 3 días antes, 1 día antes y el mismo día (y lo vencido): insignia en el menú y un aviso emergente
+  una sola vez por punto; no hay tarea programada, se calcula al abrir el panel (`lib/admin/agenda.ts`). Se agenda desde el
+  calendario o desde la ficha del chat; al pasar una conversación a **«Por Apartar Moto»** se pide la fecha del apartado.
 - **Anuncio origen:** la ficha del chat muestra de qué anuncio vino el lead (nombre, campaña, video o imagen) con un enlace para
   verlo. Sale de los datos del formulario o del anuncio de clic a WhatsApp y de Meta (`GET /admin/anuncios/:id`). En Métricas, la tabla
   «Por anuncio» cuenta leads, atendidos, oportunidades y ventas de cada anuncio (y video contra imagen) para saber cuál rinde más.
@@ -42,8 +46,8 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
   del menú lateral lista los chats que esperan respuesta.
 - **Coexistencia de WhatsApp:** el teléfono de ventas puede seguir en la app WhatsApp Business y a la vez en el CRM; lo que el
   equipo escribe desde el celular se refleja en el chat y lo pasa a «Yo» (`docs/referencia/COEXISTENCIA-WHATSAPP.md`).
-- **Embudo comercial:** tablero con el proceso comercial (Prospección, No contesta, Seguimiento, Oportunidad de venta, Vendido,
-  No vendido) con una tarjeta por conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; «No vendido» pide
+- **Embudo comercial:** tablero con el proceso comercial (Prospección, No contesta, Seguimiento, Oportunidad de venta, Por Apartar Moto,
+  Vendido, No vendido) con una tarjeta por conversación. Se arrastra a otra columna o se usa el menú ⋯ de la tarjeta; «No vendido» pide
   por qué se perdió la venta (buró, otra marca, enganche o cuota, competencia, no respondió +7 días). Vendido y No vendido
   cierran la conversación. Filtros por vendedor, origen/campaña y canal; el vendedor entra viendo las suyas.
 - **Suscripción** (solo administración): cobro del CRM de 39 USD al mes con Stripe Checkout; el panel muestra el estado y,

@@ -8,6 +8,7 @@ import {
   CreditCard,
   Gauge,
   Images,
+  CalendarDays,
   Kanban,
   LogOut,
   Menu as IconoMenu,
@@ -25,6 +26,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useAvisos } from "@/components/admin/chats/Avisos";
 import { Menu, MenuAccion, MenuSeparador, MenuTitulo } from "@/components/admin/Menu";
 import Pendientes from "@/components/admin/Pendientes";
+import { useAlertasAgenda } from "@/components/admin/agenda/useAlertasAgenda";
 import { iniciales } from "@/lib/admin/chats-tipos";
 
 type ItemMenu = {
@@ -33,6 +35,8 @@ type ItemMenu = {
   icono: LucideIcon;
   /** Muestra el contador de conversaciones sin responder. */
   badge?: boolean;
+  /** Muestra el contador de alertas de la agenda (vencidos y próximos 3 días). */
+  badgeAgenda?: boolean;
   /** Solo administración y asistentes (la base tampoco deja a un vendedor leerlo). */
   soloStaff?: boolean;
   /** Solo quien administra el panel (cobros). */
@@ -48,6 +52,7 @@ const GRUPOS: Grupo[] = [
     items: [
       { href: "/admin/chats", label: "Chats", icono: MessagesSquare, badge: true },
       { href: "/admin/embudo", label: "Embudo", icono: Kanban },
+      { href: "/admin/calendario", label: "Calendario", icono: CalendarDays, badgeAgenda: true },
       { href: "/admin/metricas", label: "Métricas", icono: Gauge, soloStaff: true },
     ],
   },
@@ -157,10 +162,12 @@ function guardarPlegados(ids: string[]) {
 export default function AdminSidebar({
   nombre,
   rol,
+  usuarioId,
   contraidoInicial = false,
 }: {
   nombre: string;
   rol: string;
+  usuarioId: string;
   /** Lo que dice la cookie: el servidor ya pintó el contenido con ese ancho. */
   contraidoInicial?: boolean;
 }) {
@@ -169,6 +176,7 @@ export default function AdminSidebar({
   const [abierto, setAbierto] = useState(false);
   const [contraido, setContraido] = useState(contraidoInicial);
   const { sinResponder, avisosActivos, activar, desactivar } = useAvisos();
+  const alertasAgenda = useAlertasAgenda(usuarioId, rol);
   const hidratado = useSyncExternalStore(sinSuscripcion, () => true, () => false);
   const [plegados, setPlegados] = useState<string[] | null>(null);
   const plegadosVigentes = plegados ?? (hidratado ? leerPlegados() : []);
@@ -201,14 +209,15 @@ export default function AdminSidebar({
   const enlace = (item: ItemMenu) => {
     const activo = esActivo(item.href);
     const Icono = item.icono;
-    const conteo = item.badge && sinResponder > 0 ? sinResponder : 0;
+    const conteo = item.badge && sinResponder > 0 ? sinResponder : item.badgeAgenda && alertasAgenda > 0 ? alertasAgenda : 0;
+    const etiquetaConteo = item.badgeAgenda ? "alertas" : "sin responder";
     return (
       <li key={item.href}>
         <Link
           href={item.href}
           onClick={() => setAbierto(false)}
           aria-current={activo ? "page" : undefined}
-          aria-label={rail ? (conteo ? `${item.label}, ${conteo} sin responder` : item.label) : undefined}
+          aria-label={rail ? (conteo ? `${item.label}, ${conteo} ${etiquetaConteo}` : item.label) : undefined}
           title={rail ? item.label : undefined}
           className={`group relative flex items-center gap-3 rounded-lg py-2 text-[13.5px] transition-colors max-lg:min-h-11 ${
             rail ? "justify-center px-0" : "px-3"
@@ -232,8 +241,8 @@ export default function AdminSidebar({
           {!rail && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
           {!rail && conteo > 0 && (
             <span
-              aria-label={`${conteo} sin responder`}
-              className="t-mono rounded-full bg-redline px-1.5 py-px text-[10.5px] font-semibold leading-4 text-white tabular-nums"
+              aria-label={`${conteo} ${etiquetaConteo}`}
+              className={`t-mono rounded-full px-1.5 py-px text-[10.5px] font-semibold leading-4 tabular-nums ${item.badgeAgenda ? "bg-amber text-pit" : "bg-redline text-white"}`}
             >
               {conteo}
             </span>

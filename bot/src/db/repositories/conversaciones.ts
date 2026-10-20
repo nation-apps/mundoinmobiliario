@@ -16,7 +16,7 @@ export type EstadoConversacion = "activa" | "escalada" | "cerrada";
  * solo pasan Prospección → Seguimiento cuando responde una persona y No contesta → Seguimiento cuando el cliente
  * vuelve a escribir. `vendido` y `no_vendido` van siempre con `estado = 'cerrada'`.
  */
-export type EtapaConversacion = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "vendido" | "no_vendido";
+export type EtapaConversacion = "prospeccion" | "no_contesta" | "seguimiento" | "oportunidad" | "por_apartar" | "vendido" | "no_vendido";
 export type MotivoCierre = "ganado" | "perdido" | "spam" | "sin_respuesta" | "otro";
 
 export type Conversacion = {
