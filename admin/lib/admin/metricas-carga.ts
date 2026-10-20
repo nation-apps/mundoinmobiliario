@@ -4,6 +4,7 @@
  */
 
 import { createServerSupabase } from "@/lib/supabase/server-auth";
+import { anuncioDeMensajes } from "./anuncio";
 import {
   calcularMetricas,
   rangoDelPeriodo,
@@ -64,15 +65,35 @@ export async function cargarMetricas(periodo: PeriodoId): Promise<ResultadoMetri
     ]);
     if (equipo.error) throw new Error(equipo.error.message);
 
+    // De qué anuncio vino cada lead: lo dicen los primeros mensajes (formulario de anuncios o clic a WhatsApp).
+    const mensajesConAnuncio = await todas<{ conversacion_id: string; metadata: Record<string, unknown> | null }>((desde, hasta) =>
+      supabase
+        .from("mensajes")
+        .select("conversacion_id, metadata")
+        .or("metadata->>ad_id.not.is.null,metadata->anuncio->>id.not.is.null")
+        .gte("created_at", rango.previoInicio.toISOString())
+        .order("created_at", { ascending: true })
+        .range(desde, hasta),
+    );
+    const anuncioPorConversacion = new Map<string, ReturnType<typeof anuncioDeMensajes>>();
+    for (const m of mensajesConAnuncio.filas) {
+      if (anuncioPorConversacion.has(m.conversacion_id)) continue; // el primero es el que trajo al lead
+      anuncioPorConversacion.set(m.conversacion_id, anuncioDeMensajes([m.metadata]));
+    }
+    const filas = conversaciones.filas.map((f) => {
+      const anuncio = anuncioPorConversacion.get(f.id);
+      return anuncio?.id ? { ...f, anuncio_id: anuncio.id, anuncio_nombre: anuncio.nombre, anuncio_campana: anuncio.campana } : f;
+    });
+
     return {
       ok: true,
       metricas: calcularMetricas({
         periodo,
         rango,
-        filas: conversaciones.filas,
+        filas,
         abiertas: abiertas.filas,
         equipo: (equipo.data ?? []) as MiembroEquipo[],
-        truncado: conversaciones.truncado || abiertas.truncado,
+        truncado: conversaciones.truncado || abiertas.truncado || mensajesConAnuncio.truncado,
       }),
     };
   } catch (err) {

@@ -29,7 +29,8 @@ GUIA-ARRANQUE.md   Qué falta y en qué orden
 - **WhatsApp por QR (no oficial, opcional):** el número se vincula escaneando un QR desde Canales (Baileys), sin pasar por la API de
   Meta. Solo contesta a quien escribe y puede bloquear el número: ver `docs/referencia/WHATSAPP-QR.md`.
 - **Anuncio origen:** la ficha del chat muestra de qué anuncio vino el lead (nombre, campaña, video o imagen) con un enlace para
-  verlo. Sale de los datos del formulario o del anuncio de clic a WhatsApp y de Meta (`GET /admin/anuncios/:id`).
+  verlo. Sale de los datos del formulario o del anuncio de clic a WhatsApp y de Meta (`GET /admin/anuncios/:id`). En Métricas, la tabla
+  «Por anuncio» cuenta leads, atendidos, oportunidades y ventas de cada anuncio (y video contra imagen) para saber cuál rinde más.
 - **Quién atiende:** toda conversación nueva empieza en «Yo» (una persona); el bot solo contesta en los chats donde se mueve el
   interruptor Bot/Yo. `BOT_ACTIVO_POR_DEFECTO=true` lo invierte.
 - **México:** teléfonos `52 + 10 dígitos` (acepta el `521` antiguo de Meta), zona horaria `America/Cancun` (UTC−5, una hora más que la Ciudad de México), plantillas `es_MX`.

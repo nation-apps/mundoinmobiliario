@@ -7,7 +7,7 @@ import { SinDatos, Tarjeta } from "./Tarjeta";
 
 const ROL_LABEL: Record<string, string> = { admin: "Administración", asistente: "Asistente", vendedor: "Ventas" };
 
-function Th({ children, derecha = false }: { children: ReactNode; derecha?: boolean }) {
+export function Th({ children, derecha = false }: { children: ReactNode; derecha?: boolean }) {
   return (
     <th
       scope="col"
@@ -20,7 +20,7 @@ function Th({ children, derecha = false }: { children: ReactNode; derecha?: bool
   );
 }
 
-function Td({ children, derecha = false, className = "" }: { children: ReactNode; derecha?: boolean; className?: string }) {
+export function Td({ children, derecha = false, className = "" }: { children: ReactNode; derecha?: boolean; className?: string }) {
   return (
     <td className={`whitespace-nowrap border-b border-line px-3 py-2.5 align-middle first:pl-4 last:pr-4 ${derecha ? "text-right tabular-nums" : ""} ${className}`}>
       {children}
@@ -29,7 +29,7 @@ function Td({ children, derecha = false, className = "" }: { children: ReactNode
 }
 
 /** Parte del total, como medidor: pista clara y relleno del mismo tono. */
-function Medidor({ valor, total }: { valor: number; total: number }) {
+export function Medidor({ valor, total }: { valor: number; total: number }) {
   const parte = total > 0 ? valor / total : 0;
   return (
     <span className="ml-auto flex w-[96px] items-center gap-2" title={`${Math.round(parte * 100)} % del total`}>
@@ -41,7 +41,7 @@ function Medidor({ valor, total }: { valor: number; total: number }) {
   );
 }
 
-function Cero() {
+export function Cero() {
   return <span className="text-line-strong">0</span>;
 }
 

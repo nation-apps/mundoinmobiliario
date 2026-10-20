@@ -30,6 +30,10 @@ export type FilaMetrica = {
   created_at: string;
   primera_respuesta_at: string | null;
   primera_respuesta_humana_at: string | null;
+  /** Del anuncio del que vino (lo pone el cargador desde los primeros mensajes; no es una columna de `conversaciones`). */
+  anuncio_id?: string | null;
+  anuncio_nombre?: string | null;
+  anuncio_campana?: string | null;
 };
 
 /** Conversación abierta ahora (de `conversaciones_resumen`, que sabe quién escribió al final). */
@@ -274,6 +278,20 @@ export type ConteoEtapa = { etapa: EtapaAbierta; total: number };
 
 export type Cierres = { vendidas: number; noVendidas: number };
 
+/** Una fila de «Por anuncio»: lo que trajo un anuncio y en qué quedó. `anuncioId` null = las que no vinieron de un anuncio. */
+export type FilaAnuncio = {
+  anuncioId: string | null;
+  nombre: string;
+  campana: string | null;
+  entradas: number;
+  /** Alguien del equipo ya les respondió. */
+  atendidas: number;
+  /** Hoy en «Oportunidad de venta». */
+  oportunidad: number;
+  vendidas: number;
+  noVendidas: number;
+};
+
 /** Una barra del pareto de ventas perdidas. `motivo` null = cerrada en «No vendido» sin decir por qué. */
 export type ConteoPerdida = { motivo: MotivoPerdida | null; total: number; parte: number; acumulado: number };
 
@@ -290,6 +308,8 @@ export type Metricas = {
   totalesSerie: Record<SerieEntrada, number>;
   porOrigen: FilaOrigen[];
   porVendedor: FilaVendedor[];
+  /** De qué anuncio vino cada lead: de los que más venden a los que menos, y al final «Sin anuncio». */
+  porAnuncio: FilaAnuncio[];
   etapas: ConteoEtapa[];
   cierres: Cierres;
   /** ¿Por qué se perdió la venta? De mayor a menor (pareto); «sin motivo» siempre al final. */
@@ -326,6 +346,45 @@ export function paretoPerdidas(filas: Pick<FilaMetrica, "etapa" | "motivo_perdid
   });
   if (sinMotivo > 0) filasPareto.push({ motivo: null, total: sinMotivo, parte: sinMotivo / total, acumulado: 1 });
   return filasPareto;
+}
+
+export const SIN_ANUNCIO = "Sin anuncio (directo, sitio web…)";
+
+/**
+ * Cuántos leads trajo cada anuncio y cuántos terminaron en venta. Ordena por lo que importa para saber cuál rinde más:
+ * más vendidas, luego más oportunidades, luego más leads. Los que no vinieron de un anuncio van juntos al final.
+ */
+export function porAnuncioDe(filas: FilaMetrica[]): FilaAnuncio[] {
+  const grupos = new Map<string, FilaAnuncio>();
+  for (const f of filas) {
+    const clave = f.anuncio_id ?? "";
+    let g = grupos.get(clave);
+    if (!g) {
+      g = {
+        anuncioId: f.anuncio_id ?? null,
+        nombre: f.anuncio_id ? (f.anuncio_nombre ?? `Anuncio ${f.anuncio_id}`) : SIN_ANUNCIO,
+        campana: f.anuncio_campana ?? null,
+        entradas: 0,
+        atendidas: 0,
+        oportunidad: 0,
+        vendidas: 0,
+        noVendidas: 0,
+      };
+      grupos.set(clave, g);
+    }
+    // El nombre y la campaña pueden venir en un lead y no en otro: se queda con el primero que los trae.
+    if (f.anuncio_id && f.anuncio_nombre && g.nombre.startsWith("Anuncio ")) g.nombre = f.anuncio_nombre;
+    if (!g.campana && f.anuncio_campana) g.campana = f.anuncio_campana;
+    g.entradas++;
+    if (f.primera_respuesta_humana_at) g.atendidas++;
+    if (f.etapa === "oportunidad") g.oportunidad++;
+    if (f.etapa === "vendido") g.vendidas++;
+    if (f.etapa === "no_vendido") g.noVendidas++;
+  }
+  return [...grupos.values()].sort((a, b) => {
+    if ((a.anuncioId === null) !== (b.anuncioId === null)) return a.anuncioId === null ? 1 : -1;
+    return b.vendidas - a.vendidas || b.oportunidad - a.oportunidad || b.entradas - a.entradas || a.nombre.localeCompare(b.nombre, "es");
+  });
 }
 
 function serieVacia(): Record<SerieEntrada, number> {
@@ -526,6 +585,7 @@ export function calcularMetricas({
     totalesSerie,
     porOrigen,
     porVendedor,
+    porAnuncio: porAnuncioDe(actuales),
     etapas,
     cierres,
     perdidas,

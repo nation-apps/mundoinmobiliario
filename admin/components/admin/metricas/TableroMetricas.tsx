@@ -23,6 +23,7 @@ import { ZONA_NEGOCIO } from "@/lib/admin/rango";
 import { PERIODOS, duracionCorta, type Metricas, type PeriodoId } from "@/lib/admin/metricas";
 import Etapas from "./Etapas";
 import VentasPerdidas from "./VentasPerdidas";
+import TablaAnuncios from "./TablaAnuncios";
 import GraficaEntradas from "./GraficaEntradas";
 import MapaCalor from "./MapaCalor";
 import Tacometro, { META_RESPUESTA_MIN } from "./Tacometro";
@@ -280,6 +281,7 @@ export default function TableroMetricas({ metricas }: { metricas: Metricas }) {
         <VentasPerdidas metricas={metricas} />
 
         <TablaOrigen metricas={metricas} />
+        <TablaAnuncios metricas={metricas} />
         <TablaVendedores metricas={metricas} />
         <MapaCalor metricas={metricas} />
       </div>
