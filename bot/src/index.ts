@@ -14,6 +14,7 @@ import { actualizarEstadoCanal } from "./db/repositories/canales.js";
 import { registrarNumeroSiHaceFalta } from "./whatsapp/registro.js";
 import { iniciarReenvios } from "./seguimientos/reenvios.js";
 import { iniciarReconciliacionLeads } from "./meta/reconciliarLeads.js";
+import { iniciarSaludosPendientes } from "./agent/primerMensajePendientes.js";
 import { arrancarSesionesQrSiHayGuardadas } from "./whatsapp-qr/sesion.js";
 
 // Sin el log automático de requests: Fastify escribe `req.url` completo y el
@@ -91,6 +92,7 @@ if (whatsappConfigurado) {
 iniciarReenvios();
 arrancarSesionesQrSiHayGuardadas().catch((err: unknown) => logger.error({ err }, "Falló el arranque de WhatsApp por QR"));
 iniciarReconciliacionLeads();
+iniciarSaludosPendientes();
 
 if (metaConfigurado) {
   estadoConexion()

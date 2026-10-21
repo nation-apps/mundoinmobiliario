@@ -186,23 +186,33 @@ const PAUSA_EXTRA_MS = 75_000;
 const cola: PrimerMensaje[] = [];
 const enviados: number[] = [];
 let procesando = false;
+/** Los que están en la cola o se están mandando ahora. */
+const enCola = new Set<string>();
+/** Los que ya no se reintentan en esta ejecución (no se pudo, o ya hablaban con nosotros): no se les insiste cada vuelta. */
+const descartados = new Set<string>();
+
+/** ¿Ya se está gestionando el saludo de esta conversación? La revisión periódica no la vuelve a poner en la cola. */
+export function saludoGestionado(conversacionId: string): boolean {
+  return enCola.has(conversacionId) || descartados.has(conversacionId);
+}
 
 const esperar = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function enviarUno(p: PrimerMensaje): Promise<boolean> {
+/** «linea_apagada»: no se intentó (la revisión periódica lo reintenta cuando la línea se conecte). «omitido»: no corresponde mandarlo. */
+async function enviarUno(p: PrimerMensaje): Promise<"enviado" | "omitido" | "linea_apagada"> {
   const { estadoLineaQr } = await import("../whatsapp-qr/sesion.js");
   if (estadoLineaQr(p.linea).estado !== "conectado") {
     log.warn({ linea: p.linea }, "La línea de WhatsApp no está conectada: no se le escribió a un lead (queda como formulario)");
-    return false;
+    return "linea_apagada";
   }
   const conversacion = await leerConversacion(p.conversacionId);
-  if (!conversacion || conversacion.canal !== "web" || conversacion.estado === "cerrada") return false;
+  if (!conversacion || conversacion.canal !== "web" || conversacion.estado === "cerrada") return "omitido";
   // Ya está hablando con nosotros por WhatsApp (o lo estuvo hace poco): no se le escribe primero otra vez.
   if (await tieneConversacionWhatsappAbierta(p.clienteId)) {
     log.info("El lead ya tiene una conversación de WhatsApp abierta: no se le manda el primer mensaje");
-    return false;
+    return "omitido";
   }
-  if (await clienteAnulado(p.clienteId)) return false;
+  if (await clienteAnulado(p.clienteId)) return "omitido";
 
   const externalId = await sendText(p.telefono, p.texto, p.linea);
   const convertida = await convertirEnWhatsapp(p.conversacionId, p.linea);
@@ -215,7 +225,7 @@ async function enviarUno(p: PrimerMensaje): Promise<boolean> {
     metadata: { via: "primer_mensaje_formulario", ...(p.leadgenId ? { leadgen_id: p.leadgenId } : {}) },
   });
   log.info({ conversacionId: p.conversacionId, convertida }, "Primer mensaje por WhatsApp enviado a un lead de formulario");
-  return true;
+  return "enviado";
 }
 
 async function procesar(): Promise<void> {
@@ -238,13 +248,19 @@ async function procesar(): Promise<void> {
       const siguiente = cola.shift();
       if (!siguiente) break;
       try {
-        if (await enviarUno(siguiente)) {
+        const resultado = await enviarUno(siguiente);
+        if (resultado === "enviado") {
           enviados.push(Date.now());
           while (enviados.length > 200) enviados.shift();
+        } else if (resultado === "omitido") {
+          descartados.add(siguiente.conversacionId);
         }
       } catch (err) {
         // Un número sin WhatsApp o una caída de la conexión: el lead queda como formulario, como hasta ahora.
+        descartados.add(siguiente.conversacionId);
         log.warn({ err }, "No se pudo mandar el primer mensaje a un lead");
+      } finally {
+        enCola.delete(siguiente.conversacionId);
       }
       await esperar(PAUSA_MIN_MS + Math.random() * PAUSA_EXTRA_MS);
     }
@@ -298,6 +314,7 @@ export function encolarPrimerMensaje(p: PrimerMensaje): void {
     log.warn("Cola de primeros mensajes llena: este lead queda solo como formulario");
     return;
   }
+  enCola.add(p.conversacionId);
   cola.push(p);
   void procesar();
 }

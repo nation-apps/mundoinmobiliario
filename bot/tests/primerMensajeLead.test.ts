@@ -174,3 +174,20 @@ describe("saludo a leads de formulario según la configuración del administrado
     expect(texto).toBe("¡Hola Marcos! Soy Giovanny de TVS Motor Cancún. ¿Sigues interesado en la moto TVS RTR 310?");
   });
 });
+
+describe("camposDelContenido", () => {
+  it("recupera las respuestas del texto guardado y de ahí sale el interés", async () => {
+    const { camposDelContenido } = await import("../src/meta/leadAds.js");
+    const { interesDelLead } = await import("../src/agent/primerMensajeLead.js");
+    const campos = camposDelContenido(
+      "Nombre: Brandy\n¿Cuándo tienes pensado comprar tu moto?: Solo estoy comparando opciones\n¿Qué modelo tvs te interesa?: tvs rtr 310\nCorreo: a@b.com",
+    );
+    expect(campos).toHaveLength(4);
+    expect(interesDelLead(campos)).toEqual({ frase: "la moto TVS RTR 310", tipo: "tvs" });
+  });
+
+  it("sin respuestas no inventa campos", async () => {
+    const { camposDelContenido } = await import("../src/meta/leadAds.js");
+    expect(camposDelContenido("Envió el formulario del anuncio sin respuestas.")).toEqual([]);
+  });
+});

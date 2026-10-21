@@ -89,6 +89,20 @@ export function legible(texto: string): string {
   return i < 0 ? limpio : limpio.slice(0, i) + limpio.charAt(i).toUpperCase() + limpio.slice(i + 1);
 }
 
+/** Las respuestas del formulario a partir del texto guardado en la conversación («Pregunta: respuesta», una por línea). */
+export function camposDelContenido(contenido: string): CampoLead[] {
+  return contenido
+    .split("\n")
+    .map((linea) => {
+      const i = linea.indexOf(":");
+      if (i <= 0) return null;
+      const name = linea.slice(0, i).trim();
+      const valor = linea.slice(i + 1).trim();
+      return name && valor ? { name, values: [valor] } : null;
+    })
+    .filter((c): c is CampoLead => c !== null);
+}
+
 /**
  * Las respuestas en el orden del formulario, una por línea, para el hilo del
  * panel. En las preguntas propias, las opciones también llegan en snake_case;
