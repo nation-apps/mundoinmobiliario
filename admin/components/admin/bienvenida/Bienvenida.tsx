@@ -5,7 +5,16 @@ import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import CanalIcono from "@/components/admin/chats/CanalIcono";
 import { LINEAS_WHATSAPP } from "@/lib/admin/chats-tipos";
-import { LARGO_MAXIMO, MARCADORES, SALUDO_AUTOMATICO_EJEMPLO, vistaPrevia, type ConfigBienvenida } from "@/lib/admin/bienvenida";
+import {
+  LARGO_MAXIMO,
+  MARCADORES,
+  PLANTILLA_DIRECTO,
+  PLANTILLA_FORMULARIO,
+  SALUDO_AUTOMATICO_EJEMPLO,
+  conPlantillas,
+  vistaPrevia,
+  type ConfigBienvenida,
+} from "@/lib/admin/bienvenida";
 
 const MARCA_DE_LINEA: Record<string, string> = { tvs: "TVS Motor Cancún", mundo: "Mundo de Motos" };
 
@@ -45,8 +54,9 @@ export default function Bienvenida({ inicial }: { inicial: ConfigBienvenida[] })
 
 function TarjetaLinea({ linea, etiqueta, inicial }: { linea: string; etiqueta: string; inicial: ConfigBienvenida }) {
   const supabase = useMemo(() => createBrowserSupabase(), []);
-  const [config, setConfig] = useState<ConfigBienvenida>(inicial);
-  const [guardado, setGuardado] = useState<ConfigBienvenida>(inicial);
+  // Sin texto propio se muestra la plantilla (editable): así nadie tiene que adivinar qué se va a mandar.
+  const [config, setConfig] = useState<ConfigBienvenida>(() => conPlantillas(inicial));
+  const [guardado, setGuardado] = useState<ConfigBienvenida>(() => conPlantillas(inicial));
   const [guardando, setGuardando] = useState(false);
   const cambios = JSON.stringify(config) !== JSON.stringify(guardado);
 
@@ -85,11 +95,12 @@ function TarjetaLinea({ linea, etiqueta, inicial }: { linea: string; etiqueta: s
 
       <Bloque
         titulo="Registro por formulario de campaña"
-        descripcion="Se le manda a quien llena un formulario de anuncios y deja su teléfono, desde este número. Si lo dejas vacío, el bot arma el saludo con las respuestas del formulario."
+        descripcion="Se le manda a quien llena un formulario de anuncios y deja su teléfono, y no toca el botón de WhatsApp, desde este número. Es una plantilla: edítala como quieras y usa las variables para que cada mensaje lleve sus datos."
         activo={config.formulario_activo}
         texto={config.formulario_texto ?? ""}
         marca={MARCA_DE_LINEA[linea] ?? etiqueta}
         esFormulario
+        plantilla={PLANTILLA_FORMULARIO}
         ejemploVacio={SALUDO_AUTOMATICO_EJEMPLO}
         onActivo={(v) => setConfig((c) => ({ ...c, formulario_activo: v }))}
         onTexto={(t) => setConfig((c) => ({ ...c, formulario_texto: t }))}
@@ -102,6 +113,7 @@ function TarjetaLinea({ linea, etiqueta, inicial }: { linea: string; etiqueta: s
         texto={config.directo_texto ?? ""}
         marca={MARCA_DE_LINEA[linea] ?? etiqueta}
         esFormulario={false}
+        plantilla={PLANTILLA_DIRECTO}
         onActivo={(v) => setConfig((c) => ({ ...c, directo_activo: v }))}
         onTexto={(t) => setConfig((c) => ({ ...c, directo_texto: t }))}
       />
@@ -116,6 +128,7 @@ function Bloque({
   texto,
   marca,
   esFormulario,
+  plantilla,
   ejemploVacio,
   onActivo,
   onTexto,
@@ -126,6 +139,7 @@ function Bloque({
   texto: string;
   marca: string;
   esFormulario: boolean;
+  plantilla: string;
   ejemploVacio?: string;
   onActivo: (v: boolean) => void;
   onTexto: (t: string) => void;
@@ -169,7 +183,7 @@ function Bloque({
           maxLength={LARGO_MAXIMO}
           rows={5}
           aria-label={`Texto de ${titulo}`}
-          placeholder={esFormulario ? "Vacío: el bot arma el saludo con las respuestas del formulario." : "Escribe el mensaje de bienvenida…"}
+          placeholder="Escribe el mensaje de bienvenida…"
           className="admin-input !h-auto w-full"
         />
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -185,6 +199,11 @@ function Bloque({
               {m.id}
             </button>
           ))}
+          {texto !== plantilla && (
+            <button type="button" onClick={() => onTexto(plantilla)} className="text-[11.5px] font-medium text-accent-deep hover:underline">
+              Restablecer plantilla
+            </button>
+          )}
           <span className="t-mono ml-auto text-[11px] text-muted tabular-nums">
             {texto.length}/{LARGO_MAXIMO}
           </span>
