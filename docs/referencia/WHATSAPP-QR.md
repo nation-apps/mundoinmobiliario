@@ -12,8 +12,10 @@ puede dar de alta un número con un proveedor autorizado.
 
 ## Qué hace el bot en este modo
 
-- Con `WHATSAPP_QR_ACTIVO=true`, todo lo de WhatsApp (recibir, contestar, enviar fotos y documentos, «escribiendo…») va por
-  el número vinculado y **no** por la API de Meta. Con `false` (por defecto) nada cambia.
+- Con `WHATSAPP_QR_ACTIVO=true`, todo lo de WhatsApp (recibir, contestar, enviar fotos y documentos) va por el número
+  vinculado y **no** por la API de Meta. Con `false` (por defecto) nada cambia.
+- El CRM nunca marca «leído» ni muestra «escribiendo…»: así el celular del negocio conserva la notificación y el globito de
+  no leído de cada mensaje (si el CRM lo marcara leído, en el celular parecería que no llegó).
 - Entra a Chats lo que escriben los clientes; el bot contesta igual que siempre. Lo que el equipo escribe desde el
   celular se refleja como «Equipo · celular» y el chat pasa a «Yo» (mismo mecanismo que la coexistencia).
 - **No manda plantillas ni difusiones** (`sendTemplate` falla a propósito): no se le escribe primero a nadie.

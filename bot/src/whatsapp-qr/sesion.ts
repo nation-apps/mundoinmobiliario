@@ -419,7 +419,6 @@ class SesionLinea {
       const s = this.conectado();
       const jid = await this.jidDe(s, para);
       const enviado = await s.sendMessage(jid, { text: texto });
-      await s.sendPresenceUpdate("paused", jid).catch(() => undefined);
       return this.anotarEnviado(enviado);
     });
   }
@@ -443,14 +442,6 @@ class SesionLinea {
       );
       return this.anotarEnviado(enviado);
     });
-  }
-
-  async marcarLeidoYEscribiendo(mensajeId: string): Promise<void> {
-    const s = this.conectado();
-    const m = this.mensajesRecientes.get(mensajeId);
-    if (!m?.key.remoteJid) return;
-    await s.readMessages([m.key]);
-    await s.sendPresenceUpdate("composing", m.key.remoteJid);
   }
 
   async descargarMedia(mensajeId: string): Promise<{ buffer: Buffer; mimeType: string }> {
@@ -528,10 +519,11 @@ function sesionDelMensaje(mensajeId: string): SesionLinea | null {
   return null;
 }
 
-/** «Leído» y «escribiendo…» (cosmético: quien llama ignora cualquier error). */
-export async function marcarLeidoYEscribiendoQr(mensajeId: string): Promise<void> {
-  await sesionDelMensaje(mensajeId)?.marcarLeidoYEscribiendo(mensajeId);
-}
+/**
+ * Por QR no se marca «leído» ni se muestra «escribiendo…»: el CRM es un dispositivo vinculado, y si marca leído (o aparece en
+ * línea) el celular del negocio pierde la notificación y el globito de no leído, y parece que el mensaje no le llegó.
+ */
+export async function marcarLeidoYEscribiendoQr(_mensajeId: string): Promise<void> {}
 
 /** Baja la foto o el documento de un mensaje reciente (el «mediaId» de la conexión QR es el id del mensaje). */
 export async function descargarMediaQr(mensajeId: string): Promise<{ buffer: Buffer; mimeType: string }> {
