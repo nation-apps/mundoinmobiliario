@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import { LINEA_POR_DEFECTO } from "../../lib/lineas.js";
 import { supabase } from "../client.js";
 import { fuentePorCanal } from "../../lib/fuente.js";
+import { variantesTelefono } from "../../lib/telefono.js";
 
 /**
  * `web` es el formulario de contacto del sitio (POST /public/leads): llega a la
@@ -305,4 +306,37 @@ export async function unirFormularioConWhatsapp(clienteId: string, linea?: strin
 export async function cambiarLineaConversacion(conversacionId: string, linea: string): Promise<void> {
   const { error } = await supabase.from("conversaciones").update({ linea }).eq("id", conversacionId);
   if (error) throw error;
+}
+
+/**
+ * El formulario abierto (reciente) de alguien que dio este teléfono o este correo al llenarlo, sin contar al cliente
+ * `excluirClienteId`. Sirve para encontrar su registro cuando escribe por WhatsApp desde otro número.
+ */
+export async function buscarFormularioAbiertoReciente(p: {
+  telefono: string | null;
+  email: string | null;
+  excluirClienteId: string;
+  desde: string;
+}): Promise<{ conversacionId: string; clienteId: string } | null> {
+  const condiciones: string[] = [];
+  if (p.telefono) condiciones.push(`telefono.in.(${variantesTelefono(p.telefono).join(",")})`);
+  if (p.email) condiciones.push(`email.ilike.${p.email.replace(/[,()*%]/g, "")}`);
+  if (condiciones.length === 0) return null;
+  const { data: clientes, error: errCli } = await supabase.from("clientes").select("id").or(condiciones.join(",")).neq("id", p.excluirClienteId);
+  if (errCli) throw errCli;
+  const ids = ((clientes ?? []) as { id: string }[]).map((c) => c.id);
+  if (ids.length === 0) return null;
+  const { data, error } = await supabase
+    .from("conversaciones")
+    .select("id, cliente_id")
+    .in("cliente_id", ids)
+    .eq("canal", "web")
+    .eq("origen", "formulario")
+    .in("estado", ESTADOS_ABIERTOS)
+    .gte("created_at", p.desde)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const fila = (data ?? [])[0] as { id: string; cliente_id: string } | undefined;
+  return fila ? { conversacionId: fila.id, clienteId: fila.cliente_id } : null;
 }

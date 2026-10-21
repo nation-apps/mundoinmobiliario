@@ -194,3 +194,15 @@ export async function guardarPerfilCliente(clienteId: string, nuevo: PerfilCompr
   if (error) throw error;
   return perfil;
 }
+
+/** Suma una línea a las notas internas del cliente (sin borrar lo que ya había). */
+export async function agregarNotaCliente(clienteId: string, nota: string): Promise<void> {
+  const { data, error } = await supabase.from("clientes").select("notas").eq("id", clienteId).maybeSingle();
+  if (error) throw error;
+  const previa = ((data as { notas: string | null } | null)?.notas ?? "").trim();
+  const { error: updError } = await supabase
+    .from("clientes")
+    .update({ notas: previa ? `${previa}\n${nota}` : nota })
+    .eq("id", clienteId);
+  if (updError) throw updError;
+}

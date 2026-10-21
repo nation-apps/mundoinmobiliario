@@ -2,6 +2,7 @@ import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { isRateLimited } from "../lib/rateLimit.js";
 import { findOrCreateByPhone } from "../db/repositories/clientes.js";
+import { unirFormularioPorMensaje } from "./unirFormularioPorMensaje.js";
 import { actualizarFuenteConversacion, getOrCreateConversacionAbierta, unirFormularioConWhatsapp } from "../db/repositories/conversaciones.js";
 import { esFuenteDeCampana, fuenteCampana } from "../lib/fuente.js";
 import { paginaDeAnuncio } from "../meta/client.js";
@@ -80,6 +81,8 @@ export async function handleInboundMessage(message: InboundMessage, linea: strin
   }
 
   const cliente = await findOrCreateByPhone(message.from, message.contactName);
+  // Si el mensaje trae los datos del formulario (botón «Enviar por WhatsApp») y escribe desde otro número, se une con su registro.
+  if (message.kind === "text") await unirFormularioPorMensaje(cliente, message.text);
   // Si ya llenó un formulario, su registro se convierte en este chat: no queda duplicado ni cambia su origen de campaña.
   await unirFormularioConWhatsapp(cliente.id, linea).catch((err: unknown) =>
     logger.warn({ err, clienteId: cliente.id }, "No se pudo unir el formulario con el chat de WhatsApp"),
