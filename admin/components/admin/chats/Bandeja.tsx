@@ -17,6 +17,7 @@ import {
   Radio,
   Search,
   UserRound,
+  UserRoundCheck,
   UserRoundX,
   X,
   type LucideIcon,
@@ -35,6 +36,7 @@ import {
   LIMITE_BANDEJA,
   esEtapaFinal,
   esperaRespuesta,
+  nombreCorto,
   type BandejaProps,
   type Canal,
   type ClienteEtiqueta,
@@ -48,6 +50,7 @@ import {
 } from "@/lib/admin/chats-tipos";
 import { Chip } from "@/components/admin/ui";
 import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
+import { Menu, MenuOpcion, MenuSeparador, MenuTitulo } from "@/components/admin/Menu";
 import { origenesDisponibles } from "@/lib/admin/embudo";
 import { useAvisos } from "./Avisos";
 import CanalIcono from "./CanalIcono";
@@ -65,6 +68,8 @@ type Vista = {
   filtroEtapa: FiltroEtapaBandeja;
   /** "todas", "campana" (cualquiera de campaña) o el texto exacto de `fuente`, como en el embudo. */
   filtroOrigen: string;
+  /** "todas", "sin_asignar" o el user_id del vendedor. No se guarda: es para trabajar la lista de un vendedor, no para quedarse. */
+  filtroVendedor: string;
   /** No se guarda: una búsqueda vieja dejaría la lista vacía sin explicación. */
   busqueda: string;
   seleccionadaId: string | null;
@@ -74,7 +79,7 @@ type Vista = {
   restaurada: boolean;
 };
 
-type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "filtroOrigen" | "busqueda">>;
+type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "filtroOrigen" | "filtroVendedor" | "busqueda">>;
 
 type Accion =
   | { tipo: "restaurar"; guardados: FiltrosBandejaGuardados }
@@ -89,6 +94,7 @@ const VISTA_INICIAL: Vista = {
   filtroEstado: "todas",
   filtroEtapa: "todas",
   filtroOrigen: "todas",
+  filtroVendedor: "todas",
   busqueda: "",
   seleccionadaId: null,
   pantalla: "lista",
@@ -124,6 +130,7 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
         filtroEstado: "todas",
         filtroEtapa: "todas",
         filtroOrigen: "todas",
+        filtroVendedor: "todas",
         busqueda: "",
         seleccionadaId: accion.id,
         pantalla: "hilo",
@@ -170,6 +177,7 @@ type Filtros = {
   estado: FiltroEstadoBandeja;
   etapa: FiltroEtapaBandeja;
   origen: string;
+  vendedor: string;
   busqueda: string;
 };
 
@@ -209,6 +217,12 @@ function coincide(c: ConversacionResumen, filtros: Filtros, usuarioId: string): 
   if (filtros.origen === "campana") {
     if (!c.fuente?.startsWith("Campaña ")) return false;
   } else if (filtros.origen !== "todas" && c.fuente !== filtros.origen) {
+    return false;
+  }
+
+  if (filtros.vendedor === "sin_asignar") {
+    if (c.asignada_a !== null) return false;
+  } else if (filtros.vendedor !== "todas" && c.asignada_a !== filtros.vendedor) {
     return false;
   }
 
@@ -380,9 +394,12 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   const [canales, setCanales] = useState<EstadoCanales | null>(null);
   // La carga inicial ya viene del servidor: solo se enciende al recargar una lista vacía.
   const [cargando, setCargando] = useState(false);
+  // Asignar de una vez toda la lista filtrada: primero se elige a quién, luego se confirma.
+  const [bloque, setBloque] = useState<{ destino: string | null; ids: string[] } | null>(null);
+  const [asignandoBloque, setAsignandoBloque] = useState(false);
 
   const [vista, despachar] = useReducer(reducirVista, VISTA_INICIAL);
-  const { filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, seleccionadaId, pantalla, restaurada } = vista;
+  const { filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, seleccionadaId, pantalla, restaurada } = vista;
 
   // El servidor no tiene matchMedia: allí se asume escritorio en el panel y
   // apilado en la app; React corrige con el valor real al hidratar.
@@ -600,9 +617,12 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   }, [etiquetas, clienteEtiquetas]);
 
   const filtradas = useMemo(() => {
-    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, busqueda };
+    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, busqueda };
     return conversaciones.filter((c) => coincide(c, filtros, usuarioId));
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, usuarioId]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, usuarioId]);
+
+  // Las abiertas de la lista filtrada: lo que se puede asignar en bloque (las cerradas no se reasignan).
+  const candidatasBloque = useMemo(() => filtradas.filter((c) => c.estado !== "cerrada"), [filtradas]);
 
   // Se busca en TODAS, no en las filtradas: si no, con el filtro "Sin
   // responder" el hilo se cerraría solo apenas el staff contesta. Cuando es
@@ -633,6 +653,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       estado: cambio.filtroEstado ?? filtroEstado,
       etapa: cambio.filtroEtapa ?? filtroEtapa,
       origen: cambio.filtroOrigen ?? filtroOrigen,
+      vendedor: cambio.filtroVendedor ?? filtroVendedor,
       busqueda: cambio.busqueda ?? busqueda,
     };
     const soltar = seleccionada !== null && !coincide(seleccionada, siguientes, usuarioId);
@@ -678,9 +699,22 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     ];
   }, [conversaciones, filtroOrigen]);
 
+  const opcionesVendedor = useMemo(
+    () => [
+      { id: "todas", label: "Todos", icono: <Layers size={16} strokeWidth={1.9} aria-hidden /> },
+      { id: "sin_asignar", label: "Sin asignar", icono: <UserRoundX size={16} strokeWidth={1.9} aria-hidden /> },
+      ...staff.map((m) => ({
+        id: m.user_id,
+        label: m.user_id === usuarioId ? `Yo (${nombreCorto(m.nombre)})` : nombreCorto(m.nombre),
+        icono: <UserRound size={16} strokeWidth={1.9} aria-hidden />,
+      })),
+    ],
+    [staff, usuarioId],
+  );
+
   const conteos = useMemo(() => {
     // Cuántas quedarían con cada opción, sin tocar los demás filtros (sobre las LIMITE_BANDEJA cargadas).
-    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, busqueda };
+    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, busqueda };
     const contar = (cambio: Partial<Filtros>) =>
       conversaciones.reduce((n, c) => n + (coincide(c, { ...base, ...cambio }, usuarioId) ? 1 : 0), 0);
     return {
@@ -688,11 +722,17 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       estado: Object.fromEntries(FILTROS_ESTADO_BANDEJA.map((f) => [f.id, contar({ estado: f.id })])) as Record<FiltroEstadoBandeja, number>,
       etapa: Object.fromEntries(OPCIONES_ETAPA.map((f) => [f.id, contar({ etapa: f.id })])) as Record<FiltroEtapaBandeja, number>,
       origen: Object.fromEntries(opcionesOrigen.map((f) => [f.id, contar({ origen: f.id })])) as Record<string, number>,
+      vendedor: Object.fromEntries(opcionesVendedor.map((f) => [f.id, contar({ vendedor: f.id })])) as Record<string, number>,
     };
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, busqueda, usuarioId, opcionesOrigen]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, usuarioId, opcionesOrigen, opcionesVendedor]);
 
   const hayFiltros =
-    filtroCanal !== "todas" || filtroEstado !== "todas" || filtroEtapa !== "todas" || filtroOrigen !== "todas" || busqueda.trim() !== "";
+    filtroCanal !== "todas" ||
+    filtroEstado !== "todas" ||
+    filtroEtapa !== "todas" ||
+    filtroOrigen !== "todas" ||
+    filtroVendedor !== "todas" ||
+    busqueda.trim() !== "";
 
   const selectorEtapa = (
     <FiltroDesplegable
@@ -719,6 +759,105 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     />
   );
 
+  const selectorVendedor = (
+    <FiltroDesplegable
+      nombre="Vendedor"
+      icono={<UserRound size={15} aria-hidden />}
+      opciones={opcionesVendedor}
+      valor={filtroVendedor}
+      conteos={conteos.vendedor}
+      onCambiar={(id) => filtrar({ filtroVendedor: id })}
+    />
+  );
+
+  async function asignarEnBloque() {
+    if (!bloque) return;
+    const { destino, ids } = bloque;
+    setAsignandoBloque(true);
+    let hechas = 0;
+    try {
+      // Por tandas: la lista de ids viaja en la URL.
+      for (let i = 0; i < ids.length; i += 80) {
+        const { data, error } = await supabase.from("conversaciones").update({ asignada_a: destino }).in("id", ids.slice(i, i + 80)).select("id");
+        if (error) break;
+        hechas += data?.length ?? 0;
+      }
+    } finally {
+      setAsignandoBloque(false);
+      setBloque(null);
+    }
+    const nombre = destino ? nombreCorto(staff.find((m) => m.user_id === destino)?.nombre) : "Sin asignar";
+    if (hechas === ids.length) toast.success(`${hechas} conversaciones asignadas a ${nombre}`);
+    else toast.error(`Solo se pudieron asignar ${hechas} de ${ids.length}. Revisa tus permisos o inténtalo otra vez.`);
+    void recargar();
+  }
+
+  const nombreDestinoBloque = bloque?.destino ? nombreCorto(staff.find((m) => m.user_id === bloque.destino)?.nombre) : "Sin asignar";
+
+  // Solo con algún filtro puesto: así no se asigna «todo» por accidente.
+  const asignacionEnBloque =
+    hayFiltros && candidatasBloque.length > 0 ? (
+      bloque ? (
+        <div
+          role="group"
+          aria-label="Confirmar la asignación de la lista"
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent/45 bg-accent-soft px-3 text-[13px] max-lg:h-auto max-lg:flex-wrap max-lg:py-2"
+        >
+          <span>
+            ¿Asignar <strong>{bloque.ids.length}</strong> a <strong>{nombreDestinoBloque}</strong>?
+          </span>
+          <button type="button" disabled={asignandoBloque} onClick={() => void asignarEnBloque()} className="admin-btn max-lg:min-h-11">
+            {asignandoBloque ? "Asignando…" : "Confirmar"}
+          </button>
+          <button type="button" disabled={asignandoBloque} onClick={() => setBloque(null)} className="text-[12.5px] text-muted hover:text-ink">
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <Menu
+          etiqueta="Asignar las conversaciones de esta lista"
+          ancho={260}
+          claseBoton="inline-flex h-9 shrink-0 items-center gap-2 border border-line bg-porcelain px-3 text-[13px] text-ink transition-colors hover:border-line-strong aria-expanded:ring-3 aria-expanded:ring-accent-soft max-lg:h-11"
+          boton={
+            <>
+              <UserRoundCheck size={15} aria-hidden className="text-muted" />
+              <span>
+                Asignar las <span className="t-mono font-semibold tabular-nums">{candidatasBloque.length}</span> a…
+              </span>
+            </>
+          }
+        >
+          <MenuTitulo>Asignar toda la lista a</MenuTitulo>
+          {staff.map((m) => (
+            <MenuOpcion
+              key={m.user_id}
+              elegida={false}
+              onElegir={() => {
+                const ids = candidatasBloque.filter((c) => c.asignada_a !== m.user_id).map((c) => c.id);
+                if (ids.length === 0) toast("Todas esas conversaciones ya son de " + nombreCorto(m.nombre));
+                else setBloque({ destino: m.user_id, ids });
+              }}
+              icono={<UserRound size={16} strokeWidth={1.9} aria-hidden />}
+            >
+              {m.user_id === usuarioId ? `Yo (${nombreCorto(m.nombre)})` : m.nombre}
+            </MenuOpcion>
+          ))}
+          <MenuSeparador />
+          <MenuOpcion
+            elegida={false}
+            onElegir={() => {
+              const ids = candidatasBloque.filter((c) => c.asignada_a !== null).map((c) => c.id);
+              if (ids.length === 0) toast("Todas esas conversaciones ya están sin asignar");
+              else setBloque({ destino: null, ids });
+            }}
+            icono={<UserRoundX size={16} strokeWidth={1.9} aria-hidden />}
+          >
+            Sin asignar
+          </MenuOpcion>
+        </Menu>
+      )
+    ) : null;
+
   const filtrosDesplegables = (
     <div role="group" aria-label="Filtros de la bandeja" className={apilado ? FILA_DESLIZABLE : FILA_ENVUELTA}>
       <FiltroDesplegable
@@ -742,16 +881,18 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       />
       {selectorEtapa}
       {selectorOrigen}
+      {selectorVendedor}
       {hayFiltros && (
         <button
           type="button"
-          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", filtroOrigen: "todas", busqueda: "" })}
+          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", filtroOrigen: "todas", filtroVendedor: "todas", busqueda: "" })}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-[13px] text-muted transition-colors hover:text-ink max-lg:h-11"
         >
           <X size={14} aria-hidden />
           Limpiar
         </button>
       )}
+      {asignacionEnBloque}
     </div>
   );
 
@@ -884,6 +1025,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
           <div className="flex flex-wrap gap-2">
             {selectorEtapa}
             {selectorOrigen}
+            {selectorVendedor}
           </div>
         </div>
       </details>
