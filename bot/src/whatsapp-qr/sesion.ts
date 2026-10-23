@@ -204,6 +204,8 @@ class SesionLinea {
       this.conectar().catch((err: unknown) => {
         this.ultimoError = err instanceof Error ? err.message : String(err);
         this.log.error({ err }, "Falló la reconexión de WhatsApp por QR");
+        // Sin conexión ni a la base ni a WhatsApp: se vuelve a intentar en un minuto (si nadie la desconectó).
+        if (this.deseaConexion && !this.sock) this.programarReconexion(60_000);
       });
     }, ms);
   }
@@ -250,15 +252,18 @@ class SesionLinea {
       this.programarReconexion(1000);
       return;
     }
+    // Los cortes de red o de WhatsApp (408, 503…) son pasajeros: con la sesión guardada nunca se deja de reintentar. Rendirse
+    // dejaba el número desconectado horas (el panel no podía enviar y no entraban mensajes) hasta reiniciar el bot.
     this.reintentos++;
+    this.estado = "conectando";
     if (this.reintentos > MAX_REINTENTOS_CONEXION) {
-      this.log.error({ codigo }, "Demasiados fallos de conexión: se deja de reintentar");
-      this.deseaConexion = false;
-      this.estado = "desconectado";
-      this.ultimoError = "La conexión falló varias veces seguidas. Vuelve a conectarla desde el panel.";
+      if (this.reintentos === MAX_REINTENTOS_CONEXION + 1) {
+        this.log.error({ codigo }, "Varios fallos de conexión seguidos: se reintenta cada 5 minutos");
+      }
+      this.ultimoError = "La conexión falló varias veces seguidas. Se sigue reintentando sola cada 5 minutos.";
+      this.programarReconexion(5 * 60_000);
       return;
     }
-    this.estado = "conectando";
     this.programarReconexion(Math.min(30_000, 2000 * 2 ** (this.reintentos - 1)));
   }
 
