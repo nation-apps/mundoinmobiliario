@@ -10,6 +10,8 @@ import { ETAPA_TONO, ETIQUETA_TONO } from "@/components/admin/chats/ListaConvers
 import DialogShell from "@/components/admin/DialogShell";
 import EventoDialogo from "@/components/admin/agenda/EventoDialogo";
 import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
+import FiltroFecha from "@/components/admin/FiltroFecha";
+import { hayFiltroFecha } from "@/lib/admin/filtro-fechas";
 import { Menu, MenuAccion, MenuOpcion, MenuSeparador, MenuTitulo } from "@/components/admin/Menu";
 import {
   CANAL_LABEL,
@@ -237,9 +239,15 @@ export default function Embudo({
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const moviendo = useRef(0);
 
+  // La fecha elegida también decide qué se trae (con un periodo viejo hacen falta sus conversaciones cerradas).
+  const fechaRef = useRef(filtros.fecha);
+  useEffect(() => {
+    fechaRef.current = filtros.fecha;
+  }, [filtros.fecha]);
+
   const recargar = useCallback(async () => {
     const mio = ++turno.current;
-    const { datos: nuevos, error } = await leerEmbudo(supabase);
+    const { datos: nuevos, error } = await leerEmbudo(supabase, fechaRef.current);
     if (!montada.current || mio !== turno.current) return;
     // No pisar una tarjeta que se está moviendo: el guardado en curso termina con su propia recarga.
     if (moviendo.current > 0) return;
@@ -280,6 +288,17 @@ export default function Embudo({
     };
   }, [supabase, recargar]);
 
+  // Al cambiar la fecha se vuelve a leer el tablero con ese periodo.
+  const claveFecha = `${filtros.fecha.id}|${filtros.fecha.desde}|${filtros.fecha.hasta}`;
+  const primeraFecha = useRef(true);
+  useEffect(() => {
+    if (primeraFecha.current) {
+      primeraFecha.current = false;
+      return;
+    }
+    void recargar();
+  }, [claveFecha, recargar]);
+
   /* --- Derivados --- */
   const etiquetasPorCliente = useMemo(() => {
     const porId = new Map(datos.etiquetas.map((e) => [e.id, e]));
@@ -298,7 +317,8 @@ export default function Embudo({
   const origenes = useMemo(() => origenesDisponibles(datos.conversaciones), [datos.conversaciones]);
   const abiertas = columnas.filter((c) => !esEtapaFinal(c.etapa)).reduce((n, c) => n + c.conversaciones.length, 0);
   const sinResponder = columnas.reduce((n, c) => n + c.sinResponder, 0);
-  const hayFiltros = filtros.vendedor !== "" || filtros.canal !== "" || filtros.origen !== "" || filtros.busqueda.trim() !== "";
+  const hayFiltros =
+    filtros.vendedor !== "" || filtros.canal !== "" || filtros.origen !== "" || hayFiltroFecha(filtros.fecha) || filtros.busqueda.trim() !== "";
 
   /* --- Mover una tarjeta --- */
   const guardarMovimiento = useCallback(
@@ -420,6 +440,7 @@ export default function Embudo({
           valor={filtros.canal}
           onCambiar={(id) => setFiltros((f) => ({ ...f, canal: id }))}
         />
+        <FiltroFecha valor={filtros.fecha} onCambiar={(fecha) => setFiltros((f) => ({ ...f, fecha }))} />
         {hayFiltros && (
           <button
             type="button"

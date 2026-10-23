@@ -5,6 +5,7 @@
  */
 
 import { ETAPAS, esEtapaFinal, esperaRespuesta, type ConversacionResumen, type Etapa, type MotivoPerdida } from "./chats-tipos";
+import { FECHA_TODAS, enRango, rangoDeFecha, type FiltroFecha } from "./filtro-fechas";
 
 /** Cuántos días de conversaciones cerradas se muestran en las columnas Vendido y No vendido. */
 export const DIAS_CERRADAS = 30;
@@ -15,10 +16,12 @@ export type FiltrosEmbudo = {
   canal: string;
   /** "" = todos; "campana" = cualquiera de campaña; o el texto exacto de `fuente`. */
   origen: string;
+  /** Fecha de entrada del lead (cuándo se creó la conversación). */
+  fecha: FiltroFecha;
   busqueda: string;
 };
 
-export const FILTROS_VACIOS: FiltrosEmbudo = { vendedor: "", canal: "", origen: "", busqueda: "" };
+export const FILTROS_VACIOS: FiltrosEmbudo = { vendedor: "", canal: "", origen: "", fecha: FECHA_TODAS, busqueda: "" };
 
 export function coincideEmbudo(c: ConversacionResumen, f: FiltrosEmbudo, usuarioId: string): boolean {
   if (f.vendedor === "mias" && c.asignada_a !== usuarioId) return false;
@@ -36,6 +39,8 @@ export function coincideEmbudo(c: ConversacionResumen, f: FiltrosEmbudo, usuario
   } else if (f.origen && c.fuente !== f.origen) {
     return false;
   }
+
+  if (!enRango(c.created_at, rangoDeFecha(f.fecha))) return false;
 
   const termino = f.busqueda.trim().toLowerCase();
   if (!termino) return true;

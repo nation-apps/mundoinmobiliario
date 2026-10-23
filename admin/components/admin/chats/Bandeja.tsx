@@ -50,6 +50,8 @@ import {
 } from "@/lib/admin/chats-tipos";
 import { Chip } from "@/components/admin/ui";
 import FiltroDesplegable from "@/components/admin/FiltroDesplegable";
+import FiltroFecha from "@/components/admin/FiltroFecha";
+import { FECHA_TODAS, enRango, hayFiltroFecha, rangoDeFecha, rangoIso, type FiltroFecha as TipoFiltroFecha } from "@/lib/admin/filtro-fechas";
 import { Menu, MenuOpcion, MenuSeparador, MenuTitulo } from "@/components/admin/Menu";
 import { origenesDisponibles } from "@/lib/admin/embudo";
 import { useAvisos } from "./Avisos";
@@ -70,6 +72,8 @@ type Vista = {
   filtroOrigen: string;
   /** "todas", "sin_asignar" o el user_id del vendedor. No se guarda: es para trabajar la lista de un vendedor, no para quedarse. */
   filtroVendedor: string;
+  /** Fecha de entrada del lead. No se guarda, como el vendedor. */
+  filtroFecha: TipoFiltroFecha;
   /** No se guarda: una búsqueda vieja dejaría la lista vacía sin explicación. */
   busqueda: string;
   seleccionadaId: string | null;
@@ -79,7 +83,7 @@ type Vista = {
   restaurada: boolean;
 };
 
-type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "filtroOrigen" | "filtroVendedor" | "busqueda">>;
+type CambioFiltros = Partial<Pick<Vista, "filtroCanal" | "filtroEstado" | "filtroEtapa" | "filtroOrigen" | "filtroVendedor" | "filtroFecha" | "busqueda">>;
 
 type Accion =
   | { tipo: "restaurar"; guardados: FiltrosBandejaGuardados }
@@ -95,6 +99,7 @@ const VISTA_INICIAL: Vista = {
   filtroEtapa: "todas",
   filtroOrigen: "todas",
   filtroVendedor: "todas",
+  filtroFecha: FECHA_TODAS,
   busqueda: "",
   seleccionadaId: null,
   pantalla: "lista",
@@ -131,6 +136,7 @@ function reducirVista(vista: Vista, accion: Accion): Vista {
         filtroEtapa: "todas",
         filtroOrigen: "todas",
         filtroVendedor: "todas",
+        filtroFecha: FECHA_TODAS,
         busqueda: "",
         seleccionadaId: accion.id,
         pantalla: "hilo",
@@ -178,6 +184,7 @@ type Filtros = {
   etapa: FiltroEtapaBandeja;
   origen: string;
   vendedor: string;
+  fecha: TipoFiltroFecha;
   busqueda: string;
 };
 
@@ -225,6 +232,8 @@ function coincide(c: ConversacionResumen, filtros: Filtros, usuarioId: string): 
   } else if (filtros.vendedor !== "todas" && c.asignada_a !== filtros.vendedor) {
     return false;
   }
+
+  if (!enRango(c.created_at, rangoDeFecha(filtros.fecha))) return false;
 
   const termino = filtros.busqueda.trim().toLowerCase();
   if (!termino) return true;
@@ -365,6 +374,9 @@ const ESTADOS_APP: FiltroEstadoBandeja[] = ["sin_responder", "escaladas", "todas
 const FILTROS_ESTADO_APP = ESTADOS_APP.flatMap((id) => FILTROS_ESTADO_BANDEJA.filter((f) => f.id === id));
 const FILTROS_ESTADO_APP_EXTRA = FILTROS_ESTADO_BANDEJA.filter((f) => !ESTADOS_APP.includes(f.id));
 
+/** Tope de conversaciones del periodo cuando se filtra por fecha. */
+const LIMITE_PERIODO = 600;
+
 const FILA_ENVUELTA = "flex flex-wrap items-center gap-2";
 /** Una sola línea que se desliza con el dedo: siete chips de 44 px envueltos se comerían media pantalla. */
 const FILA_DESLIZABLE = "-mx-5 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
@@ -399,7 +411,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   const [asignandoBloque, setAsignandoBloque] = useState(false);
 
   const [vista, despachar] = useReducer(reducirVista, VISTA_INICIAL);
-  const { filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, seleccionadaId, pantalla, restaurada } = vista;
+  const { filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, filtroFecha, busqueda, seleccionadaId, pantalla, restaurada } = vista;
 
   // El servidor no tiene matchMedia: allí se asume escritorio en el panel y
   // apilado en la app; React corrige con el valor real al hidratar.
@@ -419,6 +431,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   const conversacionesRef = useRef(conversaciones);
   const seleccionadaIdRef = useRef(seleccionadaId);
   const turnoRef = useRef(0);
+  const fechaRef = useRef<TipoFiltroFecha>(FECHA_TODAS);
   const montadaRef = useRef(false);
   const temporizadorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -447,11 +460,21 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     const turno = ++turnoRef.current;
     if (conversacionesRef.current.length === 0) setCargando(true);
 
-    const [conv, rel, etq] = await Promise.all([
+    // Con filtro de fecha se traen además las conversaciones de ese periodo: las LIMITE_BANDEJA más recientes no alcanzan
+    // para ver, por ejemplo, el mes pasado.
+    const periodo = rangoIso(rangoDeFecha(fechaRef.current));
+    const delPeriodo = () => {
+      let q = supabase.from("conversaciones_resumen").select("*");
+      if (periodo.desde) q = q.gte("created_at", periodo.desde);
+      if (periodo.hasta) q = q.lt("created_at", periodo.hasta);
+      return q.order("created_at", { ascending: false }).limit(LIMITE_PERIODO);
+    };
+    const [conv, rel, etq, extra] = await Promise.all([
       supabase.from("conversaciones_resumen").select("*").order("actividad_at", { ascending: false }).limit(LIMITE_BANDEJA),
       supabase.from("cliente_etiquetas").select("cliente_id, etiqueta_id"),
       // El catálogo también: la ficha crea etiquetas y `etiquetas` no está en la publicación de realtime.
       supabase.from("etiquetas").select("id, nombre, color").order("nombre"),
+      periodo.desde || periodo.hasta ? delPeriodo() : Promise.resolve({ data: [] as ConversacionResumen[], error: null }),
     ]);
     // Llegó tarde: ya hay una recarga más nueva en camino, o la bandeja se desmontó.
     const vencida = () => turno !== turnoRef.current || !montadaRef.current;
@@ -461,6 +484,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       toast.error("No se pudieron actualizar las conversaciones.", { id: "bandeja-recarga" });
     } else {
       let lista = (conv.data ?? []) as ConversacionResumen[];
+      for (const c of (extra.data ?? []) as ConversacionResumen[]) lista = conExtra(lista, c);
       // La conversación abierta puede ser más vieja que las últimas
       // LIMITE_BANDEJA: se trae aparte para que no se cierre sola.
       const elegida = seleccionadaIdRef.current;
@@ -562,6 +586,20 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     };
   }, []);
 
+  /* --- La fecha elegida decide también qué se trae del servidor --- */
+  const claveFecha = `${filtroFecha.id}|${filtroFecha.desde}|${filtroFecha.hasta}`;
+  const primeraFechaRef = useRef(true);
+  useEffect(() => {
+    fechaRef.current = filtroFecha;
+    // Al montar ya está la carga inicial; después, cada cambio de fecha vuelve a leer (también al quitarla).
+    if (primeraFechaRef.current) {
+      primeraFechaRef.current = false;
+      return;
+    }
+    void recargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando cambia la fecha (claveFecha la resume)
+  }, [claveFecha, recargar]);
+
   /* --- Persistencia de filtros y selección --- */
   useEffect(() => {
     despachar({ tipo: "restaurar", guardados: cargarFiltrosGuardados(estadoPorDefecto) });
@@ -617,9 +655,9 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
   }, [etiquetas, clienteEtiquetas]);
 
   const filtradas = useMemo(() => {
-    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, busqueda };
+    const filtros: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, fecha: filtroFecha, busqueda };
     return conversaciones.filter((c) => coincide(c, filtros, usuarioId));
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, usuarioId]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, filtroFecha, busqueda, usuarioId]);
 
   // Las abiertas de la lista filtrada: lo que se puede asignar en bloque (las cerradas no se reasignan).
   const candidatasBloque = useMemo(() => filtradas.filter((c) => c.estado !== "cerrada"), [filtradas]);
@@ -654,6 +692,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       etapa: cambio.filtroEtapa ?? filtroEtapa,
       origen: cambio.filtroOrigen ?? filtroOrigen,
       vendedor: cambio.filtroVendedor ?? filtroVendedor,
+      fecha: cambio.filtroFecha ?? filtroFecha,
       busqueda: cambio.busqueda ?? busqueda,
     };
     const soltar = seleccionada !== null && !coincide(seleccionada, siguientes, usuarioId);
@@ -714,7 +753,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
 
   const conteos = useMemo(() => {
     // Cuántas quedarían con cada opción, sin tocar los demás filtros (sobre las LIMITE_BANDEJA cargadas).
-    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, busqueda };
+    const base: Filtros = { canal: filtroCanal, estado: filtroEstado, etapa: filtroEtapa, origen: filtroOrigen, vendedor: filtroVendedor, fecha: filtroFecha, busqueda };
     const contar = (cambio: Partial<Filtros>) =>
       conversaciones.reduce((n, c) => n + (coincide(c, { ...base, ...cambio }, usuarioId) ? 1 : 0), 0);
     return {
@@ -724,7 +763,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       origen: Object.fromEntries(opcionesOrigen.map((f) => [f.id, contar({ origen: f.id })])) as Record<string, number>,
       vendedor: Object.fromEntries(opcionesVendedor.map((f) => [f.id, contar({ vendedor: f.id })])) as Record<string, number>,
     };
-  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, busqueda, usuarioId, opcionesOrigen, opcionesVendedor]);
+  }, [conversaciones, filtroCanal, filtroEstado, filtroEtapa, filtroOrigen, filtroVendedor, filtroFecha, busqueda, usuarioId, opcionesOrigen, opcionesVendedor]);
 
   const hayFiltros =
     filtroCanal !== "todas" ||
@@ -732,6 +771,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     filtroEtapa !== "todas" ||
     filtroOrigen !== "todas" ||
     filtroVendedor !== "todas" ||
+    hayFiltroFecha(filtroFecha) ||
     busqueda.trim() !== "";
 
   const selectorEtapa = (
@@ -769,6 +809,8 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       onCambiar={(id) => filtrar({ filtroVendedor: id })}
     />
   );
+
+  const selectorFecha = <FiltroFecha valor={filtroFecha} onCambiar={(f) => filtrar({ filtroFecha: f })} />;
 
   async function asignarEnBloque() {
     if (!bloque) return;
@@ -882,10 +924,11 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
       {selectorEtapa}
       {selectorOrigen}
       {selectorVendedor}
+      {selectorFecha}
       {hayFiltros && (
         <button
           type="button"
-          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", filtroOrigen: "todas", filtroVendedor: "todas", busqueda: "" })}
+          onClick={() => filtrar({ filtroCanal: "todas", filtroEstado: "todas", filtroEtapa: "todas", filtroOrigen: "todas", filtroVendedor: "todas", filtroFecha: FECHA_TODAS, busqueda: "" })}
           className="inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-[13px] text-muted transition-colors hover:text-ink max-lg:h-11"
         >
           <X size={14} aria-hidden />
@@ -1026,6 +1069,7 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
             {selectorEtapa}
             {selectorOrigen}
             {selectorVendedor}
+            {selectorFecha}
           </div>
         </div>
       </details>

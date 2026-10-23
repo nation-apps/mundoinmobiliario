@@ -66,7 +66,7 @@ export default function TablaAnuncios({ metricas }: { metricas: Metricas }) {
   return (
     <Tarjeta
       titulo="Por anuncio"
-      nota="Cuántos leads trajo cada anuncio en el periodo y en qué quedaron hoy. Va de los que más venden a los que menos: ventas, luego oportunidades, luego leads."
+      nota="Cuántas personas llegaron por cada anuncio en el periodo (cada formulario enviado o chat abierto desde el anuncio, aunque la persona ya tuviera un chat) y en qué quedaron hoy. Va de los que más venden a los que menos."
     >
       {porAnuncio.length === 0 ? (
         <SinDatos alto={120}>Sin conversaciones en este periodo.</SinDatos>
@@ -164,6 +164,10 @@ export default function TablaAnuncios({ metricas }: { metricas: Metricas }) {
           <p className="mt-3 text-[12px] text-muted">
             «Conversión» = vendidas entre leads. Con pocas ventas todavía, mira también «Oportunidad» y «Atendidos»: son los que más
             adelantan cuál anuncio trae gente que sí compra.
+          </p>
+          <p className="mt-1.5 text-[12px] text-muted">
+            En los anuncios de WhatsApp, Meta cuenta también a quien abrió el chat y no escribió nada: esas personas no llegan al CRM
+            hasta que escriben o el vendedor les escribe, así que Meta puede mostrar más.
           </p>
         </>
       )}

@@ -447,6 +447,7 @@ export function calcularMetricas({
   periodo,
   rango,
   filas,
+  filasAnuncio,
   abiertas,
   equipo,
   truncado = false,
@@ -456,6 +457,12 @@ export function calcularMetricas({
   rango: Rango;
   /** Conversaciones creadas entre `rango.previoInicio` y `rango.fin`. */
   filas: FilaMetrica[];
+  /**
+   * Una fila por cada llegada desde un anuncio en el periodo (formulario enviado o mensaje de clic a WhatsApp), con los datos de
+   * su conversación, más las conversaciones del periodo que no vinieron de ningún anuncio. Así se cuenta como Meta: un formulario
+   * que se sumó a un chat que ya existía cuenta para su anuncio. Sin esto, se usa el primer anuncio de cada conversación nueva.
+   */
+  filasAnuncio?: FilaMetrica[];
   abiertas: FilaAbierta[];
   equipo: MiembroEquipo[];
   truncado?: boolean;
@@ -585,7 +592,7 @@ export function calcularMetricas({
     totalesSerie,
     porOrigen,
     porVendedor,
-    porAnuncio: porAnuncioDe(actuales),
+    porAnuncio: porAnuncioDe(filasAnuncio ?? actuales),
     etapas,
     cierres,
     perdidas,
