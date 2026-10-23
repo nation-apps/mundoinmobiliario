@@ -68,6 +68,21 @@ const ESPERA_RAFAGA_EXTRA_MS = 1400;
 
 const esperar = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** Claves de un mensaje que no traen nada que mostrar (protocolo, reacciones, llaves de cifrado). */
+const CLAVES_SIN_CONTENIDO = new Set(["protocolMessage", "reactionMessage", "senderKeyDistributionMessage", "messageContextInfo", "keepInChatMessage", "pinInChatMessage", "encReactionMessage", "pollUpdateMessage"]);
+
+/** La forma de un mensaje para el registro: qué claves trae, quién lo mandó y cómo llegó. Nunca el texto ni el teléfono. */
+function formaDe(m: WAMessage, tipo: string): { claves: string[]; propio: boolean; tipo: string; stub: number | null } {
+  return { claves: Object.keys(m.message ?? {}), propio: Boolean(m.key.fromMe), tipo, stub: m.messageStubType ?? null };
+}
+
+/** ¿Es de los últimos 10 minutos? */
+function esReciente(m: WAMessage): boolean {
+  const ts = m.messageTimestamp;
+  const seg = typeof ts === "number" ? ts : ts ? Number(ts.toString()) : 0;
+  return seg > 0 && Date.now() / 1000 - seg < 600;
+}
+
 function codigoDeCierre(err: unknown): number | undefined {
   return (err as { output?: { statusCode?: number } } | undefined)?.output?.statusCode;
 }
@@ -155,15 +170,28 @@ class SesionLinea {
 
   private async procesarMensaje(s: WASocket, m: WAMessage, tipo: string): Promise<void> {
     const jid = m.key.remoteJid;
-    if (!esChatIndividual(jid)) return;
+    if (!esChatIndividual(jid)) {
+      // Grupos, difusión, estados y canales se ignoran a propósito; cualquier otro tipo de chat se anota para entenderlo.
+      if (jid && !/@(g\.us|broadcast|newsletter)$/.test(jid)) this.log.info({ ...formaDe(m, tipo), jidTipo: jid.split("@")[1] }, "Mensaje de un chat no individual, se ignora");
+      return;
+    }
     const propio = Boolean(m.key.fromMe);
-    if (!propio && tipo !== "notify") return; // lo que llega en «append» es historial: no se contesta
+    if (!propio && tipo !== "notify") {
+      // «append» es historial y no se contesta. Si es reciente (p. ej. llegó mientras la línea se reconectaba), se anota.
+      if (esReciente(m)) this.log.info(formaDe(m, tipo), "Mensaje reciente que llegó como historial, se ignora");
+      return;
+    }
     const id = m.key.id;
     if (!id || this.esDuplicado(id)) return;
     if (propio && this.enviadosPorBot.has(id)) return;
 
     const contenido = normalizeMessageContent(m.message) as ContenidoMinimo | undefined;
-    if (!contenido) return; // protocolo, reacciones, recibos…
+    if (!contenido) {
+      // Protocolo, reacciones, recibos… Lo que no sea eso se anota (forma, no contenido) para saber qué se está perdiendo.
+      const forma = formaDe(m, tipo);
+      if (forma.claves.some((c) => !CLAVES_SIN_CONTENIDO.has(c))) this.log.info(forma, "Mensaje sin contenido reconocible, se ignora");
+      return;
+    }
 
     const digitos = await this.resolverTelefono(s, m);
     const telefono = digitos ? telefonoDelBot(digitos) : null;
@@ -176,6 +204,7 @@ class SesionLinea {
 
     if (propio) {
       const eco = aEco(m, contenido, telefono);
+      if (eco?.tipoOriginal === "otro") this.log.info(formaDe(m, tipo), "Mensaje enviado desde el número con un formato no reconocido");
       if (eco) await handleEcoApp(eco, undefined, this.linea.id);
       return;
     }
