@@ -40,7 +40,7 @@ describe("prompt de Mundo Motos", () => {
     const p = await buildSystemPrompt("whatsapp");
     // Datos de la sucursal.
     expect(p).toMatch(/Avenida Yaxchilán 573, Cancún/);
-    expect(p).toMatch(/lunes a viernes de 9 am a 7 pm, y sábado y domingo de 9 am a 2 pm/);
+    expect(p).toMatch(/lunes a viernes de 9 am a 6 pm, y sábado de 9 am a 2 pm \(domingo cerrado\)/);
     // Requisitos del crédito del documento «INFORMACIÓN CRM», sin prometer aprobación.
     expect(p).toMatch(/INE, comprobante de domicilio y\s+estado de cuenta o comprobante de ingresos/);
     expect(p).toMatch(/Citas y visitas: solo dentro del horario de atención/);

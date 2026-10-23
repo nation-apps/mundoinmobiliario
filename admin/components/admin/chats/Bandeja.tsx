@@ -37,6 +37,7 @@ import {
   esEtapaFinal,
   esperaRespuesta,
   nombreCorto,
+  telefonoCoincide,
   type BandejaProps,
   type Canal,
   type ClienteEtiqueta,
@@ -237,9 +238,8 @@ function coincide(c: ConversacionResumen, filtros: Filtros, usuarioId: string): 
 
   const termino = filtros.busqueda.trim().toLowerCase();
   if (!termino) return true;
-  // "987 654 321" debe encontrar "51987654321".
-  const digitos = termino.replace(/\D/g, "");
-  if (digitos.length >= 3 && (c.cliente_telefono ?? "").includes(digitos)) return true;
+  // Cualquier parte del número («758 41», «4160») y también el formato con «1» de WhatsApp (+52 1 998…).
+  if (telefonoCoincide(c.cliente_telefono, termino)) return true;
   return [c.cliente_nombre, c.cliente_telefono, c.cliente_email, c.identidad_nombre, c.identidad_username, c.ultimo_contenido].some(
     (valor) => (valor ?? "").toLowerCase().includes(termino),
   );
@@ -599,6 +599,36 @@ export default function Bandeja({ usuarioId, modo, inicial, estadoPorDefecto = "
     void recargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando cambia la fecha (claveFecha la resume)
   }, [claveFecha, recargar]);
+
+  /* --- Búsqueda también en el servidor: la bandeja carga las LIMITE_BANDEJA más recientes y un contacto viejo no estaría --- */
+  useEffect(() => {
+    const termino = busqueda.trim();
+    if (termino.length < 3) return;
+    const id = setTimeout(() => {
+      const digitos = termino.replace(/\D/g, "");
+      const sinUno = digitos.startsWith("521") && digitos.length > 3 ? `52${digitos.slice(3)}` : null;
+      const texto = termino.replace(/[,()*%\\]/g, " ").trim();
+      const condiciones = [
+        ...(digitos.length >= 3 ? [`cliente_telefono.ilike.*${digitos}*`] : []),
+        ...(sinUno ? [`cliente_telefono.ilike.*${sinUno}*`] : []),
+        ...(texto.length >= 3 && digitos.length < texto.replace(/\s/g, "").length
+          ? [`cliente_nombre.ilike.*${texto}*`, `identidad_nombre.ilike.*${texto}*`, `identidad_username.ilike.*${texto}*`, `cliente_email.ilike.*${texto}*`]
+          : []),
+      ];
+      if (condiciones.length === 0) return;
+      void supabase
+        .from("conversaciones_resumen")
+        .select("*")
+        .or(condiciones.join(","))
+        .order("actividad_at", { ascending: false })
+        .limit(50)
+        .then(({ data, error }) => {
+          if (error || !data?.length || !montadaRef.current) return;
+          setConversaciones((previas) => (data as ConversacionResumen[]).reduce((lista, c) => conExtra(lista, c), previas));
+        });
+    }, 350);
+    return () => clearTimeout(id);
+  }, [busqueda, supabase]);
 
   /* --- Persistencia de filtros y selección --- */
   useEffect(() => {

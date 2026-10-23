@@ -4,7 +4,7 @@
  * components/admin/embudo/Embudo.tsx.
  */
 
-import { ETAPAS, esEtapaFinal, esperaRespuesta, type ConversacionResumen, type Etapa, type MotivoPerdida } from "./chats-tipos";
+import { ETAPAS, esEtapaFinal, esperaRespuesta, telefonoCoincide, type ConversacionResumen, type Etapa, type MotivoPerdida } from "./chats-tipos";
 import { FECHA_TODAS, enRango, rangoDeFecha, type FiltroFecha } from "./filtro-fechas";
 
 /** Cuántos días de conversaciones cerradas se muestran en las columnas Vendido y No vendido. */
@@ -44,8 +44,7 @@ export function coincideEmbudo(c: ConversacionResumen, f: FiltrosEmbudo, usuario
 
   const termino = f.busqueda.trim().toLowerCase();
   if (!termino) return true;
-  const digitos = termino.replace(/\D/g, "");
-  if (digitos.length >= 3 && (c.cliente_telefono ?? "").includes(digitos)) return true;
+  if (telefonoCoincide(c.cliente_telefono, termino)) return true;
   return [c.cliente_nombre, c.cliente_telefono, c.identidad_nombre, c.identidad_username, c.ultimo_contenido, c.fuente].some((v) =>
     (v ?? "").toLowerCase().includes(termino),
   );

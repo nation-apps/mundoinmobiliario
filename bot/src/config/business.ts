@@ -47,8 +47,8 @@ export const NEGOCIO = {
   sucursal: "Mundo de Motos – TVS Motor Cancún, Avenida Yaxchilán 573, Cancún, Quintana Roo",
   /** Enlace oficial de Google Maps: falta que el negocio lo comparta. */
   mapa: POR_DEFINIR,
-  /** Del documento «INFORMACIÓN CRM» (9-oct-2026). Las citas se agendan dentro de este horario. */
-  horarioTexto: "lunes a viernes de 9 am a 7 pm, y sábado y domingo de 9 am a 2 pm",
+  /** Del documento «Implementación CRM» (actualizado el 23-oct-2026). Las citas se agendan dentro de este horario. */
+  horarioTexto: "lunes a viernes de 9 am a 6 pm, y sábado de 9 am a 2 pm (domingo cerrado)",
   email: "mundodemotossureste@gmail.com",
   /** No hay un sitio propio confirmado (el de TVS México es de la marca, no de la sucursal). */
   web: POR_DEFINIR,

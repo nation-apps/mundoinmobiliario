@@ -576,3 +576,14 @@ export type CanalesProps = {
   inicial: CanalConfig[];
 };
 
+
+/**
+ * ¿El teléfono guardado (52 + 10 dígitos) contiene lo que se buscó? Sirve con cualquier parte del número, no solo el inicio
+ * («758 41», «4160»), y con el formato que muestra WhatsApp con «1» (+52 1 998…). Hacen falta al menos 3 dígitos.
+ */
+export function telefonoCoincide(telefono: string | null | undefined, termino: string): boolean {
+  const d = termino.replace(/\D/g, "");
+  if (d.length < 3 || !telefono) return false;
+  if (telefono.includes(d)) return true;
+  return d.startsWith("521") && d.length > 3 && telefono.includes(`52${d.slice(3)}`);
+}

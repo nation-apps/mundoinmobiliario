@@ -204,14 +204,17 @@ class SesionLinea {
 
     if (propio) {
       const eco = aEco(m, contenido, telefono);
-      if (eco?.tipoOriginal === "otro") this.log.info(formaDe(m, tipo), "Mensaje enviado desde el número con un formato no reconocido");
+      const forma = formaDe(m, tipo);
+      if (eco?.tipoOriginal === "otro" && forma.claves.some((c) => !CLAVES_SIN_CONTENIDO.has(c))) {
+        this.log.info(forma, "Mensaje enviado desde el número con un formato no reconocido");
+      }
       if (eco) await handleEcoApp(eco, undefined, this.linea.id);
       return;
     }
     const entrante = aMensajeEntrante(m, contenido, telefono);
     if (!entrante) return;
     if (entrante.kind === "unsupported") {
-      this.log.info({ tipo: entrante.messageType }, "Tipo de mensaje no soportado por la conexión QR, se ignora");
+      this.log.info({ tipo: entrante.messageType, claves: formaDe(m, tipo).claves }, "Tipo de mensaje no soportado por la conexión QR, se ignora");
       return;
     }
     if (entrante.kind === "text" && entrante.referral) {
