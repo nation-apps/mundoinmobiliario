@@ -24,6 +24,7 @@ import { PERIODOS, duracionCorta, type Metricas, type PeriodoId } from "@/lib/ad
 import Etapas from "./Etapas";
 import VentasPerdidas from "./VentasPerdidas";
 import TablaAnuncios from "./TablaAnuncios";
+import TablaLlegadas from "./TablaLlegadas";
 import GraficaEntradas from "./GraficaEntradas";
 import MapaCalor from "./MapaCalor";
 import Tacometro, { META_RESPUESTA_MIN } from "./Tacometro";
@@ -282,6 +283,7 @@ export default function TableroMetricas({ metricas }: { metricas: Metricas }) {
 
         <TablaOrigen metricas={metricas} />
         <TablaAnuncios metricas={metricas} />
+        <TablaLlegadas metricas={metricas} />
         <TablaVendedores metricas={metricas} />
         <MapaCalor metricas={metricas} />
       </div>

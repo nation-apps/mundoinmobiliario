@@ -11,6 +11,7 @@
  */
 
 import { ZONA_NEGOCIO } from "./rango";
+import type { Llegada } from "./llegadas";
 import type { Canal, Etapa, EstadoConversacion, MotivoCierre, MotivoPerdida, OrigenConversacion, RolMensaje } from "./chats-tipos";
 
 /* ---------- Entradas ---------- */
@@ -18,6 +19,7 @@ import type { Canal, Etapa, EstadoConversacion, MotivoCierre, MotivoPerdida, Ori
 /** Columnas de `conversaciones` que usan las métricas. */
 export type FilaMetrica = {
   id: string;
+  cliente_id?: string;
   canal: Canal;
   origen: OrigenConversacion;
   hilo_externo: string | null;
@@ -316,6 +318,10 @@ export type Metricas = {
   perdidas: ConteoPerdida[];
   /** [lunes … domingo][0 … 23 h]: cuántas conversaciones empezaron a esa hora. */
   calor: number[][];
+  /** Una fila por persona que llegó en el periodo (la pone el cargador). */
+  llegadas?: Llegada[];
+  /** Conversaciones del periodo de contactos con la etiqueta «Prueba»: no se cuentan en ninguna parte. */
+  pruebasExcluidas?: number;
 };
 
 const ETAPAS_ABIERTAS: EtapaAbierta[] = ["prospeccion", "no_contesta", "seguimiento", "oportunidad", "por_apartar"];
