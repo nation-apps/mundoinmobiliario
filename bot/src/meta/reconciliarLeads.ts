@@ -4,6 +4,7 @@ import { existeExternalId } from "../db/repositories/mensajes.js";
 import { handleLeadFormulario } from "../agent/handleLeadFormulario.js";
 import { GRAPH_BASE_URL } from "./client.js";
 import { paginasMeta, type PaginaMeta } from "./paginas.js";
+import { completarAnunciosDeLeads } from "./completarAnuncios.js";
 import type { EventoMeta } from "./parser.js";
 
 /**
@@ -135,6 +136,8 @@ export function iniciarReconciliacionLeads(): void {
     corriendo = true;
     reconciliarLeads()
       .catch((err: unknown) => logger.error({ err }, "Falló una vuelta de la revisión de formularios"))
+      // Después, los formularios que entraron sin el anuncio que los trajo.
+      .then(() => completarAnunciosDeLeads())
       .finally(() => {
         corriendo = false;
       });

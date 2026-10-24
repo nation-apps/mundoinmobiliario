@@ -415,3 +415,21 @@ export async function estadoConexion(): Promise<EstadoConexionMeta | null> {
     return null;
   }
 }
+
+/**
+ * De qué anuncio vino un lead, preguntado otra vez a Meta. Al llegar el aviso a veces Meta todavía no lo tiene (el lead entra
+ * sin anuncio y el reporte «Por anuncio» lo cuenta como «sin anuncio»); horas después sí lo devuelve.
+ */
+export async function anuncioDeLead(
+  leadgenId: string,
+  paginaId: string | null,
+): Promise<{ adId: string | null; anuncio: string | null; campana: string | null; plataforma: string | null; esOrganico: boolean }> {
+  const data = await leerGraphApi(`/${leadgenId}`, "ad_id,ad_name,campaign_name,platform,is_organic", tokenDePagina(paginaId) ?? tokenRequerido());
+  return {
+    adId: textoOpcional(data.ad_id),
+    anuncio: textoOpcional(data.ad_name),
+    campana: textoOpcional(data.campaign_name),
+    plataforma: textoOpcional(data.platform),
+    esOrganico: data.is_organic === true,
+  };
+}

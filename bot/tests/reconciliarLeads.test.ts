@@ -15,6 +15,7 @@ const mensajes = { existeExternalId: vi.fn(async () => false) };
 vi.mock("../src/db/repositories/mensajes.js", () => mensajes);
 const lead = { handleLeadFormulario: vi.fn(async () => {}) };
 vi.mock("../src/agent/handleLeadFormulario.js", () => lead);
+vi.mock("../src/meta/completarAnuncios.js", () => ({ completarAnunciosDeLeads: vi.fn(async () => 0) }));
 
 const { reconciliarLeads, listarLeadsRecientes } = await import("../src/meta/reconciliarLeads.js");
 
