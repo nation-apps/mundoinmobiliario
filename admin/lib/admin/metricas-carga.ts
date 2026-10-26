@@ -139,13 +139,15 @@ async function filasPorAnuncio(
     return t >= ini && t <= fin;
   };
 
-  const llegadas = new Map<string, { conversacionId: string; anuncio: NonNullable<ReturnType<typeof anuncioDeMensajes>> }>();
+  const llegadas = new Map<string, { conversacionId: string; anuncio: NonNullable<ReturnType<typeof anuncioDeMensajes>>; tipo: "formulario" | "whatsapp" }>();
   for (const m of mensajes) {
     if (!enPeriodo(m.created_at)) continue;
     const anuncio = anuncioDeMensajes([m.metadata]);
     if (!anuncio?.id) continue;
-    const clave = `${m.conversacion_id}|${anuncio.id}`;
-    if (!llegadas.has(clave)) llegadas.set(clave, { conversacionId: m.conversacion_id, anuncio });
+    // Un formulario y un chat de la misma persona desde el mismo anuncio son dos resultados para Meta: se cuentan los dos.
+    const tipo = typeof m.metadata?.leadgen_id === "string" ? "formulario" : "whatsapp";
+    const clave = `${m.conversacion_id}|${anuncio.id}|${tipo}`;
+    if (!llegadas.has(clave)) llegadas.set(clave, { conversacionId: m.conversacion_id, anuncio, tipo });
   }
 
   // Las conversaciones de esas llegadas que no están entre las del periodo (son anteriores): se traen aparte.
@@ -159,11 +161,11 @@ async function filasPorAnuncio(
 
   const resultado: FilaMetrica[] = [];
   const conAnuncio = new Set<string>();
-  for (const { conversacionId, anuncio } of llegadas.values()) {
+  for (const { conversacionId, anuncio, tipo } of llegadas.values()) {
     const f = porId.get(conversacionId);
     if (!f || (f.cliente_id && prueba.has(f.cliente_id))) continue;
     conAnuncio.add(conversacionId);
-    resultado.push({ ...f, anuncio_id: anuncio.id, anuncio_nombre: anuncio.nombre, anuncio_campana: anuncio.campana });
+    resultado.push({ ...f, anuncio_id: anuncio.id, anuncio_nombre: anuncio.nombre, anuncio_campana: anuncio.campana, llegada_tipo: tipo });
   }
   for (const f of filas) {
     if (enPeriodo(f.created_at) && !conAnuncio.has(f.id) && !f.anuncio_id) resultado.push(f);

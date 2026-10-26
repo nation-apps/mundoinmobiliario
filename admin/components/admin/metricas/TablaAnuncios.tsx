@@ -94,7 +94,9 @@ export default function TablaAnuncios({ metricas }: { metricas: Metricas }) {
               <thead>
                 <tr>
                   <Th>Anuncio</Th>
-                  <Th derecha>Leads</Th>
+                  <Th derecha>Personas</Th>
+                  <Th derecha>Formularios</Th>
+                  <Th derecha>Chats WA</Th>
                   <Th derecha>Parte</Th>
                   <Th derecha>Atendidos</Th>
                   <Th derecha>Oportunidad</Th>
@@ -145,6 +147,8 @@ export default function TablaAnuncios({ metricas }: { metricas: Metricas }) {
                       <Td derecha>
                         <span className="t-mono font-semibold">{a.entradas}</span>
                       </Td>
+                      <Td derecha>{a.formularios || <Cero />}</Td>
+                      <Td derecha>{a.chats || <Cero />}</Td>
                       <Td derecha>
                         <Medidor valor={a.entradas} total={kpis.entradas} />
                       </Td>
@@ -164,6 +168,11 @@ export default function TablaAnuncios({ metricas }: { metricas: Metricas }) {
           <p className="mt-3 text-[12px] text-muted">
             «Conversión» = vendidas entre leads. Con pocas ventas todavía, mira también «Oportunidad» y «Atendidos»: son los que más
             adelantan cuál anuncio trae gente que sí compra.
+          </p>
+          <p className="mt-1.5 text-[12px] text-muted">
+            Para comparar con Meta: «Formularios» es su columna «Clientes potenciales» y «Chats WA» sus «Conversaciones con mensajes
+            iniciadas». «Personas» cuenta una sola vez a quien llenó el formulario y además escribió por WhatsApp. Meta pone cada
+            resultado en el día en que la persona vio o tocó el anuncio, así que cerca de la medianoche puede caer en otro día.
           </p>
           <p className="mt-1.5 text-[12px] text-muted">
             En los anuncios de WhatsApp, Meta cuenta también a quien abrió el chat y no escribió nada: esas personas no llegan al CRM

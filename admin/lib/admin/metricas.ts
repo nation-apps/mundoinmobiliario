@@ -36,6 +36,8 @@ export type FilaMetrica = {
   anuncio_id?: string | null;
   anuncio_nombre?: string | null;
   anuncio_campana?: string | null;
+  /** En «Por anuncio»: si esta llegada fue un formulario o un chat de WhatsApp desde el anuncio (lo pone el cargador). */
+  llegada_tipo?: "formulario" | "whatsapp";
 };
 
 /** Conversación abierta ahora (de `conversaciones_resumen`, que sabe quién escribió al final). */
@@ -285,7 +287,12 @@ export type FilaAnuncio = {
   anuncioId: string | null;
   nombre: string;
   campana: string | null;
+  /** Personas (conversaciones) que llegaron por el anuncio: una persona que llenó el formulario y escribió cuenta una vez. */
   entradas: number;
+  /** Formularios enviados desde el anuncio: lo que Meta llama «clientes potenciales». */
+  formularios: number;
+  /** Chats de WhatsApp abiertos desde el anuncio: lo que Meta llama «conversaciones con mensajes iniciadas». */
+  chats: number;
   /** Alguien del equipo ya les respondió. */
   atendidas: number;
   /** Hoy en «Oportunidad de venta» o «Agenda Apartado». */
@@ -362,6 +369,7 @@ export const SIN_ANUNCIO = "Sin anuncio (directo, sitio web…)";
  */
 export function porAnuncioDe(filas: FilaMetrica[]): FilaAnuncio[] {
   const grupos = new Map<string, FilaAnuncio>();
+  const personas = new Map<string, Set<string>>();
   for (const f of filas) {
     const clave = f.anuncio_id ?? "";
     let g = grupos.get(clave);
@@ -371,6 +379,8 @@ export function porAnuncioDe(filas: FilaMetrica[]): FilaAnuncio[] {
         nombre: f.anuncio_id ? (f.anuncio_nombre ?? `Anuncio ${f.anuncio_id}`) : SIN_ANUNCIO,
         campana: f.anuncio_campana ?? null,
         entradas: 0,
+        formularios: 0,
+        chats: 0,
         atendidas: 0,
         oportunidad: 0,
         vendidas: 0,
@@ -381,6 +391,13 @@ export function porAnuncioDe(filas: FilaMetrica[]): FilaAnuncio[] {
     // El nombre y la campaña pueden venir en un lead y no en otro: se queda con el primero que los trae.
     if (f.anuncio_id && f.anuncio_nombre && g.nombre.startsWith("Anuncio ")) g.nombre = f.anuncio_nombre;
     if (!g.campana && f.anuncio_campana) g.campana = f.anuncio_campana;
+    if (f.llegada_tipo === "formulario") g.formularios++;
+    else if (f.llegada_tipo === "whatsapp") g.chats++;
+    // Lo demás es por persona: quien llenó el formulario y además escribió por WhatsApp desde el mismo anuncio cuenta una vez.
+    const vistas = personas.get(clave) ?? new Set<string>();
+    if (vistas.has(f.id)) continue;
+    vistas.add(f.id);
+    personas.set(clave, vistas);
     g.entradas++;
     if (f.primera_respuesta_humana_at) g.atendidas++;
     if (f.etapa === "oportunidad" || f.etapa === "por_apartar") g.oportunidad++;
